@@ -500,6 +500,10 @@ scripts by default. Install the registry package instead:
 `dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui`. Rendering,
 questionnaire, or tool-card changes also need the matching regression scripts.
 
+From a source checkout, the root `Makefile` wraps the common commands (`make help`);
+`make install` builds and packs the checkout and installs it into the local dsh's
+`dsh-tui` profile (see [getting started](docs/getting-started.en.md#develop-from-source)).
+
 ## Plugin Ecosystem
 
 Plugin development: [admission & development guide](tui-profile/docs/plugin-admission-and-development.md) · [plugin-template](https://github.com/dsh-tui-ecosystem/plugin-template) · [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem). Reference implementation: `dsh-working-activity`.

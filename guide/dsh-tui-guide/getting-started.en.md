@@ -439,6 +439,15 @@ pnpm build
 pnpm smoke
 ```
 
+The root `Makefile` wraps the common commands (`make help` lists them all): `make setup`
+(init the submodule and install dependencies), `make build` / `make check` (compile /
+compile plus build gates), `make smoke`, `make ci GROUP=<name>`, and `make install`, which
+installs this checkout into the local dsh — it compiles, packs, then runs
+`dsh plugin --profile dsh-tui add <tarball>` into the `dsh-tui` profile under `DSH_HOME`
+(default `~/.dsh`); start it with `dsh --profile dsh-tui`. `make install-launcher` also
+installs the `dsh-tui` / `dst` launcher globally from the same tarball, and `make uninstall`
+removes the plugin from the profile. `dsh` must already be installed.
+
 The repository has a single submodule, and it is required to install:
 
 - `vendor/dsh-std`: its `packages/*` are listed as workspace packages in

@@ -19,8 +19,8 @@ PACK_DIR    ?= .tmp/pack
 GROUP       ?= channel-ui
 JOBS        ?= 6
 
-.PHONY: help setup build check typecheck smoke package pack install install-launcher \
-	uninstall dev dev-config ci guide clean
+.PHONY: help setup build check typecheck smoke package pack require-dsh install \
+	install-launcher uninstall dev dev-config ci guide clean
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-17s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -49,9 +49,11 @@ pack: build ## Build and pack the current checkout into $(PACK_DIR)
 	mkdir -p $(PACK_DIR)
 	$(NPM) pack --ignore-scripts --pack-destination $(PACK_DIR)
 
-install: pack ## Build, pack and install this checkout into the local dsh profile
+require-dsh:
 	@command -v $(DSH) >/dev/null 2>&1 || { \
-		echo "make install: '$(DSH)' not found; install DeepSeek Harness first: npm install -g @deepseek-ai/dsh" >&2; exit 1; }
+		echo "make: '$(DSH)' not found; install DeepSeek Harness first: npm install -g @deepseek-ai/dsh" >&2; exit 1; }
+
+install: require-dsh pack ## Build, pack and install this checkout into the local dsh profile
 	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); \
 		echo "Installing $$tarball into profile '$(DSH_PROFILE)' ($${DSH_HOME:-~/.dsh})"; \
 		$(DSH) plugin --profile $(DSH_PROFILE) add "$$PWD/$$tarball"
@@ -60,7 +62,7 @@ install: pack ## Build, pack and install this checkout into the local dsh profil
 install-launcher: pack ## Also install the dsh-tui / dst launcher globally from the same tarball
 	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); $(NPM) install -g "$$PWD/$$tarball"
 
-uninstall: ## Remove the TUI plugin from the local dsh profile
+uninstall: require-dsh ## Remove the TUI plugin from the local dsh profile
 	$(DSH) plugin --profile $(DSH_PROFILE) remove @deepseek-harness-tui/dsh-tui
 
 dev: ## Build, pack, install in an isolated home and launch (pnpm dev)

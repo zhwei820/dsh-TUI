@@ -371,6 +371,13 @@ pnpm build
 pnpm smoke
 ```
 
+仓库根目录的 `Makefile` 封装了常用命令（`make help` 列出全部）：`make setup`（初始化子模块并
+安装依赖）、`make build` / `make check`（编译 / 编译加构建门禁）、`make smoke`、
+`make ci GROUP=<组名>`，以及把当前检出装进本机 dsh 的 `make install`——编译、打包，再执行
+`dsh plugin --profile dsh-tui add <tarball>`，装到 `DSH_HOME`（默认 `~/.dsh`）下的
+`dsh-tui` profile，之后用 `dsh --profile dsh-tui` 启动；`make install-launcher` 另从同一
+tarball 全局安装 `dsh-tui` / `dst` 启动器，`make uninstall` 从 profile 移除。需要先安装 `dsh`。
+
 本仓库只有一个子模块，且安装必需：
 
 - `vendor/dsh-std`：`pnpm-workspace.yaml` 把 `vendor/dsh-std/packages/*` 列为
