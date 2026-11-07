@@ -4,8 +4,8 @@
  *
  * It is **pure data**: the build-time index (`scripts/gen-backend-index.mjs`)
  * imports each manifest statically, so a manifest may import nothing at all
- * except types, plus the single allowlisted version constant inside its own
- * backend (the Claude SDK pin — see `scripts/verify-backend-registry.ts`).
+ * except types, plus an allowlisted version constant inside its own backend
+ * (see `scripts/verify-backend-registry.ts`).
  * The backend implementation stays behind the registry's lazy `load()`.
  *
  * This module sits in the neutral domain layer (`src/agent/**`) on purpose: the
@@ -41,19 +41,19 @@ export interface BackendManifest {
   readonly shortLabel: string
   /** Product a version belongs to (`claude-code v2.1.0`); absent = bare version. */
   readonly product?: string
-  /** Ships inside this package (dsh / claude / codex): the only source allowed
+  /** Ships inside this package (`dsh` today): the only source allowed
    *  to use `label.kind === 'key'` and a `native.<key>` channel. */
   readonly inTree: boolean
   /** Always selectable and not an `AgentBackend` at all (only `dsh` today:
    *  `buildKernelCatalog`'s `selectable` and the dsh version row need it).
-   *  Distinct from `inTree` — claude and codex are in-tree but optional. */
+   *  Distinct from `inTree` — an in-tree backend may still be optional. */
   readonly alwaysAvailable?: true
-  /** Module export holding the `AgentBackend` (default `backend`; claude's
-   *  barrel exports `claudeBackend`). Absent = this entry has no `load`. */
+  /** Module export holding the `AgentBackend` (default `backend`). Absent =
+   *  this entry has no `load`. */
   readonly backendExport?: string
   /**
    * Module export closing this backend's **module-level / process-wide**
-   * resource pool (codex: `closeAllCodexHubs`). Session-scoped resources
+   * resource pool (e.g. an app-server hub pooled across sessions). Session-scoped resources
    * (child processes, transcript handles) belong to `session.dispose()`, which
    * the fiber owns — never here.
    *
@@ -62,12 +62,11 @@ export interface BackendManifest {
    */
   readonly unloadExport?: string
   /** Gate derivation only (backend scope, `verify-adapter-boundary`): vendor
-   *  package prefixes this backend may import (claude: `@anthropic-ai/`). */
+   *  package prefixes this backend may import (e.g. `@vendor/`). */
   readonly vendorPackages?: readonly string[]
   /** Gate derivation only: the `native.<key>` slot this backend owns. **Absent
-   *  means "this backend does not use a native channel"** — claude must stay
-   *  absent (its channel is not declared today, and deriving one would widen
-   *  the boundary gate). */
+   *  means "this backend does not use a native channel"** — deriving one for a
+   *  backend that does not declare it would widen the boundary gate. */
   readonly nativeKey?: string
   /**
    * The session capabilities this backend's handler actually serves, in the
@@ -100,8 +99,8 @@ export interface BackendManifest {
    * What the host's install wizard would install, and with which of the host's
    * executors (§6 item 12). Declaring it is how a backend says "there is
    * something to install for me": no backend id is privileged any longer, and
-   * codex's "there is nothing to install, the user's own binary is the
-   * dependency" is the absent case — still a first-class row (a hint, no fake
+   * "there is nothing to install, the user's own binary is the dependency" is
+   * the absent case — still a first-class row (a hint, no fake
    * button).
    *
    * Whether the named `executor` is one *this* host implements is a runtime

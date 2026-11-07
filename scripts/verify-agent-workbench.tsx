@@ -7,8 +7,7 @@
  *   W1  父关系/兄弟纯函数（agentTeam.ts）：parentAgentId 是唯一父事实、
  *       depth 1 证明主循环、depth>=2 无父=unknown（不造假树）；transcript
  *       的显式父覆盖 roster 事实；兄弟=同父可证，深度相同不构成兄弟。
- *   W2  领域事实链：Claude replay 的 subagent.start 带真实 parentAgentId
- *       （嵌套）/depth 1（主链）；生产投影折叠 parentAgentId 且无父刷新
+ *   W2  领域事实链：生产投影折叠 subagent.start 的 parentAgentId 且无父刷新
  *       不清已有父事实。
  *   W3  工作台 UI（AgentTranscriptScene）：宽屏右侧 metadata/工具/父关系
  *       面板；sibling 原地切换不混消息（换代理即换转录源，旧代理行不
@@ -88,35 +87,9 @@ console.log('--- W1: parent fact + neighbourhood math ---')
 }
 
 // ── W2: the facts through replay + the production fold ────────────────────
-console.log('--- W2: replay parent facts + projection fold ---')
+console.log('--- W2: projection fold of parent facts ---')
 {
-  const { replayClaudeTranscript } = await import('../src/backends/claude/replay.js')
   const { createProjectorHarness } = await import('./lib/projector-harness.js')
-  const at = (s: number): string => new Date(1_700_000_000_000 + s * 1000).toISOString()
-  const chain = [
-    { type: 'user', uuid: 'u1', message: { role: 'user', content: 'delegate two levels' }, timestamp: at(0) },
-    { type: 'assistant', uuid: 'a1', message: { id: 'm1', content: [{ type: 'tool_use', id: 'c-1', name: 'Agent', input: { description: 'outer dig', prompt: 'x' } }] }, timestamp: at(1) },
-  ]
-  const outer = [
-    { type: 'user', message: { role: 'user', content: 'outer prompt' }, timestamp: at(2), parent_agent_id: null },
-    { type: 'assistant', message: { id: 'm2', content: [{ type: 'tool_use', id: 'c-2', name: 'Agent', input: { description: 'inner dig', prompt: 'y' } }] }, timestamp: at(3), parent_agent_id: null },
-    { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'c-2', content: 'agentId: agent-b' }] }, timestamp: at(4), parent_agent_id: null },
-  ]
-  const inner = [
-    { type: 'user', message: { role: 'user', content: 'inner prompt' }, timestamp: at(5), parent_agent_id: 'agent-a' },
-    { type: 'assistant', message: { id: 'm3', content: [{ type: 'text', text: 'inner body works' }] }, timestamp: at(6), parent_agent_id: 'agent-a' },
-  ]
-  const replay = replayClaudeTranscript(chain as never, {
-    cwd: '/fixture/project',
-    subagents: new Map([
-      ['c-1', { agentId: 'agent-a', messages: outer }],
-      ['c-2', { agentId: 'agent-b', messages: inner, parentAgentId: 'agent-a' }],
-    ]) as never,
-  })
-  const starts = new Map(replay.events.filter(e => e.type === 'subagent.start').map(e => [(e as { agentId: string }).agentId, e as { depth?: number; parentAgentId?: string }]))
-  check('W2 replay：主链子代理 depth 1 且无伪父', starts.get('agent-a')?.depth === 1 && starts.get('agent-a')?.parentAgentId === undefined, JSON.stringify(starts.get('agent-a')))
-  check('W2 replay：嵌套子代理带真实 parentAgentId + depth 2', starts.get('agent-b')?.parentAgentId === 'agent-a' && starts.get('agent-b')?.depth === 2, JSON.stringify(starts.get('agent-b')))
-
   const harness = createProjectorHarness({ activity: true })
   harness.apply([{ type: 'subagent.start', agentId: 'fx-1', description: 'has parent', background: false, depth: 2, parentAgentId: 'fx-0', time: 1 } as never])
   const folded = (harness.state as unknown as { subagents: Array<{ agentId: string; parentAgentId?: string }> }).subagents.find(s => s.agentId === 'fx-1')

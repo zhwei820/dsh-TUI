@@ -49,7 +49,7 @@ import type { ChannelUi as Channel } from '../adapter/channel/ui-policy.js'
 import type { CredentialStatus, EffortOption, LlmModelInfo, LlmProviderInfo } from '../adapter/ports/channel-view.js'
 import type { BalanceResult } from '../adapter/ports/channel-catalog.js'
 import type { OAuthProviderStatus } from '../adapter/ports/channel-settings.js'
-import type { ProviderWizardOutcome } from '../dsh-adapter/providerWizard.js'
+import type { AccountSignInOutcome } from '../channel/account-sign-in.js'
 import type { TuiThemeHost } from '../dsh-adapter/themes.js'
 import type { TuiWorkspaceTarget } from '../workspaces.js'
 
@@ -63,10 +63,9 @@ type ConnState =
 /**
  * 第一步的三层：动作列表 → 选账号登录 → 选默认模型（内联模态层）。
  *
- * `adopt` 只在"订阅登录之后真的有新模型、且不止一个"时出现——一个模型
- * 不问（直接设为默认），一个都没有也不问；加 key 的启用与切换由 `/provider`
- * 向导自己问，这里只报结果。三分支的判定在 `components/onboardingProviderPlan`
- * 里，是纯函数。
+ * `adopt` 只在"账号登录之后真的有新模型、且不止一个"时出现——一个模型
+ * 不问（直接设为默认），一个都没有也不问。三分支的判定在
+ * `components/onboardingProviderPlan` 里，是纯函数。
  *
  * 这一层**只选默认**，不做多选：登录后该 provider 的模型因凭据门控目录已经
  * 全部可用，`/model` 与第三步读的也是全量目录，没有一处会保存"接入哪几个"。
@@ -74,7 +73,7 @@ type ConnState =
 type AccessPhase = 'actions' | 'signin' | 'adopt'
 
 /** 动作行的 id（渲染顺序由 `accessActionIds` 决定，缺接缝的行不出现）。 */
-type AccessActionId = 'signin' | 'add' | 'recheck' | 'next'
+type AccessActionId = 'signin' | 'recheck' | 'next'
 
 /** 选默认层的完整状态（取消即整块丢掉）。行 = 新增模型 + 末尾"保持当前模型"。 */
 interface AdoptState {
@@ -130,23 +129,6 @@ function hintKeyFor(step: OnboardingStep, phase: AccessPhase, onLast: boolean): 
 }
 
 /**
- * `/provider` 配好、key 也真的在的路由 id。`DEEPSEEK_API_KEY` 那一条跳过：它由
- * 第一步自己的凭证行报。只问"有没有"（`describeCredential` 不含秘密），不读值。
- */
-async function configuredKeyRoutes(channel: Channel): Promise<readonly string[]> {
-  let configured: readonly { readonly route: string; readonly ref: string }[]
-  try {
-    configured = channel.providerSetup?.()?.listConfiguredProviders() ?? []
-  } catch {
-    return []
-  }
-  const candidates = configured.filter(row => row.ref !== '' && row.ref !== 'DEEPSEEK_API_KEY')
-  const present = await Promise.all(candidates.map(row =>
-    channel.describeCredential(row.ref).then(status => status?.configured === true).catch(() => false)))
-  return candidates.filter((_, index) => present[index]).map(row => row.route)
-}
-
-/**
  * Onboarding —— 首次运行的引导向导（`~/.dsh-tui/onboarding.json` 走一次性记账）。
  *
  * 身为一个屏幕，它跟 `SessionSupervisor` 同规矩：所有 hook 先跑完，再由
@@ -160,12 +142,10 @@ async function configuredKeyRoutes(channel: Channel): Promise<readonly string[]>
  * **凭证永远只报"有没有"，不报值**：`describeCredential` 回的是不含秘密的
  * 元数据，界面上也照它的原样画。
  *
- * 第一步（账号与模型接入）会把**动作**交给 Chat 执行：订阅登录与 `/provider`
- * 的 key 流程都要用共享问答面板（设备码、授权 URL、密钥输入），而那套面板
- * 归 Chat 的 `questionStore`。面板挂起时本屏会被卸载、回答后重挂，所以进度
+ * 第一步（账号与模型接入）会把**动作**交给 Chat 执行：DeepSeek 账号登录要用
+ * 共享问答面板（授权 URL），而那套面板归 Chat 的 `questionStore`。面板挂起时本屏会被卸载、回答后重挂，所以进度
  * 落在 `src/onboardingDraft.ts`（模块级，不是 React state）——挂载时读回，
- * 动作回来时按"动作前的目录基线"做差分：订阅登录按 0/1/N 决定是否问默认模型，
- * 加 key 只报结果（向导已经问过）。
+ * 动作回来时按"动作前的目录基线"做差分：账号登录按 0/1/N 决定是否问默认模型。
  */
 export function Onboarding({
   channel,
@@ -174,7 +154,6 @@ export function Onboarding({
   onRunCommand,
   onApplyLang,
   onProviderSignIn,
-  onProviderAddProvider,
   initialStep,
   externalNotice,
 }: {
@@ -191,16 +170,10 @@ export function Onboarding({
    */
   onApplyLang: (lang: Lang) => void
   /**
-   * 订阅账号登录（第一步的动作行）：Chat 用既有的 `runOAuthLogin` +
-   * `questionStore` 跑完整个 OAuth 流程，只把结果交回来。返回值口径与
-   * `/provider` 的 `ProviderWizardOutcome` 一致。
+   * 账号登录（第一步的动作行）：Chat 用 `runAccountSignIn` + `questionStore`
+   * 跑完整个登录流程，只把结果交回来。
    */
-  onProviderSignIn?: (provider: string) => Promise<ProviderWizardOutcome>
-  /**
-   * "添加模型提供方（API key）"：Chat 用既有的 `runProviderWizard` 跑
-   * `/provider` 的 add 流程（route / 端点 / key / 模型多选 / 回滚都在那里）。
-   */
-  onProviderAddProvider?: () => Promise<ProviderWizardOutcome>
+  onProviderSignIn?: (provider: string) => Promise<AccountSignInOutcome>
   /** 测试缝：直接落在某一步（探针不重复走前几步；不给则从 draft 恢复）。 */
   initialStep?: number | undefined
   /** 测试缝：外部注入一句提示（真机不传）。 */
@@ -250,52 +223,42 @@ export function Onboarding({
   const [oauth, setOauth] = React.useState<readonly OAuthProviderStatus[] | undefined>(undefined)
   /** 打开选账号层时重读登录状态的阀门（不连带重跑余额检查）。 */
   const [oauthNonce, setOauthNonce] = React.useState(0)
-  /**
-   * 用 `/provider` 配好、key 也在的路由（不含 `DEEPSEEK_API_KEY` 那一条）。
-   * 第一步的余额检查只认 DeepSeek 官方 key：有了这些路由，缺 DeepSeek key
-   * 就不再是"没有可用的凭证"。
-   */
-  const [keyRoutes, setKeyRoutes] = React.useState<readonly string[]>([])
   const [accessPhase, setAccessPhase] = React.useState<AccessPhase>('actions')
   const [signinIndex, setSigninIndex] = React.useState(0)
   const [adopt, setAdopt] = React.useState<AdoptState | undefined>(undefined)
   /**
    * 有一单接入动作在跑（draft 里有 `pending`）。问答面板会在两次提问之间关掉、
-   * 本屏重挂回动作列表；这时登录 / 加 key 两行再发起一单，会和在跑的那一单
+   * 本屏重挂回动作列表；这时登录行再发起一单，会和在跑的那一单
    * 并发提问、并发写盘，还会顶掉它的 `pending`，让它的结果无处结算。所以在跑
-   * 期间这两行不接 Enter / 点击，并说一句"配置进行中"。
+   * 期间这一行不接 Enter / 点击，并说一句"配置进行中"。
    */
   const [inFlight, setInFlight] = React.useState(() => readOnboardingDraft()?.pending !== undefined)
   /** 目录刷新阀门：接入成功后让第三步重读模型/提供方。 */
   const [catalogNonce, setCatalogNonce] = React.useState(0)
   /**
-   * 第一步的动作清单在挂载后**会长出来**（`oauthProviderStatuses` / `providerSetup`
-   * 是异步/懒解析的）：前几帧可能只有"重新检查 / 跳过"，之后"登录订阅账号 / 添加
-   * 模型提供方"插到最前面。焦点因此按**动作 id**记，不按下标——否则用户的焦点
+   * 第一步的动作清单在挂载后**会长出来**（`oauthProviderStatuses` / `oauthSetup`
+   * 是异步/懒解析的）：前几帧可能只有"重新检查 / 跳过"，之后"登录账号"插到
+   * 最前面。焦点因此按**动作 id**记，不按下标——否则用户的焦点
    * 会在清单变长的瞬间从"重新检查"静默变成"登录"，一次回车就点错东西。
    */
   // 每次渲染现读：channel 对象本身不换，按它 memo 会把"挂载时还没解析出来"的
   // 结果冻结在整个引导期间。
-  const setupHost = channel.providerSetup?.()
-  // 登录行的可见性与执行走**同一个**接缝：Chat 的 `onboardingSignIn` 取的是
-  // `providerSetup()?.oauth`，而 `oauthProviderStatuses()` 只要求 dsh-auth——
-  // 只看后者，"有 dsh-auth、没有 /provider 宿主服务"的组合会画出一行点了就报未挂载的死入口。
-  const oauthMounted = setupHost?.oauth !== undefined
+  // 登录行的可见性与执行走**同一个**接缝：Chat 的 `onboardingSignIn` 取的也是
+  // `oauthSetup()`。
+  const oauthMounted = channel.oauthSetup?.() !== undefined
   const canSignIn = onProviderSignIn !== undefined && oauthMounted && (oauth?.length ?? 0) > 0
-  const canConfigure = onProviderAddProvider !== undefined && setupHost !== undefined
   const accessActionIds = React.useMemo<readonly AccessActionId[]>(() => [
     ...(canSignIn ? ['signin' as const] : []),
-    ...(canConfigure ? ['add' as const] : []),
     'recheck',
     'next',
-  ], [canConfigure, canSignIn])
+  ], [canSignIn])
   const [accessFocusId, setAccessFocusId] = React.useState<AccessActionId | undefined>(() => {
     // 焦点按**动作 id**恢复，不按下标：清单是异步长出来的（先有"重新检查/跳过"，
-    // 几帧后才长出"登录/加 key"），下标在清单变长后会指向另一个动作。
+    // 几帧后才长出"登录"），下标在清单变长后会指向另一个动作。
     // id 暂时不在清单里也没关系——`accessIndex` 会先落在第 0 行，等清单长出来
     // 再回到同一个动作上。
     const seed = restored?.focusId
-    return seed === 'signin' || seed === 'add' || seed === 'recheck' || seed === 'next'
+    return seed === 'signin' || seed === 'recheck' || seed === 'next'
       ? seed
       : undefined
   })
@@ -303,14 +266,12 @@ export function Onboarding({
     ? 0
     : Math.max(0, accessActionIds.indexOf(accessFocusId))
   /**
-   * DeepSeek 官方 key 之外已经能用的接入：已登录的订阅账号 + 配好 key 的路由。
+   * DeepSeek 官方 key 之外已经能用的接入：已登录的账号（DeepSeek 账号路由）。
    * 第一步的凭证行与余额检查都只针对 DeepSeek 官方 API，有这些接入时它们只是
    * 一条中性说明，不是失败。
    */
-  const otherAccess = React.useMemo(() => [
-    ...(oauth ?? []).filter(row => row.signedIn).map(row => row.provider),
-    ...keyRoutes,
-  ].filter((id, index, all) => all.indexOf(id) === index), [keyRoutes, oauth])
+  const otherAccess = React.useMemo(() =>
+    (oauth ?? []).filter(row => row.signedIn).map(row => row.provider), [oauth])
   /**
    * 已经有能用的东西了吗（DeepSeek 凭证已配置，或有别的接入）？有就不再往屏幕上
    * 堆"手工设置"的兜底文案——那是"这台机器现在什么都没有"时才需要的出路。
@@ -324,13 +285,11 @@ export function Onboarding({
       const status = await channel.describeCredential('DEEPSEEK_API_KEY').catch(() => undefined)
       if (!alive) return
       setCredential(status)
-      const [models, balance, routes] = await Promise.all([
+      const [models, balance] = await Promise.all([
         channel.listModels().catch(() => [] as readonly LlmModelInfo[]),
         channel.balanceInfo().catch(() => ({ ok: false, reason: 'network' }) as BalanceResult),
-        configuredKeyRoutes(channel),
       ])
       if (!alive) return
-      setKeyRoutes(routes)
       // 连通性的判定口径：余额接口是唯一一次真的打服务端的调用，所以以它
       // 为准；模型列表只用来给成功态添一个数字（某些 provider 会走缓存）。
       setConn(balance.ok
@@ -454,7 +413,7 @@ export function Onboarding({
     onRunCommand(card.command)
   }, [onRunCommand])
 
-  // ── 第一步的接入动作（订阅登录 / API key / 接入模型）──────────────────
+  // ── 第一步的接入动作（账号登录 / 接入模型）──────────────────────────
   /** provider 显示名：注册表 → 登录状态 → 原始 id。 */
   const providerLabel = React.useCallback((id: string | undefined): string => {
     if (id === undefined) return ''
@@ -478,11 +437,6 @@ export function Onboarding({
               ? t('onboarding-access-action-busy-desc')
               : t('onboarding-access-action-signin-desc', { signed: signedIn, total }),
           }
-        case 'add':
-          return {
-            label: t('onboarding-access-action-add'),
-            desc: inFlight ? t('onboarding-access-action-busy-desc') : t('onboarding-access-action-add-desc'),
-          }
         case 'recheck':
           return {
             label: t('onboarding-access-action-recheck'),
@@ -499,7 +453,7 @@ export function Onboarding({
   }, [accessActionIds, inFlight, oauth])
 
   /**
-   * 动作结束之后的唯一收口：读回动作前的目录基线 → 差分 → 0/1/N 决策（加 key 只报结果）。
+   * 动作结束之后的唯一收口：读回动作前的目录基线 → 差分 → 0/1/N 决策。
    * 前提是 draft 里已经有 `completed`（动作真的跑完了），并且本实例还在挂；
    * `pending`/`completed` 同时清空，保证重挂、订阅回调、Promise 回调三条路
    * 径加起来只结算一次。
@@ -556,19 +510,6 @@ export function Onboarding({
       writeOnboardingDraft({ baseline: [], notice: setNotice(text, 'warning') })
       return
     }
-    if (completion.kind === 'add-provider') {
-      // 加 key 跑的是 `/provider` 向导：启用哪些模型（模型多选）、要不要切过去
-      // （provider-q-switch），向导自己已经问过并落了盘。这里只报结果——再走
-      // auto / 接入层，会推翻用户在向导里选的「保持当前模型」，还把同一批模型再问一遍。
-      const live = models.find(model => model.provider === channel.provider && model.id === channel.model)
-      const text = t('onboarding-access-added-provider', {
-        provider: label,
-        n: plan.added.length,
-        model: live?.name ?? channel.model,
-      })
-      writeOnboardingDraft({ baseline: [], notice: setNotice(text) })
-      return
-    }
     if (plan.decision === 'auto') {
       const pick = plan.added[0]!
       const ok = await channel.switchModel(pick.provider, pick.id).catch(() => false)
@@ -595,7 +536,7 @@ export function Onboarding({
    */
   const runProviderAction = React.useCallback(async (
     intent: Omit<OnboardingPendingAction, 'id'>,
-    start: () => Promise<ProviderWizardOutcome>,
+    start: () => Promise<AccountSignInOutcome>,
     /** 发起这一单的动作 id：重挂后按它把焦点放回同一行（不是按当时的行号）。 */
     focusId: AccessActionId,
   ): Promise<void> => {
@@ -625,7 +566,7 @@ export function Onboarding({
     // 流程的反馈（失败原因、登出/删除的结果）只走通知条：记下开跑前最后一条的
     // id，结束后取它之后最新的那一条带进 completion。
     const noticeMark = channel.notifications.at(-1)?.id
-    const outcome = await start().catch(() => 'failed' as ProviderWizardOutcome)
+    const outcome = await start().catch(() => 'failed' as AccountSignInOutcome)
     const status = outcome === 'cancelled' || outcome === 'failed' || outcome === 'added' ? outcome : 'changed'
     const latest = channel.notifications.at(-1)
     const notice = latest !== undefined && (noticeMark === undefined || latest.id > noticeMark) ? latest.text : undefined
@@ -651,17 +592,10 @@ export function Onboarding({
     void runProviderAction({ kind: 'sign-in', provider }, () => onProviderSignIn(provider), 'signin')
   }, [onProviderSignIn, runProviderAction])
 
-  const startAddProvider = React.useCallback((): void => {
-    if (onProviderAddProvider === undefined) return
-    void runProviderAction({ kind: 'add-provider' }, onProviderAddProvider, 'add')
-  }, [onProviderAddProvider, runProviderAction])
-
-  /** 动作行的落点（键盘 Enter 与鼠标点击共用）。在跑期间登录 / 加 key 不接。 */
+  /** 动作行的落点（键盘 Enter 与鼠标点击共用）。在跑期间登录不接。 */
   const runAccessAction = (id: AccessActionId): void => {
     if (id === 'signin') {
       if (!inFlight) openSignIn()
-    } else if (id === 'add') {
-      if (!inFlight) startAddProvider()
     } else if (id === 'recheck') setCheckNonce(nonce => nonce + 1)
     else advance()
   }
@@ -1015,14 +949,11 @@ export function Onboarding({
                 <Text dimColor wrap="truncate-end">{'    ' + row.desc}</Text>
               </Box>
             ))}
-            {(!canSignIn || !canConfigure) && !accessReady && (
+            {!accessReady && (
               <Box flexDirection="column" marginTop={1}>
                 <Text dimColor wrap="truncate-end">{'  ' + t('onboarding-access-fallback')}</Text>
                 {!canSignIn && (
                   <Text dimColor wrap="truncate-end">{'    · ' + t('onboarding-access-fallback-signin')}</Text>
-                )}
-                {!canConfigure && (
-                  <Text dimColor wrap="truncate-end">{'    · ' + t('onboarding-access-fallback-provider')}</Text>
                 )}
                 <Text dimColor wrap="truncate-end">{'  ' + t('onboarding-access-fallback-env')}</Text>
                 <Text>{'    ' + t('onboarding-access-fallback-powershell')}</Text>
@@ -1242,9 +1173,9 @@ function PaneTab({
 }
 
 /**
- * 第一步的状态块：凭证 + 订阅登录 + 真连通性检查。
+ * 第一步的状态块：凭证 + 账号登录 + 真连通性检查。
  *
- * 这里**只读**——动作在下面的动作行里，由 Chat 交给既有的登录/`/provider`
+ * 这里**只读**——动作在下面的动作行里，由 Chat 交给既有的账号登录
  * 流程执行。凭证只报"有没有"（`describeCredential` 不含秘密）；登录行只画
  * 掩码状态（provider + 已登录/过期/未登录）。
  *
@@ -1323,7 +1254,7 @@ function AccessStatus({
 }
 
 /**
- * 选默认层：订阅登录之后新出现的模型里，哪一个当默认。
+ * 选默认层：账号登录之后新出现的模型里，哪一个当默认。
  *
  * 只有 N>1 才会走到这里（0 不问、1 直接落默认）。这些模型登录后已经全部可用
  * （凭据门控目录），所以这一层是**单选**，不问"接入哪些"——没有任何地方会保存

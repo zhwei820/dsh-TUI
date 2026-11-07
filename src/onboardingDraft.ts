@@ -41,8 +41,8 @@ import type { ProviderModelRef } from './components/onboardingProviderPlan.js'
 export interface OnboardingPendingAction {
   /** Monotonic id allocated when the action starts (see {@link nextOnboardingActionId}). */
   readonly id: number
-  readonly kind: 'sign-in' | 'add-provider'
-  /** Provider id for `sign-in`; absent for the add-provider wizard. */
+  readonly kind: 'sign-in'
+  /** Provider id of the sign-in. */
   readonly provider?: string | undefined
 }
 

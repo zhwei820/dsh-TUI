@@ -30,12 +30,10 @@ const [
   { render, AlternateScreen },
   { SdkInstallWizard },
   { t, setLang },
-  { claudeText },
 ] = await Promise.all([
   import('../src/ui.js'),
   import('../src/components/SdkInstallWizard.js'),
   import('../src/i18n.js'),
-  import('../src/backends/claude/text.js'),
 ])
 
 let failures = 0
@@ -71,17 +69,17 @@ class FakeStdin extends PassThrough {
 }
 
 const DIR = 'C:\\Users\\test\\.dsh\\profiles\\dsh-tui'
-const SPECIFIER = '@anthropic-ai/claude-agent-sdk@0.3.287'
+const SPECIFIER = '@verify/example-agent-sdk@0.3.287'
 const VERSION = '0.3.287'
 const TAIL = ['Progress: resolved 9, reused 77', 'ERR_PNPM_LINKING_FAILED cannot overwrite directory']
 
-/** 检测载荷形状：安装指引 + 可选的本机 CLI 注记；生产者另由 detect 回归覆盖。 */
-const GUIDANCE = claudeText('claude-sdk-missing', { version: VERSION })
+/** 检测载荷形状：安装指引 + 可选的本机 CLI 注记（文案由后端自带，这里用固定样例）。 */
+const GUIDANCE = `Example agent SDK not installed (validated ${VERSION}); install it from the kernel picker`
 const CLI_VERSION = '2.0.30'
-const CLI_PATH = 'C:\\Users\\test\\.local\\bin\\claude.exe'
+const CLI_PATH = 'C:\\Users\\test\\.local\\bin\\example-agent.exe'
 /** 版本与路径、仅路径两种注记。 */
-const FOUND_NOTE = claudeText('claude-sdk-missing-found-cli', { version: CLI_VERSION, path: CLI_PATH })
-const FOUND_NOTE_PATH_ONLY = claudeText('claude-sdk-missing-found-cli-path', { path: CLI_PATH })
+const FOUND_NOTE = `Found a local example-agent CLI v${CLI_VERSION} at ${CLI_PATH}`
+const FOUND_NOTE_PATH_ONLY = `Found a local example-agent CLI at ${CLI_PATH}`
 
 /** 挂一份向导（真 render + 假 TTY），返回读屏与收尾。 */
 async function mountWizard(phase: SdkInstallPhase, columns = 80, rows = 24) {
@@ -189,7 +187,7 @@ async function run(): Promise<void> {
       setLang('zh')
     }
   }
-  // A non-Claude recipe must show its actual package in both languages, and
+  // Any recipe must show its actual package in both languages, and
   // neither confirmation nor completion may claim a different backend is ready.
   for (const lang of ['zh', 'en'] as const) {
     setLang(lang)

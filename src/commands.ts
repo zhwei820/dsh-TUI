@@ -106,7 +106,6 @@ export const LOCAL_COMMANDS: LocalCommand[] = [
   { name: 'tokens', description: 'Show session token usage' },
   // Account / policy
   { name: 'balance', description: 'Show DeepSeek account balance' },
-  { name: 'provider', description: 'Add, edit or delete an LLM provider (catalog or custom API endpoint)' },
   { name: 'login', description: 'Show API credential status' },
   { name: 'logout', description: 'Clear the API credential' },
   { name: 'add-dir', description: 'Show the filesystem policy scope' },
@@ -126,10 +125,8 @@ export const LOCAL_COMMANDS: LocalCommand[] = [
   // Help / exit
   { name: 'help', description: 'Show shortcuts and commands' },
   { name: 'tips', description: 'Show usage tips and shortcuts' },
-  { name: 'kernel', description: 'Choose the kernel dsh-tui runs on (DSH, Codex or Claude)' },
+  { name: 'kernel', description: 'Choose the kernel dsh-tui runs on' },
   { name: 'dsh', description: 'Switch to the DSH kernel (restarts into a new session)' },
-  { name: 'codex', description: 'Switch to the Codex kernel (restarts into a new session)' },
-  { name: 'claude', description: 'Switch to the Claude kernel (restarts into a new session)' },
   { name: 'restart', description: 'Restart dsh-tui and resume this session' },
   { name: 'exit', description: 'Exit dsh-tui' },
   { name: 'quit', description: 'Exit dsh-tui', tag: 'alias of /exit' },
@@ -150,22 +147,6 @@ export const BACKEND_PERMISSION_COMMAND: LocalCommand = {
   name: 'permission',
   description: 'Show or switch the permission mode',
   descriptionKey: 'cmd-desc-permission',
-}
-
-/**
- * `/channel` as a channels-capable backend serves it (the Claude backend's
- * relay channel profiles, backends/claude/channels.ts). Like /permission,
- * deliberately NOT a LOCAL_COMMANDS entry: the command must appear only on a
- * backend that declares the typed `channels` capability — a DSH session
- * (every built-in) and other backends never list it, so typing `/channel`
- * there keeps today's not-a-command behavior. The capability snapshot
- * appends the name (channel/capabilities.ts) and session-controls rides it
- * here.
- */
-export const BACKEND_CHANNEL_COMMAND: LocalCommand = {
-  name: 'channel',
-  description: 'Manage relay channel profiles (switch, import, view mappings)',
-  descriptionKey: 'cmd-desc-channel',
 }
 
 /**
@@ -203,7 +184,7 @@ const LOCAL_COMMAND_REQUIREMENTS: ReadonlyMap<string, LocalCommandRequirement> =
   ['connect', 'any'], ['update', 'any'], ['export', 'any'], ['panel', 'any'],
   // The composition root serves these by respawning the process, so every
   // backend offers them, including the direct kernel shortcuts.
-  ['kernel', 'any'], ['dsh', 'any'], ['codex', 'any'], ['claude', 'any'], ['restart', 'any'],
+  ['kernel', 'any'], ['dsh', 'any'], ['restart', 'any'],
   ['compact', 'compact'], ['resume', 'resume'], ['home', 'resume'], ['agentview', 'resume'],
   ['bg', 'resume'], ['background', 'resume'], ['rewind', 'rewind'], ['fork', 'fork'],
   ['model', 'models'], ['effort', 'effort'], ['agents', 'subagents'], ['jobs', 'tasks'], ['mcp', 'mcp'],
@@ -292,7 +273,7 @@ const BOOT_SAFE_COMMAND_NAMES: ReadonlySet<string> = new Set([
   'exit', 'quit', 'q',
   'help', 'tips',
   'theme', 'lang', 'vim',
-  'kernel', 'dsh', 'codex', 'claude',
+  'kernel', 'dsh',
   'deepseek',
   // Opening a session by hand: the retry after a failed startup open. Run
   // while the open is still going, the binding drops the startup candidate.
@@ -349,14 +330,10 @@ export const WORKING_GATE_NOTICES = {
   // but its ROW is not gray-zoned — see GRAY_ZONE_EXEMPT_COMMANDS.
   resume: 'resume-while-working',
   rewind: 'rewind-while-working',
-  // Both backend pickers open while a turn runs, but every mutating row inside
-  // them is refused (`/kernel` confirms a switch; `/channel` imports, adds,
-  // manages or switches to a profile that needs a process restart).
+  // The kernel picker opens while a turn runs, but confirming a switch inside
+  // it is refused.
   kernel: 'kernel-switch-while-working',
   dsh: 'kernel-switch-while-working',
-  codex: 'kernel-switch-while-working',
-  claude: 'kernel-switch-while-working',
-  channel: 'channel-switch-while-working',
 } as const
 
 /**
@@ -370,7 +347,7 @@ export const WORKING_GATE_NOTICES = {
  * switch interrupts the running turn — the same reason `/tree` is in the normal
  * region. Its key stays in {@link WORKING_GATE_NOTICES} because the core's own
  * session-switch transaction still refuses mid-turn on a backend that gets no
- * DSH extension (Claude, `core/session-switch.ts`), and `resumeFailureText`
+ * DSH extension (`core/session-switch.ts`), and `resumeFailureText`
  * reports that reason with it.
  */
 export const GRAY_ZONE_EXEMPT_COMMANDS: readonly string[] = ['resume']
@@ -420,7 +397,7 @@ export type WorkingHold = 'gated' | 'conversation' | 'inject'
 
 /**
  * Classify a command by its impact on the running conversation.
- * @param name Bare command name or a completion path (`model deepseek-chat`);
+ * @param name Bare command name or a completion path (`model deepseek-flash`);
  *   only the first token is classified, so every child of a gated command
  *   (`/model <id>`, `/workspace rename <t>`) inherits the parent's hold.
  * @param skill Whether the entry is a user-invocable skill.

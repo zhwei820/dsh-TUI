@@ -464,7 +464,7 @@ export function Launchpad({
   whale: boolean
   whaleIdle: boolean
   whaleGirl: boolean
-  /** 品牌档（当前后端 → `resolveBrand`；见 `branding.ts`）。 */
+  /** 品牌档（设置项 → `resolveBrand`；见 `branding.ts`）。 */
   brand?: Brand
   /**
    * 测试缝：`companion.skin` 的固定值（`deepy` / `whaleGirl`）；undefined 按

@@ -35,7 +35,7 @@ import type { NegotiationDecision } from '../adapter/standard/types.js'
 
 /** The host facts the verdict depends on; passed in, so the function is pure. */
 export interface BackendAdmissionHost {
-  /** Ids this host owns (`BUILTIN_BACKEND_IDS`); a contribution may not wear one. */
+  /** Ids this host owns (`RESERVED_BACKEND_IDS`); a contribution may not wear one. */
   readonly reservedIds: ReadonlySet<string>
   /** Names this host's session model implements (`BACKEND_CAPABILITY_NAMES`). */
   readonly capabilityNames: ReadonlySet<string>

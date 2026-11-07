@@ -62,8 +62,7 @@ const EFFORT_TIER_ORDER = ['off', 'low', 'medium', 'high', 'xhigh', 'max'] as co
  * compatibility offer when a model catalog row declares reasoning support
  * without listing its own tiers (pi-ai 0.87.x zai rows for glm-5.3* ship only
  * `reasoning: true`): the kernel accepts the standard effort ids and is the
- * set-time authority, so the ladder is an honest offer, not a guess. Mirrors
- * the Claude backend's EFFORT_FALLBACK_TIERS (backends/claude/controls.ts). */
+ * set-time authority, so the ladder is an honest offer, not a guess. */
 export const STANDARD_EFFORT_LADDER: readonly string[] = ['low', 'medium', 'high', 'xhigh', 'max']
 
 /**

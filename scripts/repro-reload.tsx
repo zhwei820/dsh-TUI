@@ -172,7 +172,7 @@ const channel = {
   settingsSections: () => [],
   subscribeSettingsSections: () => () => {},
   describeCredential: () => Promise.resolve(undefined),
-  providerSetup: () => undefined,
+  oauthSetup: () => undefined,
   listWorkspaces: () => Promise.resolve([]),
   resolveWorkspace: () => Promise.resolve(undefined),
   switchWorkspace: () => Promise.resolve(false),

@@ -44,11 +44,6 @@ export function channelCapabilities(input: {
     sideQuery: input.dsh || caps.sideQuery !== undefined,
     rename: input.dsh || caps.rename !== undefined,
     color: input.dsh || caps.color !== undefined,
-    // The only flag without the dsh shortcut: /channel manages the Claude
-    // backend's own channels.json, which a DSH session does not have, so the
-    // command must not appear there even though dsh sessions list every
-    // built-in.
-    channels: caps.channels !== undefined,
     // DSH serves /goal through its registry row; another backend through
     // the typed `goals` capability (BACKEND_GOAL_COMMAND below).
     goals: input.dsh || caps.goals !== undefined,
@@ -65,10 +60,6 @@ export function channelCapabilities(input: {
       // channel's backendModes host. DSH keeps its registry-row
       // command (dsh sessions take the every-builtin branch above).
       ...(input.dsh || caps.modes === undefined ? [] : ['permission']),
-      // The typed `channels` capability rides the same way: /channel is
-      // the backend's own profile manager (BACKEND_CHANNEL_COMMAND), never
-      // offered on a session that does not declare it (DSH included).
-      ...(input.dsh || caps.channels === undefined ? [] : ['channel']),
       // The typed `goals` capability serves /goal the same way
       // (BACKEND_GOAL_COMMAND); DSH keeps its registry-row command.
       ...(input.dsh || caps.goals === undefined ? [] : ['goal']),

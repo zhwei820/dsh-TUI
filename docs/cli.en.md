@@ -76,7 +76,7 @@ bin/dsh-tui.js (lazy dispatch only)
 
 The global launcher prefers the updated profile's CLI, then its own shipped CLI. Missing files in a partial installation fail without installing anything. Plain help/version/safe remain independent. npm and installer distributions ship ready-to-run ESM, without tsx or TUI compilation output. Standalone invokes the same extracted CLI; automation subprocesses need system Node `^22.19 || >=24` (override `DSH_TUI_CLI_NODE`), rather than recursively treating the pkg binary as Node.
 
-Not implemented: arbitrary TUI-preset resume, settings/credential writes, noninteractive OAuth, MCP reconnect, persistent background daemon, Claude/Codex automation adapters, or Claude cloud/Remote Control. Slash commands do not automatically become Shell commands. These are outside the current phase-two checklist and remain future scope under the parent issue.
+Not implemented: arbitrary TUI-preset resume, settings/credential writes, noninteractive OAuth, MCP reconnect, persistent background daemon, or Claude cloud/Remote Control. Slash commands do not automatically become Shell commands. These are outside the current phase-two checklist and remain future scope under the parent issue.
 
 ## Programmatic examples
 

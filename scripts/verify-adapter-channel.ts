@@ -140,7 +140,7 @@ function makeFakeChannel() {
     listSkills: async () => [],
     describeCredential: async () => undefined,
     balanceInfo: async () => ({ ok: true, balance: 0 }),
-    providerSetup: () => undefined,
+    oauthSetup: () => undefined,
     oauthProviderStatuses: async () => undefined,
     settingsHost: () => undefined,
     settingsSections: () => [],

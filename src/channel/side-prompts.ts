@@ -3,8 +3,8 @@
  * `/recap`): what one tool-less, single-answer auxiliary call is asked, and
  * how a recap answer is read back. Every backend's side call uses the same
  * words: DSH sends them over its own derived history (`dsh-adapter/
- * sideQuestion.ts`, `recap.ts`), Claude over a throwaway fork of the
- * conversation (`backends/claude/side-query.ts`).
+ * sideQuestion.ts`, `recap.ts`); another backend serves them through its
+ * typed `sideQuery` capability.
  *
  * Pure text: no I/O, no vendor types.
  */

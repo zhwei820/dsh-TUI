@@ -1,5 +1,12 @@
 # Accounts and models in first-run onboarding (Onboarding v2 design)
 
+> **Current status**: dsh-TUI now supports DeepSeek models only. The `/provider` wizard described
+> here (including the "add a model provider" action and model capability editing) and `dsh-auth`'s
+> third-party subscription sign-in (ChatGPT/Codex, Claude, Grok and other pi-ai routes) have been
+> removed. The guide's first step keeps only DeepSeek account sign-in (`runAccountSignIn`,
+> `src/channel/account-sign-in.ts`), check again and skip; the 0/1/N default-model decision
+> (`components/onboardingProviderPlan`) still works as described. The rest is kept as a design record.
+
 Related: #1646 (this design), the first wizard (#1255), the `/provider` wizard, `dsh-auth`
 subscription sign-in, `/settings` credential writes.
 

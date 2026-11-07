@@ -180,13 +180,11 @@ check('isPeakHour 周日北京 10:00 → 空闲', !isPeakHour(new Date('2026-08-
 // --- deepseekPricing：单价匹配 ---
 
 {
-  const flash = priceForModel('deepseek-v4-flash')
-  check('priceForModel 精确匹配 flash（#857 Flash 价）', flash !== undefined && flash.output[1] === 8.0
+  const flash = priceForModel('deepseek-flash')
+  check('priceForModel 精确匹配 flash（V4.1-Flash 价）', flash !== undefined && flash.output[1] === 8.0
     && flash.inputMiss[1] === 2.0 && flash.inputHit[1] === 0.04, JSON.stringify(flash))
-  const vision = priceForModel('deepseek-v4-flash-vision-exp')
-  check('priceForModel 最长前缀匹配 vision（flash 价）', vision !== undefined && vision.output[1] === 8.0
-    && vision.inputMiss[1] === 2.0, JSON.stringify(vision))
-  check('priceForModel v4-pro 已下线（未收录）', priceForModel('deepseek-v4-pro') === undefined)
+  check('priceForModel 旧模型 id 不再收录', priceForModel('deepseek-v4-flash') === undefined
+    && priceForModel('deepseek-v4-flash-vision-exp') === undefined && priceForModel('deepseek-v4-pro') === undefined)
   check('priceForModel 未知模型', priceForModel('gpt-4o') === undefined)
 }
 
@@ -200,42 +198,42 @@ const buckets = (peak: Partial<import('../src/deepseekPricing.js').CostTokenTota
 
 {
   // 高峰桶 1M 输入（未命中）→ 2.0 元（#857 Flash 高峰未命中价）
-  const cost = estimateSessionCostCny(buckets({ input: 1_000_000 }), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({ input: 1_000_000 }), 'deepseek-flash')
   check('估算 高峰桶 1M 输入未命中 = 2.0', cost !== undefined && Math.abs(cost - 2.0) < 1e-9, `cost=${cost}`)
 }
 {
   // 空闲桶 1M 输入（未命中）→ 1.0 元（#857 Flash 空闲未命中价）
-  const cost = estimateSessionCostCny(buckets({}, { input: 1_000_000 }), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({}, { input: 1_000_000 }), 'deepseek-flash')
   check('估算 空闲桶 1M 输入未命中 = 1.0', cost !== undefined && Math.abs(cost - 1.0) < 1e-9, `cost=${cost}`)
 }
 {
   // 跨时段会话：高峰 0.2M + 空闲 0.8M 输入 → 0.2×2.0 + 0.8×1.0 = 1.2
-  const cost = estimateSessionCostCny(buckets({ input: 200_000 }, { input: 800_000 }), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({ input: 200_000 }, { input: 800_000 }), 'deepseek-flash')
   check('估算 跨时段分桶各按对应单价 = 1.2', cost !== undefined && Math.abs(cost - 1.2) < 1e-9, `cost=${cost}`)
 }
 {
   // 两段输入各自计价：未命中输入 1M×2.0 + 命中输入 0.8M×0.04 = 2.032
   // （DSH TokenUsage 契约：inputTokens 只是未命中输入，cacheReadTokens 另计）
-  const cost = estimateSessionCostCny(buckets({ input: 1_000_000, cacheRead: 800_000 }), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({ input: 1_000_000, cacheRead: 800_000 }), 'deepseek-flash')
   check('估算 未命中输入与命中输入分别计价 = 2.032', cost !== undefined && Math.abs(cost - 2.032) < 1e-9, `cost=${cost}`)
 }
 {
-  // 输出计价：空闲桶 0.5M 输出 → 0.5×4.0 = 2.0（vision 同 flash 价）
-  const cost = estimateSessionCostCny(buckets({}, { output: 500_000 }), 'deepseek-v4-flash-vision-exp')
-  check('估算 输出按输出价（vision 前缀）= 2.0', cost !== undefined && Math.abs(cost - 2.0) < 1e-9, `cost=${cost}`)
+  // 输出计价：空闲桶 0.5M 输出 → 0.5×4.0 = 2.0
+  const cost = estimateSessionCostCny(buckets({}, { output: 500_000 }), 'deepseek-flash')
+  check('估算 输出按输出价 = 2.0', cost !== undefined && Math.abs(cost - 2.0) < 1e-9, `cost=${cost}`)
 }
 {
   // 拆分函数：高峰/空闲各自金额
-  const split = estimateSessionCostSplitCny(buckets({ input: 1_000_000 }, { input: 1_000_000 }), 'deepseek-v4-flash')
+  const split = estimateSessionCostSplitCny(buckets({ input: 1_000_000 }, { input: 1_000_000 }), 'deepseek-flash')
   check('估算拆分 peak=2.0 idle=1.0 total=3.0', split !== undefined && Math.abs(split.peak - 2.0) < 1e-9 && Math.abs(split.idle - 1.0) < 1e-9 && Math.abs(split.total - 3.0) < 1e-9, `split=${JSON.stringify(split)}`)
 }
 {
   // cacheRead ≫ input 是真实形态而非异常值：两段各自计价 = (100×2.0 + 10_000×0.04)/1e6 = 0.0006
-  const cost = estimateSessionCostCny(buckets({ input: 100, cacheRead: 10_000 }), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({ input: 100, cacheRead: 10_000 }), 'deepseek-flash')
   check('估算 cacheRead ≫ input 时分别计价 = 0.0006', cost !== undefined && Math.abs(cost - 0.0006) < 1e-9, `cost=${cost}`)
 }
 {
-  const cost = estimateSessionCostCny(buckets({}, {}), 'deepseek-v4-flash')
+  const cost = estimateSessionCostCny(buckets({}, {}), 'deepseek-flash')
   check('估算 零 token → undefined', cost === undefined, `cost=${cost}`)
 }
 {
@@ -248,7 +246,7 @@ const buckets = (peak: Partial<import('../src/deepseekPricing.js').CostTokenTota
 {
   // 主会话与子代理各自模型、各自峰谷/cache 分桶，金额按 scope 分侧求和。
   const estimate = estimateCostFromBucketsCny([
-    { provider: 'deepseek', model: 'deepseek-v4-flash', buckets: buckets({ input: 1_000_000 }), scope: 'main' },
+    { provider: 'deepseek', model: 'deepseek-flash', buckets: buckets({ input: 1_000_000 }), scope: 'main' },
     {
       provider: 'deepseek-official',
       model: 'deepseek-flash',
@@ -287,7 +285,7 @@ const buckets = (peak: Partial<import('../src/deepseekPricing.js').CostTokenTota
 }
 {
   check('多模型桶：全零条目 → undefined', estimateCostFromBucketsCny([
-    { provider: 'deepseek', model: 'deepseek-v4-flash', buckets: buckets({}, {}) },
+    { provider: 'deepseek', model: 'deepseek-flash', buckets: buckets({}, {}) },
   ]) === undefined)
 }
 
@@ -363,7 +361,7 @@ function makeChannel() {
     sessionColor: '',
     autoRecapOnOpen: false,
     agentId: 'probe',
-    model: 'deepseek-v4-flash',
+    model: 'deepseek-flash',
     provider: 'deepseek',
     tokens: {
       input: 1234,
@@ -376,7 +374,7 @@ function makeChannel() {
     // 多模型/子代理快照（#1089）：主会话与 tokens 同桶，子代理一条官方计价 +
     // 一条第三方未计价，hover 应给出拆分与 unpriced 标注。
     mainCost: {
-      'deepseek-v4-flash': {
+      'deepseek-flash': {
         peak: { input: 400, output: 2000, cacheRead: 300, cacheWrite: 40 },
         idle: { input: 834, output: 3678, cacheRead: 600, cacheWrite: 60 },
       },
@@ -384,7 +382,7 @@ function makeChannel() {
     subagentCost: [
       {
         provider: 'deepseek-official',
-        model: 'deepseek-v4-flash',
+        model: 'deepseek-flash',
         buckets: {
           peak: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0 },
           idle: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

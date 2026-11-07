@@ -29,7 +29,6 @@ import { createActivityProjection } from '../../../channel/activity.js'
 import { channelCapabilities } from '../../../channel/capabilities.js'
 import { anchoredRow, prependHistoryRows, projectHistorySlice, restoreFoldedRows } from '../../../channel/history-restore.js'
 import { t } from '../../../i18n.js'
-import { WORKING_GATE_NOTICES } from '../../../commands.js'
 import { markBoot } from '../../../utils/bootTrace.js'
 import { logForDebugging } from '../../../utils/debug.js'
 import { DEFAULT_SESSION_MODES } from '../../../sessionModes.js'
@@ -555,57 +554,6 @@ export function createCoreChannel(
           // login is not ours to erase; already-loaded tokens need a restart.
           return removed
         }, fence.current),
-      }
-    },
-    backendChannels: () => {
-      const fence = mcpFence()
-      const channels = fence.session.capabilities.channels
-      if (channels === undefined) return undefined
-      const activeId = channels.activeId()
-      // Keep the connection before this host's writes: save may replace the
-      // active row under the same id before activate decides whether to restart.
-      const fingerprint = channels.list().find(option => option.id === activeId)?.connection?.fingerprint
-      const restartFor = (option: import('../../../adapter/ports/channel-view.js').BackendChannelOption): boolean =>
-        fingerprint !== option.connection?.fingerprint
-      const write = <T>(fallback: T, run: () => T): T => {
-        if (!fence.current()) return fallback
-        try {
-          return run()
-        } catch (error) {
-          if (fence.current()) notify(t('capability-failed', { name: 'channel', err: error instanceof Error ? error.message : String(error) }), { color: 'error', timeoutMs: 8000 })
-          return fallback
-        }
-      }
-      return {
-        snapshot: () => ({ channels: channels.list(), activeId: channels.activeId() }),
-        activate: id => {
-          if (!fence.current()) return { ok: false, restart: false }
-          const option = channels.list().find(option => option.id === id)
-          if (option === undefined) { unavailable('channel'); return { ok: false, restart: false } }
-          const restart = restartFor(option)
-          if (restart && state.working) {
-            notify(t(WORKING_GATE_NOTICES.channel), { color: 'warning' })
-            return { ok: false, restart }
-          }
-          channels.setActive(id)
-          try {
-            controls.refreshModelDisplay(fence.session)
-            state.emit()
-          } catch (error) {
-            logForDebugging(`channel: model display refresh failed (${error instanceof Error ? error.message : String(error)})`)
-          }
-          return { ok: true, restart }
-        },
-        importFromSettings: () => write(undefined, () => {
-          const importingActiveId = channels.activeId()
-          const option = channels.importFromSettings()
-          return option === undefined ? undefined : { option, restart: option.id === importingActiveId && restartFor(option) }
-        }),
-        save: input => write(undefined, () => channels.save(input)),
-        remove: id => write(false, () => channels.remove(id)),
-        peekImport: () => {
-          try { return channels.peekSettingsImport() } catch { return undefined }
-        },
       }
     },
     backendModes: () => {

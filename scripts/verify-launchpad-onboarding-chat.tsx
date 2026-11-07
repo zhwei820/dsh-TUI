@@ -55,7 +55,7 @@ const [
   { isLandingLaunch },
   { noteBoundaryRecoveryRemount },
   { kernelEntriesOf },
-  { listBackends },
+  backendRegistry,
   { applySidePanelOpen, applySidePanelPanels, getSidePanelOpen, getSidePanelPanels },
   { TuiDialogStore },
 ] = await Promise.all([
@@ -72,6 +72,10 @@ const [
   import('../src/tuiDisplayPrefs.js'),
   import('../src/dsh-adapter/dialogs.js'),
 ])
+const { listBackends } = backendRegistry
+const { FIXTURE_SDK_ID, registerFixtureBackends } = await import('./lib/fixture-backends.js')
+// DSH 是唯一的仓内内核：插件形态的 fixture 行充当「另一个内核」。
+registerFixtureBackends(backendRegistry)
 
 /** 内核目录：与真机组合根同源（`kernelEntriesOf(listBackends())`）——选择器那一屏
  *  与右下角铭牌的名字都来自它，headless 宿主也得喂，否则内核行整块不存在。 */
@@ -436,50 +440,40 @@ const heroIdentical = (before: readonly string[], after: readonly string[]): boo
   }
 }
 
-// Real Codex login -> interaction -> QuestionStore -> Chat -> OSC status.
+// Auth-purpose question -> interaction -> QuestionStore -> Chat -> OSC status.
 {
-  const [{ createCodexAuthCapability }, { createCodexAuth }, { createCodexHub }, { createFakeAppServer }, { attachInteraction }, { PermissionStore }] = await Promise.all([
-    import('../src/backends/codex/auth/status.js'), import('../src/backends/codex/auth/external-tokens.js'),
-    import('../src/backends/codex/rpc/hub.js'), import('./lib/codex-fake-app-server.js'),
+  const [{ attachInteraction }, { PermissionStore }] = await Promise.all([
     import('../src/channel/interaction.js'), import('../src/channel/permissions.js'),
   ])
   const savedStatusFlag = process.env.DSH_TUI_PROGRAM_STATUS
   process.env.DSH_TUI_PROGRAM_STATUS = '1'
   const questions = new QuestionStore()
-  const fake = createFakeAppServer()
-  fake.on('account/login/start', () => ({ type: 'chatgptDeviceCode', loginId: 'status-device', verificationUrl: 'https://auth.openai.com/codex/device', userCode: 'ABCD-EFGH' }))
-  fake.on('account/login/cancel', () => ({}))
-  const hub = createCodexHub({ executable: '/fake/codex-status', args: ['app-server'], env: {}, cwd: '/TMP/project' }, { transportFactory: fake.transportFactory })
-  const auth = createCodexAuthCapability(createCodexAuth({ hub, cwd: '/TMP/project', config: {} }), batch => interaction.apply(batch))
   const interaction = attachInteraction({ permissions: new PermissionStore(), questions, debug: () => undefined }, {
-    sessionId: 'codex-status', capabilities: { questions: { respond: auth.respondQuestion, cancel: auth.cancelQuestion } },
+    sessionId: 'auth-status', capabilities: { questions: { respond: async () => undefined, cancel: async () => undefined } },
   })
   const chat = await mountChat({}, {}, { questionStore: questions })
   const report = () => [...chat.stdout.frames.join('').matchAll(/\x1b\]7501;([^\x1b]*)\x1b\\/gu)].at(-1)?.[1] ?? ''
-  let flow: Promise<void> | undefined
   try {
-    for (const [method, index] of [['API key', 1], ['device code', 0]] as const) {
-      flow = auth.capability.login()
+    for (const [method, question] of [
+      ['API key', { header: 'Sign in', question: 'API key?', options: [], secret: true, purpose: 'auth' as const }],
+      ['device code', { header: 'Sign in', question: 'Open the link and enter the code', options: [], link: 'https://example.invalid/device', purpose: 'auth' as const }],
+    ] as const) {
+      const requestId = `auth-${method}`
+      interaction.apply([{ type: 'question.request', request: { requestId, questions: [question as never] } }])
       await settle(() => questions.getSnapshot() !== null)
-      check(`OSC 7501 ${method} method selection is blocked/auth`,
+      check(`OSC 7501 ${method} auth question is blocked/auth`,
         await settled(() => report().startsWith('state=blocked:kind=auth:')), report())
-      questions.answerCurrent({ selected: [questions.getSnapshot()!.question.options![index]!.label] })
-      await settle(() => method === 'API key' ? questions.getSnapshot()?.question.secret === true : questions.getSnapshot()?.question.link !== undefined)
       check(`OSC 7501 ${method} purpose survives the real interaction/store path`,
         questions.getSnapshot()?.question.purpose === 'auth' && report().startsWith('state=blocked:kind=auth:'), report())
-      auth.withdrawAll()
-      await flow
+      interaction.apply([{ type: 'question.settled', requestId }])
       await settle(() => !report().startsWith('state=blocked:'))
     }
-    interaction.apply([{ type: 'question.request', request: { requestId: 'ordinary-question', questions: [{ header: 'Codex', question: 'Token?', options: [], secret: true }] } }])
+    interaction.apply([{ type: 'question.request', request: { requestId: 'ordinary-question', questions: [{ header: 'Backend', question: 'Token?', options: [], secret: true }] } }])
     check('OSC 7501 an unmarked secret question remains blocked/question',
       await settled(() => report().startsWith('state=blocked:kind=question:')), report())
   } finally {
-    auth.dispose()
     interaction.release()
-    await flow
     await chat.unmount()
-    await hub.close()
     if (savedStatusFlag === undefined) delete process.env.DSH_TUI_PROGRAM_STATUS
     else process.env.DSH_TUI_PROGRAM_STATUS = savedStatusFlag
   }
@@ -1389,9 +1383,9 @@ for (const fullscreen of [false, true]) {
 }
 // ── X. 内核选择器（用户实测：点「内核」直接落进对话页，没有选择空间）──────
 {
-  // 组合根注入的两条缝：onProbeKernels（Claude 探测）与 onSwitchBackend
+  // 组合根注入的两条缝：onProbeKernels（非 DSH 内核探测）与 onSwitchBackend
   // （写记忆 + 重启进入新内核）。这一段的断言就是用户报的那条链路：
-  // 点「内核」→ 选择器盖在启动页之上 → 选 Claude → 真的调了切换。
+  // 点「内核」→ 选择器盖在启动页之上 → 选 fixture-sdk → 真的调了切换。
   const switches: string[] = []
   let probes = 0
   const chat = await mountChat(
@@ -1399,29 +1393,29 @@ for (const fullscreen of [false, true]) {
     {},
     {
       onSwitchBackend: (id: string) => { switches.push(id) },
-      onProbeKernels: async () => { probes += 1; return { claude: { installed: true, auth: 'ok' as const, version: '2.1.284' } } },
+      onProbeKernels: async () => { probes += 1; return { [FIXTURE_SDK_ID]: { installed: true, auth: 'ok' as const, version: '2.1.284' } } },
     },
   )
   check('X0 夹具挂起来了（启动页上屏）', await settled(() => chat.screen().includes('说点什么')), chat.screen().slice(0, 200))
   // 右下角：可选内核行 + 当前内核的箭头标记（用户原话「有箭头或者高亮
   // 表明目前记忆中启动的内核」）。
   check('X1 右下角列出可选内核，当前内核带 ▸ 标记',
-    await settled(() => /▸\s*DSH/.test(chat.screen()) && chat.screen().includes('Claude ·')),
+    await settled(() => /▸\s*DSH/.test(chat.screen()) && chat.screen().includes('FixtureSDK ·')),
     chat.screen().slice(-320))
-  check('X2 Claude 行显示探测到的版本（claude-code v…）',
-    await settled(() => chat.screen().includes('claude-code v2.1.284')),
+  check('X2 fixture-sdk 行显示探测到的版本（fixture-sdk-cli v…）',
+    await settled(() => chat.screen().includes('fixture-sdk-cli v2.1.284')),
     'probes=' + probes + ' :: ' + chat.screen().slice(-320))
   check('X2b 探测只跑一次（组合根那条缝不会被反复打）', probes === 1, 'probes=' + probes)
   await clickChip(chat, '内核')
   check('X3 点「内核」：选择器盖在启动页之上（启动页仍在、没落进对话页）',
     await settled(() => chat.screen().includes('选择内核') && chat.screen().includes('说点什么')),
     chat.screen().slice(0, 360))
-  check('X4 选择器里两行内核都在（DSH 当前、Claude 可选）',
-    await settled(() => chat.screen().includes('DeepSeek Harness') && chat.screen().includes('Claude Agent')),
+  check('X4 选择器里两行内核都在（DSH 当前、fixture-sdk 可选）',
+    await settled(() => chat.screen().includes('DeepSeek Harness') && chat.screen().includes('Fixture SDK Agent')),
     chat.screen().slice(0, 360))
-  await chat.click('Claude Agent')
-  check('X5 选中 Claude：走组合根 onSwitchBackend(claude)（不是落进 DSH 对话页）',
-    await settled(() => switches.includes('claude')),
+  await chat.click('Fixture SDK Agent')
+  check('X5 选中 fixture-sdk：走组合根 onSwitchBackend(fixture-sdk)（不是落进 DSH 对话页）',
+    await settled(() => switches.includes(FIXTURE_SDK_ID)),
     JSON.stringify(switches))
   await chat.unmount()
 }
@@ -1431,7 +1425,7 @@ for (const fullscreen of [false, true]) {
   const chat = await mountChat({ launchpadOnBoot: true }, {}, {
     onSwitchBackend: (id: string) => { switches.push(id) },
     // 探测说「没装」：那一行必须画灰并写明原因。
-    onProbeKernels: async () => ({ claude: { installed: false } }),
+    onProbeKernels: async () => ({ [FIXTURE_SDK_ID]: { installed: false } }),
   })
   await settled(() => chat.screen().includes('说点什么'))
   await clickChip(chat, '内核')
@@ -1450,14 +1444,14 @@ for (const fullscreen of [false, true]) {
   check('X7 关闭后能再次打开选择器（同一个入口可重复用）',
     await settled(() => chat.screen().includes('选择内核'), { timeoutMs: 1200 }),
     chat.screen().slice(0, 360))
-  check('X7b 未安装的 Claude 行写明原因（未安装）',
+  check('X7b 未安装的 fixture-sdk 行写明原因（未安装）',
     await settled(() => chat.screen().includes('未安装')),
     chat.screen().slice(0, 360))
   // 键盘路径：↓ 移到不可选行 + Enter = 只提示原因，绝不切换（选择器留在屏上）。
   // 步数按 ID 从目录推导（P0 §1.2）：写死一次会在新增后端插到前面时落到别的行。
-  const downsToClaude = Math.max(0, KERNEL_ENTRIES.findIndex(entry => entry.id === 'claude'))
+  const downsToSdk = Math.max(0, KERNEL_ENTRIES.findIndex(entry => entry.id === FIXTURE_SDK_ID))
   const beforeKeys = chat.screen().slice(-300)
-  for (let step = 0; step < downsToClaude; step += 1) await chat.send('\x1b[B')
+  for (let step = 0; step < downsToSdk; step += 1) await chat.send('\x1b[B')
   const afterDown = chat.screen().slice(-300)
   await chat.send('\r')
   const afterEnter = chat.screen().slice(-300)
@@ -1478,90 +1472,39 @@ for (const fullscreen of [false, true]) {
   const switches: string[] = []
   const chat = await mountChat({ launchpadOnBoot: true }, { working: true }, {
     onSwitchBackend: (id: string) => { switches.push(id) },
-    onProbeKernels: async () => ({ claude: { installed: true, auth: 'ok' as const, version: '2.1.284' } }),
+    onProbeKernels: async () => ({ [FIXTURE_SDK_ID]: { installed: true, auth: 'ok' as const, version: '2.1.284' } }),
   })
   await settled(() => chat.screen().includes('说点什么'))
   await clickChip(chat, '内核')
-  await settled(() => chat.screen().includes('选择内核') && chat.screen().includes('claude-code v2.1.284'))
-  await chat.click('Claude Agent')
-  check('X9 回合运行中选 Claude：提示不能切换，不调用 onSwitchBackend',
+  await settled(() => chat.screen().includes('选择内核') && chat.screen().includes('fixture-sdk-cli v2.1.284'))
+  await chat.click('Fixture SDK Agent')
+  check('X9 回合运行中选 fixture-sdk：提示不能切换，不调用 onSwitchBackend',
     await settled(() => chat.notifications.includes('回合运行中，无法切换内核')) && switches.length === 0,
     JSON.stringify({ switches, notes: chat.notifications }))
   await chat.send('\x1b')
   await chat.unmount()
 }
-{
-  // /channel 打开后回合开始了（后台任务唤醒模型）：换到连接不同的渠道要以新
-  // 会话重启，会打断这个回合，所以只提示，不写渠道、不重启。
-  const sets: string[] = []
-  const restarts: string[] = []
-  const conn = (url: string) => ({ baseUrl: url, hasToken: true, envKeys: [], fingerprint: url })
-  const channels = [
-    { id: 'alpha', name: 'alpha', models: [], tiers: [], connection: conn('https://alpha.example') },
-    { id: 'beta', name: 'beta', models: [], tiers: [], connection: conn('https://beta.example') },
-  ]
-  const chat = await mountChat({}, {
-    commandList: [...LOCAL_COMMANDS, { name: 'channel', description: 'channel' }],
-    backendChannels: () => ({
-      snapshot: () => ({ channels, activeId: 'alpha' }),
-      activate: (id: string) => {
-        if (chat.channel.working) {
-          chat.channel.notify('回合运行中，无法切换或改动渠道')
-          return { ok: false, restart: true }
-        }
-        sets.push(id)
-        return { ok: true, restart: true }
-      },
-      importFromSettings: () => undefined,
-      save: () => undefined,
-      remove: () => false,
-      peekImport: () => undefined,
-    }),
-  }, { onRestartFreshSession: (notice: string) => { restarts.push(notice) } })
-  await chat.type('/channel')
-  await chat.send('\r')
-  check('X10 /channel 打开渠道选择器',
-    await settled(() => chat.screen().includes('渠道档案') && chat.screen().includes('beta')),
-    chat.screen().slice(-600))
-  ;(chat.channel as { working: boolean }).working = true
-  await chat.send('\x1b[B')
-  // 固定窗:墙钟 Chat 吞掉上一次 Enter 后 80ms 内的回车（防连按），等过这个窗口。
-  await new Promise(resolve => setTimeout(resolve, 120))
-  await chat.send('\r')
-  check('X10b 回合运行中切到连接不同的渠道：提示、不写渠道、不重启',
-    await settled(() => chat.notifications.includes('回合运行中，无法切换或改动渠道'))
-      && sets.length === 0 && restarts.length === 0,
-    JSON.stringify({ sets, restarts, notes: chat.notifications }))
-  ;(chat.channel as { working: boolean }).working = false
-  // 固定窗:墙钟 同上，越过回车防连按窗口。
-  await new Promise(resolve => setTimeout(resolve, 120))
-  await chat.send('\r')
-  check('X10c 空闲后同一操作：写渠道并以新会话重启',
-    await settled(() => sets.join() === 'beta' && restarts.length === 1),
-    JSON.stringify({ sets, restarts, notes: chat.notifications }))
-  await chat.unmount()
-}
 
-// ── Y. claude 内核的启动页编排（用户实测：kernel.json 记住 claude 后全新启动
-//      直接进聊天页、没有启动页。修复后 launchpadOnBoot 不再看后端——claude
+// ── Y. 非 DSH 内核的启动页编排（用户实测：kernel.json 记住非 DSH 内核后全新启动
+//      直接进聊天页、没有启动页。修复后 launchpadOnBoot 不再看后端——非 DSH
 //      启动同样先落启动页、Enter 才进聊天；带 resume 目标仍直达）─────────────
 {
-  // 桩口径与真机 claude 会话一致：backendCapabilities.backendId = 'claude'
+  // 桩口径与真机非 DSH 会话一致：backendCapabilities.backendId = 该后端 id
   // （Chat 的 kernelCurrentId 只认这一处——右下角内核区的 ▸ 与入口名都跟着它）。
-  const claudeCaps = { backendId: 'claude', backendLabel: 'Claude', commands: [] }
-  // 真机 claude 会话的 listPresets 是拒绝桩（action-readiness 的
+  const pluginCaps = { backendId: FIXTURE_SDK_ID, backendLabel: 'FixtureSDK', commands: [] }
+  // 真机非 DSH 会话的 listPresets 是拒绝桩（action-readiness 的
   // 「当前内核不支持：preset」提示）：记下调用，Y1b 断言启动页不去碰它。
   const presetReads: string[] = []
   const chat = await mountChat({ launchpadOnBoot: true }, {
-    backendCapabilities: claudeCaps,
+    backendCapabilities: pluginCaps,
     listPresets: async () => { presetReads.push('listPresets'); return [] },
   })
-  check('Y1 claude 内核全新启动先落启动页（Launchpad 盖在最上层）',
+  check('Y1 非 DSH 内核全新启动先落启动页（Launchpad 盖在最上层）',
     await settled(() => chat.screen().includes('说点什么')), chat.screen().slice(0, 200))
   check('Y1b 内核不提供 /preset 时启动页不预读 preset 名册（否则每次启动都弹不支持）',
     presetReads.length === 0, JSON.stringify(presetReads))
-  check('Y2 内核角标把 claude 记为当前内核（▸ 在 Claude 行，不在 DSH 行）',
-    await settled(() => /▸\s*Claude/.test(chat.screen()) && !/▸\s*DSH/.test(chat.screen())),
+  check('Y2 内核角标把 fixture-sdk 记为当前内核（▸ 在 FixtureSDK 行，不在 DSH 行）',
+    await settled(() => /▸\s*FixtureSDK/.test(chat.screen()) && !/▸\s*DSH/.test(chat.screen())),
     chat.screen().slice(-320))
   await chat.type('你好')
   await chat.send('\r')
@@ -1573,7 +1516,7 @@ for (const fullscreen of [false, true]) {
 {
   // resume 目标（DSH_TUI_RESUME_SESSION / --resume <id>，plugin 侧同源的
   // launchSessionId）仍直达会话：noResume 门保留，与后端无关。
-  const chat = await mountChat({}, { backendCapabilities: { backendId: 'claude', backendLabel: 'Claude', commands: [] } })
+  const chat = await mountChat({}, { backendCapabilities: { backendId: FIXTURE_SDK_ID, backendLabel: 'FixtureSDK', commands: [] } })
   check('Y4 resume 启动直达聊天页（没有启动页盖屏）',
     await settled(() => !chat.screen().includes('说点什么')),
     chat.screen().slice(0, 200))

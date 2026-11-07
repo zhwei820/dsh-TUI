@@ -1,7 +1,7 @@
 /**
  * Backend registry regression (roadmap Stage A / P0, checklist §7).
  *
- * The point of this file is the three properties a fourth backend would break:
+ * The point of this file is the three properties a new backend would break:
  *
  *  1. **Registration is loud** and reserved for what the manifest can honestly
  *     say: duplicate ids, built-in ids claimed by a plugin, host label keys used
@@ -71,15 +71,14 @@ const backends = listBackends()
 const backendIds: readonly string[] = backends.map(entry => entry.id)
 // Additive on purpose (P0 §1.2: adding `src/backends/<id>/` must not red this).
 // The seed stays first, every built-in stays present exactly once, and the exact
-// order/completeness against the directory is the parity check right below —
-// pinning the literal three here would only duplicate it and break the drill.
+// order/completeness against the directory is the parity check right below.
 check('registry starts with dsh and carries every built-in exactly once (parity below pins order and completeness)',
   backendIds[0] === 'dsh' && BUILTIN_BACKEND_IDS.every(id => backendIds.includes(id))
     && new Set(backendIds).size === backendIds.length, backendIds)
 check('every registered id passed the syntax gate, and getBackend agrees',
-  backends.every(entry => isBackendIdSyntax(entry.id)) && getBackend('codex')?.id === 'codex' && getBackend('nope') === undefined)
+  backends.every(entry => isBackendIdSyntax(entry.id)) && getBackend('dsh')?.id === 'dsh' && getBackend('nope') === undefined)
 check('backendLabel names the manifest, and an unknown id stays itself',
-  backendLabel('claude') === 'Claude' && backendLabel('acme-agent') === 'acme-agent')
+  backendLabel('dsh') === 'DSH' && backendLabel('acme-agent') === 'acme-agent')
 
 const manifestFiles = readdirSync(join(ROOT, 'src', 'backends'), { withFileTypes: true })
   .filter(entry => entry.isDirectory() && existsSync(join(ROOT, 'src', 'backends', entry.name, 'manifest.ts')))
@@ -105,10 +104,9 @@ for (const name of manifestFiles) {
       // nothing at runtime could report it.
       && getBackend(name)?.installable === (manifest.install !== undefined))
 }
-check('neither in-tree backend declares a native channel (P0 §6) — claude never did, codex stopped in B-5',
-  getBackend('claude')?.manifest.nativeKey === undefined && getBackend('codex')?.manifest.nativeKey === undefined)
-check('the install wizard target comes from the manifest that declares it',
-  getBackend('claude')?.manifest.install?.version === (await import('../src/backends/claude/contract.js')).VALIDATED_SDK_VERSION)
+check('DSH is the only built-in: no backend manifest ships in-tree, and the removed claude / codex ids are not registered',
+  JSON.stringify(BUILTIN_BACKEND_IDS) === JSON.stringify(['dsh']) && manifestFiles.length === 0
+    && getBackend('claude') === undefined && getBackend('codex') === undefined && !isRegisteredBackend('codex'))
 
 // ── 2. Registration guards ─────────────────────────────────────────────────────
 const fakeManifest = (overrides: Partial<BackendManifest> = {}): BackendManifest =>
@@ -123,7 +121,9 @@ const neverBackend = fakeBackend('acme-contribution')
 check('a duplicate id is refused',
   throws(() => registerBackend({ manifest: fakeManifest({ id: 'dsh', inTree: true }) })))
 check('a plugin may not claim a built-in id',
-  throws(() => registerBackend({ manifest: fakeManifest({ id: 'claude' }) })))
+  throws(() => registerBackend({ manifest: fakeManifest({ id: 'dsh' }) })))
+check('the removed built-in ids stay reserved by the contribution family: a plugin may not wear claude / codex',
+  throws(() => registerBackend({ manifest: fakeManifest({ id: 'claude' }) })) && throws(() => registerBackend({ manifest: fakeManifest({ id: 'codex' }) })))
 check('a plugin may not use a host label key (it would read "DeepSeek Harness")',
   throws(() => registerBackend({ manifest: fakeManifest({ label: { kind: 'key', key: 'kernel-label-dsh' } }) })))
 check('a plugin may not be always-available, nor declare a native channel',
@@ -136,67 +136,12 @@ check('an install recipe is refused without a non-empty executor, specifier and 
     && throws(() => registerBackend({ manifest: fakeManifest({ id: 'acme-nospec', install: { executor: 'pnpm-profile-add', specifier: '', version: '1' } }) }))
     && throws(() => registerBackend({ manifest: fakeManifest({ id: 'acme-nover', install: { executor: 'pnpm-profile-add', specifier: '@acme/x@1', version: '' } }) })))
 // ── 2b. The install surface is a declaration, not an id (B-1, §6 item 12) ───────
-// §2.5's acceptance is "flip claude / codex to `inTree: false` and everything but
-// the label check (D2) stays green" — which could not hold while the privilege was
-// spelled as one id (`HOST_INSTALLABLE_BACKEND_ID`): the id decided, not the
-// declaration, so a plugin-shaped fourth backend could never have a wizard of its
-// own. The probes below are that acceptance in executable form — a non-inTree entry
-// declaring Claude's recipe gets *its own* wizard, while codex's "there is nothing
-// to install, the user's own binary is the dependency" is an ordinary absent recipe.
-//
-// ── 2b′. §4.7 ① over the *real* manifests (B-3; re-measured in B-5) ──────────────
-// The roadmap's note ("flipping the two built-in manifests reddens on the label
-// only") is measured here rather than assumed, on copies of the real manifests
-// through the production gate. A copy needs a free id — the seeds own theirs, and a
-// second registration of one id is refused before any of these rules is reached —
-// and nothing else is changed. Measured: the flip reddens on the label in the
-// registry, plus one further condition the note did not name — claude's
-// `vendorPackages` (the boundary gate refuses a vendor rule for a non-in-tree
-// backend). codex's `nativeKey` was the second such condition while it declared one;
-// B-5 removed the declaration (the slot had no consumer), so its copy now registers
-// as declared. With the remaining condition neutralized both manifests register as
-// plugins with their install surface intact, which is what B-4 has to keep true.
-{
-  const seed = (id: string): BackendManifest => {
-    const manifest = getBackend(id)?.manifest
-    assert.ok(manifest !== undefined, `${id} must be seeded`)
-    return manifest
-  }
-  const claude = seed('claude')
-  const codex = seed('codex')
-  const asPlugin = (manifest: BackendManifest, id: string, overrides: Partial<BackendManifest> = {}): BackendManifest =>
-    ({ ...manifest, id, inTree: false, label: { kind: 'literal', text: manifest.shortLabel }, ...overrides })
-
-  check('flip: claude\'s host label key is the first red — a plugin may not wear a first-party name',
-    throws(() => registerBackend({ manifest: asPlugin(claude, 'claude-flip-label', { label: claude.label }) })))
-  check('flip: the real codex manifest has no native channel left to neutralize (B-5) — its copy registers as declared',
-    (() => {
-      registerBackend({ manifest: asPlugin(codex, 'codex-flip-native') })
-      return getBackend('codex-flip-native')?.admission.decision !== 'rejected'
-    })())
-  check('flip: an invented nativeKey on a non-in-tree manifest is still refused — native channels stay first-party',
-    throws(() => registerBackend({ manifest: asPlugin(codex, 'codex-flip-nativekey', { nativeKey: 'codex' }) })))
-  check('flip: with the label a literal and its vendor rule dropped, the real claude manifest registers as a plugin — same recipe, its own wizard',
-    (() => {
-      registerBackend({ manifest: asPlugin(claude, 'claude-flip', { vendorPackages: [] }) })
-      const entry = getBackend('claude-flip')
-      const surface = installSurfaceFor('claude-flip')
-      return entry?.installable === true
-        && JSON.stringify(entry.manifest.install) === JSON.stringify(claude.install)
-        && surface?.specifier === claude.install?.specifier && surface.version === claude.install?.version
-        && entry.admission.decision !== 'rejected'
-    })())
-  check('flip: the real codex manifest registers as a plugin with no install surface (nothing to add, the user\'s own binary)',
-    (() => {
-      registerBackend({ manifest: asPlugin(codex, 'codex-flip') })
-      const entry = getBackend('codex-flip')
-      return entry?.manifest.install === undefined && entry.installable === false
-        && installSurfaceFor('codex-flip') === undefined
-        && entry.admission.decision !== 'rejected'
-    })())
-}
-
-check('a non-inTree entry may declare the host\'s executor, and the wizard it opens is its own (not Claude\'s)',
+// The privilege used to be spelled as one id (`HOST_INSTALLABLE_BACKEND_ID`): the
+// id decided, not the declaration, so a plugin-shaped backend could never have a
+// wizard of its own. The probes below pin the replacement — a non-inTree entry
+// declaring a recipe gets *its own* wizard, while "there is nothing to install, the
+// user's own binary is the dependency" is an ordinary absent recipe.
+check('a non-inTree entry may declare the host\'s executor, and the wizard it opens is its own',
   (() => {
     registerBackend({
       manifest: fakeManifest({ id: 'acme-install', install: { executor: PNPM_PROFILE_ADD, specifier: '@acme/agent-sdk@2.0.0', version: '2.0.0' } }),
@@ -205,9 +150,12 @@ check('a non-inTree entry may declare the host\'s executor, and the wizard it op
     return getBackend('acme-install')?.installable === true
       && surface?.executor === PNPM_PROFILE_ADD && surface.specifier === '@acme/agent-sdk@2.0.0' && surface.version === '2.0.0'
   })())
-check('codex-style "no install surface" stays a first-class registered row: absent recipe, not installable, no surface',
-  getBackend('codex')?.manifest.install === undefined && getBackend('codex')?.installable === false
-    && installSurfaceFor('codex') === undefined)
+check('"no install surface" stays a first-class registered row: absent recipe, not installable, no surface',
+  (() => {
+    registerBackend({ manifest: fakeManifest({ id: 'acme-bare' }) })
+    return getBackend('acme-bare')?.manifest.install === undefined && getBackend('acme-bare')?.installable === false
+      && installSurfaceFor('acme-bare') === undefined
+  })())
 check('an executor this host does not implement registers as "no install surface" — no throw, no wizard, recipe kept',
   (() => {
     registerBackend({
@@ -276,14 +224,14 @@ check('syntax passes it, membership does not',
 // so an id whose bundle registers during `apply` survives, and the boot applies
 // this gate after that assembly (pinned by verify-backend-config.ts).
 check('the membership parse reads an unregistered value as "not configured", and normalizes case/blanks',
-  normalizeBackendChoice(UNINSTALLED) === undefined && normalizeBackendChoice(' Codex ') === 'codex')
+  normalizeBackendChoice(UNINSTALLED) === undefined && normalizeBackendChoice(' Acme-Bare ') === 'acme-bare')
 check('handoff env: an unregistered value is ignored, the memory still wins',
-  resolveRememberedBackend({ handoff: parseBackendChoice(UNINSTALLED), memory: 'claude' }) === 'claude')
+  resolveRememberedBackend({ handoff: parseBackendChoice(UNINSTALLED), memory: 'acme-bare' }) === 'acme-bare')
 check('DSH_TUI_BACKEND without the registry predicate is the old priority chain (regression scripts rely on it)',
-  resolveRememberedBackend({ envRaw: UNINSTALLED, memory: 'claude' }) === UNINSTALLED)
+  resolveRememberedBackend({ envRaw: UNINSTALLED, memory: 'acme-bare' }) === UNINSTALLED)
 check('DSH_TUI_BACKEND with the registry predicate: dsh, never the memory, never a crash',
-  resolveRememberedBackend({ envRaw: UNINSTALLED, envKnown: isRegisteredBackend, memory: 'claude' }) === 'dsh'
-    && resolveRememberedBackend({ envRaw: ' Bad Id ', envKnown: isRegisteredBackend, memory: 'claude' }) === 'dsh')
+  resolveRememberedBackend({ envRaw: UNINSTALLED, envKnown: isRegisteredBackend, memory: 'acme-bare' }) === 'dsh'
+    && resolveRememberedBackend({ envRaw: ' Bad Id ', envKnown: isRegisteredBackend, memory: 'acme-bare' }) === 'dsh')
 // The hard failure stays reserved for "registered but cannot open" (D1): an
 // unregistered id must never get there, and loadBackend says so if one ever does.
 await assert.rejects(async () => loadBackend(UNINSTALLED as never), /is not registered/)
@@ -442,6 +390,13 @@ check('and opens a backend in exactly one place, inside the "not dsh" branch (D1
   const runGenerator = (dir: string): { readonly status: number | null; readonly stderr: string; readonly stdout: string } =>
     spawnSync(process.execPath, ['--import', 'tsx/esm', join(ROOT, 'scripts', 'gen-backend-index.mjs'), '--dir', dir, '--out', out], { cwd: ROOT, encoding: 'utf8' })
 
+  const emptyTree = join(tmp, 'empty-backends')
+  mkdirSync(emptyTree, { recursive: true })
+  const empty = runGenerator(emptyTree)
+  const emptyEmitted = existsSync(out) ? readFileSync(out, 'utf8') : ''
+  check('a tree with no backend manifest emits an empty index (DSH alone), not an error',
+    empty.status === 0 && emptyEmitted.includes('export const GENERATED_BACKENDS: readonly BackendEntry[] = []'), `${empty.stderr.trim()} | ${emptyEmitted.replace(/\n/gu, ' | ')}`)
+
   const failing = runGenerator(fixture)
   check('a backend directory without a manifest fails the generator (no silent disappearance)',
     failing.status !== 0 && failing.stderr.includes('no manifest.ts'), failing.stderr.trim().split('\n').slice(-2).join(' '))
@@ -487,17 +442,15 @@ check('and opens a backend in exactly one place, inside the "not dsh" branch (D1
   /** One violating import per rule family, at the worst possible place. */
   const probes: readonly { readonly name: string; readonly file: string; readonly source: string }[] = [
     { name: '@deepseek-ai/* off dsh-adapter', file: 'src/agent/probe.ts', source: "import Schema from '@deepseek-ai/schemastery'\nexport const s = Schema\n" },
-    { name: '@anthropic-ai/* off backends/claude', file: 'src/screens/probe.ts', source: "import sdk from '@anthropic-ai/claude-agent-sdk'\nexport const s = sdk\n" },
     { name: '@agentclientprotocol/* off backends/acp', file: 'src/agent/probe.ts', source: "import acp from '@agentclientprotocol/sdk'\nexport const s = acp\n" },
     { name: '@dsh-std/* off adapter/standard + dsh-adapter', file: 'src/agent/probe.ts', source: "import core from '@dsh-std/core'\nexport const s = core\n" },
     { name: 'native.dsh outside dsh-adapter', file: 'src/agent/probe.ts', source: 'export const read = (session: { capabilities: { native: Record<string, unknown> } }): unknown => session.capabilities.native.dsh\n' },
-    { name: 'native.codex outside backends/codex', file: 'src/agent/probe.ts', source: 'export const read = (session: { capabilities: { native: Record<string, unknown> } }): unknown => session.capabilities.native.codex\n' },
     // The island rule (B-3): a concrete backend reaches into host internals. The
     // three probes are the shapes that matter — the host dictionary (D2), the
     // host's own utils, and a type-only import (types are part of the surface).
-    { name: 'a backend reads the host dictionary', file: 'src/backends/claude/probe.ts', source: "import { t } from '../../i18n.js'\nexport const s = t('claude-sdk-missing')\n" },
-    { name: 'a backend reads a host util', file: 'src/backends/claude/probe.ts', source: "import { DATA_DIR } from '../../utils/paths.js'\nexport const s = DATA_DIR\n" },
-    { name: 'a backend takes a host type', file: 'src/backends/claude/probe.ts', source: "import type { I18nKey } from '../../i18n.js'\nexport type S = I18nKey\n" },
+    { name: 'a backend reads the host dictionary', file: 'src/backends/probe-agent/probe.ts', source: "import { t } from '../../i18n.js'\nexport const s = t('doctor-unknown')\n" },
+    { name: 'a backend reads a host util', file: 'src/backends/probe-agent/probe.ts', source: "import { DATA_DIR } from '../../utils/paths.js'\nexport const s = DATA_DIR\n" },
+    { name: 'a backend takes a host type', file: 'src/backends/probe-agent/probe.ts', source: "import type { I18nKey } from '../../i18n.js'\nexport type S = I18nKey\n" },
     // The seam's own rule (C-2): `src/backends/shared/` sits *below* every backend, so
     // it may not read the host dictionary either — otherwise a backend would reach the
     // host's copy through a module the island rule above never looks at (the boundary
@@ -518,14 +471,22 @@ check('and opens a backend in exactly one place, inside the "not dsh" branch (D1
   }
   // The equivalence trap of §6: a manifest that invents a native rule must not be
   // able to relax the gate — the snapshot comparison catches it before the scan.
-  const manifestFile = join(tree, 'src', 'backends', 'claude', 'manifest.ts')
-  writeFileSync(manifestFile, readFileSync(manifestFile, 'utf8').replace("  backendExport: 'claudeBackend',", "  backendExport: 'claudeBackend',\n  nativeKey: 'claude',"))
+  // No backend manifest ships in-tree, so the probe brings its own in-tree one.
+  const manifestFile = join(tree, 'src', 'backends', 'probe-agent', 'manifest.ts')
+  const probeManifest = "import type { BackendManifest } from '../../agent/backend-manifest.js'\n"
+    + "export const manifest: BackendManifest = {\n  id: 'probe-agent', label: { kind: 'literal', text: 'Probe' }, shortLabel: 'Probe', inTree: true, capabilities: [], grants: [],\n}\n"
+  mkdirSync(dirname(manifestFile), { recursive: true })
+  writeFileSync(manifestFile, probeManifest)
+  const declared = runGate()
+  check('control: an in-tree manifest that declares no vendor/native rule keeps the gate green',
+    declared.status === 0, declared.stderr.trim().split('\n').slice(0, 3).join(' '))
+  writeFileSync(manifestFile, probeManifest.replace('grants: [],', "grants: [], nativeKey: 'probe-agent',"))
   const widened = runGate()
-  check('bad baseline is red: a manifest may not invent native.claude (derivation snapshot)',
+  check('bad baseline is red: a manifest may not invent native.probe-agent (derivation snapshot)',
     widened.status !== 0 && widened.stderr.includes('native'), widened.stderr.trim().split('\n').slice(0, 4).join(' '))
-  writeFileSync(manifestFile, readFileSync(join(ROOT, 'src', 'backends', 'claude', 'manifest.ts'), 'utf8'))
+  rmSync(dirname(manifestFile), { recursive: true, force: true })
   const restored = runGate()
-  check('restoring the manifest restores the gate', restored.status === 0, restored.stderr.trim().split('\n').slice(0, 3).join(' '))
+  check('removing the manifest restores the gate', restored.status === 0, restored.stderr.trim().split('\n').slice(0, 3).join(' '))
 }
 
 console.log(`\nverify-backend-registry OK (${passed} checks)`)

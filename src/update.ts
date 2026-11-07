@@ -129,7 +129,7 @@ export function logRestartEvent(event: string, data?: Record<string, unknown>): 
  * instance ran, written at boot (plugin.ts) and refreshed by the exit funnel.
  * The launcher's safe-mode retry reads it. After a kernel switch the
  * launcher's own env still names the original backend, so retrying from that
- * env would reopen the old kernel, or hand a DSH session id to a Claude boot.
+ * env would reopen the old kernel, or hand a DSH session id to another backend.
  * kernel.json has the backend but not the session or when it was written.
  */
 export interface LastRunRecord {
@@ -1194,7 +1194,7 @@ export function ensureProfileAllowBuilds(profile: string): AllowBuildsOutcome | 
 }
 
 /** Path-based core of {@link ensureProfileAllowBuilds} for callers that hold
- *  the profile directory itself (the Claude SDK installer's heal pass). */
+ *  the profile directory itself (the kernel-picker install executor's heal pass). */
 export function ensureWorkspaceAllowBuilds(yamlPath: string): AllowBuildsOutcome | undefined {
   try {
     if (!existsSafe(dirname(yamlPath))) return undefined
@@ -1370,7 +1370,7 @@ export interface StoreDirOutcome {
  * explicit setting exists: a pnpm run under a redirected \u0060XDG_DATA_HOME\u0060
  * (sandbox, relay, container) silently records THAT location in the
  * profile's \u0060node_modules/.modules.yaml\u0060, and every later pnpm run in the
- * profile — dsh's own updates, plugin installs, the Claude SDK wizard —
+ * profile — dsh's own updates, plugin installs, the kernel install wizard —
  * dies with ERR_PNPM_UNEXPECTED_STORE until node_modules is rebuilt by
  * hand. Pin \u0060storeDir\u0060 in the profile's pnpm-workspace.yaml so all of them
  * resolve the same store whatever the environment says. The value is
@@ -1477,12 +1477,12 @@ export function ignoredSharpOptionalPatterns(platform: string, cpu: string, libc
 
 /**
  * `@anthropic-ai/claude-agent-sdk` carries the Claude CLI as one native bundle
- * per platform in its optionalDependencies. The SDK is an on-demand backend —
- * the kernel picker adds it to a profile only when the user picks Claude — but
- * once it IS there, an update re-resolves it through the same pnpm path that
+ * per platform in its optionalDependencies. The Claude backend that installed
+ * it on demand is gone, but a profile set up by an older release may still
+ * carry the SDK, and an update re-resolves it through the same pnpm path that
  * materializes every platform's optional (see the sharp report above), so the
  * same ignore list keeps only this platform's bundle. Suffixes mirror the
- * pinned SDK version's published matrix, musl variants included.
+ * last pinned SDK version's published matrix, musl variants included.
  */
 const CLAUDE_SDK_PREFIX = '@anthropic-ai/claude-agent-sdk-'
 const CLAUDE_SDK_SUFFIXES = [
@@ -3533,9 +3533,8 @@ async function installProfileTui(
   // Foreign-platform natives are pure download waste (sharp ~90MB, the Claude
   // SDK's bundles ~1.6GB on the maintainer report); keep the profile's ignore
   // list matching THIS machine (each update recomputes it) so pnpm never
-  // fetches them. The SDK is never ADDED here — it only enters a profile
-  // through the kernel picker's guided install, and then only for the
-  // platform it runs on.
+  // fetches them. The SDK is never ADDED here — only a profile set up by an
+  // older release (the removed Claude backend's guided install) still has it.
   const platformFilter = ensureProfilePlatformFilter(profile)
   if (platformFilter !== undefined && platformFilter.changed) {
     process.stderr.write(

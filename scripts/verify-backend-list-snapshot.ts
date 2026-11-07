@@ -54,7 +54,7 @@ function channel(backendId: string, catalog: SessionCatalog, startup?: Promise<C
 }
 
 try {
-  for (const backendId of ['claude', 'codex']) {
+  for (const backendId of ['fixture-sdk', 'fixture-cli']) {
     let key = JSON.stringify([backendId, home])
     let stored = [row('old', backendId)]
     let failure = false
@@ -72,7 +72,7 @@ try {
     stored = [row('fresh', backendId)]
     check(backendId + ': refresh replaces stale titles and deletions from the backend', ids(await restarted.listSessions()), ['fresh'])
     check(backendId + ': snapshot follows the authoritative refresh', ids(readListingSnapshot(key)), ['fresh'])
-    const other = channel(backendId === 'claude' ? 'codex' : 'claude', { ...catalog, snapshotKey: () => JSON.stringify(['other-backend', backendId, home]) })
+    const other = channel(backendId === 'fixture-sdk' ? 'fixture-cli' : 'fixture-sdk', { ...catalog, snapshotKey: () => JSON.stringify(['other-backend', backendId, home]) })
     check(backendId + ': another backend/store never sees these rows', other.cachedSessions(), undefined)
     await restarted.renameSessionTo('fresh', 'Renamed')
     check(backendId + ': successful rename updates disk first paint', readListingSnapshot(key)?.[0]?.title.text, 'Renamed')
@@ -93,7 +93,7 @@ try {
     check(backendId + ': an empty completed listing is cached distinctly from unknown', restarted.cachedSessions(), [])
   }
 
-  for (const backendId of ['claude', 'codex']) {
+  for (const backendId of ['fixture-sdk', 'fixture-cli']) {
     const local = row('current-workspace', backendId)
     const foreign = { ...row('newer-elsewhere', backendId), cwd: join(home, 'elsewhere'), updatedAt: 999 }
     const global = gate<readonly SessionSummary[]>()
@@ -118,7 +118,7 @@ try {
     check(backendId + ': completion includes both workspaces', ids(await listing), ['newer-elsewhere', 'current-workspace'])
   }
 
-  for (const backendId of ['claude', 'codex']) {
+  for (const backendId of ['fixture-sdk', 'fixture-cli']) {
     const key = JSON.stringify([backendId, home, 'preload'])
     beginListingSnapshot(key)([row('cached-old', backendId)])
     const local = { ...row('native-new', backendId), updatedAt: 999 }
@@ -156,15 +156,15 @@ try {
   }
 
   {
-    const key = JSON.stringify(['codex', home, 'preload-failure'])
-    beginListingSnapshot(key)([row('kept', 'codex')])
+    const key = JSON.stringify(['fixture-cli', home, 'preload-failure'])
+    beginListingSnapshot(key)([row('kept', 'fixture-cli')])
     const failed = gate<void>()
     let attempts = 0
-    const retry = channel('codex', {
+    const retry = channel('fixture-cli', {
       snapshotKey: () => key,
       list: async () => {
         if (++attempts === 1) { failed.resolve(); throw new Error('offline') }
-        return [row('retried', 'codex')]
+        return [row('retried', 'fixture-cli')]
       },
     })
     await failed.promise
@@ -175,22 +175,22 @@ try {
   }
 
   {
-    const key = JSON.stringify(['codex', home, 'disposed-preload'])
+    const key = JSON.stringify(['fixture-cli', home, 'disposed-preload'])
     const local = gate<readonly SessionSummary[]>()
     const began = gate<void>()
     let reads = 0
-    const disposed = channel('codex', {
+    const disposed = channel('fixture-cli', {
       snapshotKey: () => key,
       list: async () => { reads++; began.resolve(); return local.promise },
     })
     await began.promise
     disposed.releaseContributions()
-    local.resolve([row('late', 'codex')])
+    local.resolve([row('late', 'fixture-cli')])
     await new Promise<void>(resolve => setImmediate(resolve))
     check('disposing during preload prevents the global read and disk write', [reads, readListingSnapshot(key)], [1, undefined])
   }
 
-  for (const backendId of ['claude', 'codex']) {
+  for (const backendId of ['fixture-sdk', 'fixture-cli']) {
     const opened = gate<ChannelStartup>()
     const local = gate<readonly SessionSummary[]>()
     const began = gate<void>()
@@ -219,7 +219,7 @@ try {
     check(backendId + ': startup adoption keeps preload progress and its disk write valid', [batches[0], scopes, ids(readListingSnapshot(key))], [[summary.id], [home, 'all'], [summary.id]])
   }
 
-  for (const backendId of ['claude', 'codex']) {
+  for (const backendId of ['fixture-sdk', 'fixture-cli']) {
     const opened = gate<ChannelStartup>()
     const oldLocal = gate<readonly SessionSummary[]>()
     const began = gate<void>()
@@ -250,7 +250,7 @@ try {
 
   // A slow page is useful immediately, but cannot masquerade as a complete
   // listing or overwrite the last successful snapshot.
-  const key = JSON.stringify(['codex', home, 'paging'])
+  const key = JSON.stringify(['fixture-cli', home, 'paging'])
   const pending = gate<readonly SessionSummary[]>()
   const began = gate<void>()
   let calls = 0
@@ -258,20 +258,20 @@ try {
     snapshotKey: () => key,
     list: async (_scope, onPartial) => {
       calls += 1
-      if (calls > 1) return [row('first-page', 'codex'), row('last-page', 'codex')]
-      onPartial?.([row('first-page', 'codex')])
+      if (calls > 1) return [row('first-page', 'fixture-cli'), row('last-page', 'fixture-cli')]
+      onPartial?.([row('first-page', 'fixture-cli')])
       began.resolve()
       return pending.promise
     },
   }
-  const paged = channel('codex', catalog)
+  const paged = channel('fixture-cli', catalog)
   const partials: string[][] = []
   const listing = paged.listSessions(undefined, rows => { partials.push(ids(rows)!) })
   await began.promise
   check('cold paging: first-page callback reaches the real channel before completion', partials, [['first-page']])
   check('cold paging: partial rows do not become a memory snapshot', paged.cachedSessions(), undefined)
   check('cold paging: partial rows do not become a disk snapshot', readListingSnapshot(key), undefined)
-  pending.resolve([row('first-page', 'codex')])
+  pending.resolve([row('first-page', 'fixture-cli')])
   await listing
   check('cold paging: final snapshot has all pages', ids(readListingSnapshot(key)), ['first-page', 'last-page'])
 
@@ -281,55 +281,55 @@ try {
   const started = gate<void>()
   let count = 0
   const racing: SessionCatalog = {
-    snapshotKey: () => JSON.stringify(['claude', home, 'racing']),
+    snapshotKey: () => JSON.stringify(['fixture-sdk', home, 'racing']),
     list: async scope => {
       if (!scope?.allProjects && ++count === 1) { started.resolve(); return slow.promise }
-      return [row('newest', 'claude')]
+      return [row('newest', 'fixture-sdk')]
     },
     rename: async () => {},
   }
-  const raced = channel('claude', racing)
+  const raced = channel('fixture-sdk', racing)
   const oldListing = raced.listSessions()
   await started.promise
   const joinedListing = raced.listSessions()
   check('overlapping reloads share the pending catalog read', count, 1)
   await raced.renameSessionTo('late', 'Renamed')
   await raced.listSessions()
-  slow.resolve([row('late', 'claude')])
+  slow.resolve([row('late', 'fixture-sdk')])
   check('overlapping reload: an obsolete read cannot publish', await oldListing, [])
   check('overlapping reload: subscribers to the obsolete read are fenced too', await joinedListing, [])
   check('overlapping reload: the latest memory snapshot survives', ids(raced.cachedSessions()), ['newest'])
   check('overlapping reload: the latest disk snapshot survives', ids(readListingSnapshot(racing.snapshotKey!()!)), ['newest'])
 
   {
-    let sourceKey = JSON.stringify(['codex', home, 'old-store'])
+    let sourceKey = JSON.stringify(['fixture-cli', home, 'old-store'])
     const oldKey = sourceKey
     const slowStore = gate<readonly SessionSummary[]>()
     const began = gate<void>()
-    const replaced = channel('codex', {
+    const replaced = channel('fixture-cli', {
       snapshotKey: () => sourceKey,
       list: async () => {
         if (sourceKey === oldKey) { began.resolve(); return slowStore.promise }
-        return [row('new-store', 'codex')]
+        return [row('new-store', 'fixture-cli')]
       },
     })
     const oldStore = replaced.listSessions()
     await began.promise
-    sourceKey = JSON.stringify(['codex', home, 'replacement-store'])
+    sourceKey = JSON.stringify(['fixture-cli', home, 'replacement-store'])
     check('changing stores starts a separate read instead of joining the old store', ids(await replaced.listSessions()), ['new-store'])
-    slowStore.resolve([row('old-store', 'codex')])
+    slowStore.resolve([row('old-store', 'fixture-cli')])
     check('an old store completion is fenced after replacement', await oldStore, [])
     check('an old store cannot overwrite the replacement cache', ids(readListingSnapshot(sourceKey)), ['new-store'])
     check('a revoked store read cannot write its snapshot', readListingSnapshot(oldKey), undefined)
   }
 
   {
-    const key = JSON.stringify(['codex', home, 'delete-during-preload'])
-    const victim = row('deleted', 'codex')
+    const key = JSON.stringify(['fixture-cli', home, 'delete-during-preload'])
+    const victim = row('deleted', 'fixture-cli')
     beginListingSnapshot(key)([victim])
     const slowDelete = gate<readonly SessionSummary[]>()
     const began = gate<void>()
-    const deleted = channel('codex', {
+    const deleted = channel('fixture-cli', {
       snapshotKey: () => key,
       list: async () => { began.resolve(); return slowDelete.promise },
       delete: async () => {},
@@ -342,62 +342,30 @@ try {
     check('a late page cannot revive a deleted cached session', [ids(deleted.cachedSessions()), ids(readListingSnapshot(key))], [[], []])
   }
 
-  const crossKey = JSON.stringify(['codex', home, 'cross-channel'])
+  const crossKey = JSON.stringify(['fixture-cli', home, 'cross-channel'])
   const earlier = gate<readonly SessionSummary[]>()
   const scanning = gate<void>()
-  const olderChannel = channel('codex', {
+  const olderChannel = channel('fixture-cli', {
     snapshotKey: () => crossKey,
     list: async scope => {
       if (scope?.allProjects) { scanning.resolve(); return earlier.promise }
-      return [row('old-channel', 'codex')]
+      return [row('old-channel', 'fixture-cli')]
     },
   })
-  const newerChannel = channel('codex', { snapshotKey: () => crossKey, list: async () => [row('new-channel', 'codex')] })
+  const newerChannel = channel('fixture-cli', { snapshotKey: () => crossKey, list: async () => [row('new-channel', 'fixture-cli')] })
   const pendingOlder = olderChannel.listSessions()
   await scanning.promise
   await newerChannel.listSessions()
-  earlier.resolve([row('old-channel', 'codex')])
+  earlier.resolve([row('old-channel', 'fixture-cli')])
   await pendingOlder
   check('cross-channel reload: older completion cannot overwrite the newer store snapshot', ids(readListingSnapshot(crossKey)), ['new-channel'])
 
   // The declared key is the one place a relative configured root could point
-  // first paint at another store, so the real backends answer instead of a
-  // fixture. Path case stays part of the key: Windows can host case-sensitive
-  // directories, and an alias miss is safer than another store's rows.
+  // first paint at another store, so the real provider answers instead of a
+  // fixture.
   {
-    const { codexBackend } = await import('../src/backends/codex/backend.js')
-    const { claudeBackend } = await import('../src/backends/claude/backend.js')
     const { readListingSnapshot: readProviderSnapshot } = await import('../src/dsh-adapter/sessions/snapshot.js')
-    const saved = {
-      CODEX_HOME: process.env.CODEX_HOME,
-      CODEX_SQLITE_HOME: process.env.CODEX_SQLITE_HOME,
-      CLAUDE_CONFIG_DIR: process.env.CLAUDE_CONFIG_DIR,
-    }
-    const keyOf = (backend: { catalog?: SessionCatalog }): string | undefined => backend.catalog?.snapshotKey?.()
-    try {
-      process.env.CODEX_HOME = join(home, '.codex')
-      check('codex: an absolute CODEX_HOME yields a store-scoped key', typeof keyOf(codexBackend), 'string')
-      process.env.CLAUDE_CONFIG_DIR = join(home, 'claude')
-      check('claude: an absolute CLAUDE_CONFIG_DIR yields a store-scoped key', typeof keyOf(claudeBackend), 'string')
-      process.env.CODEX_HOME = join('relative', 'codex')
-      check('codex: a relative CODEX_HOME declines the snapshot', keyOf(codexBackend), undefined)
-      delete process.env.CODEX_HOME
-      process.env.CODEX_SQLITE_HOME = join('relative', 'sqlite')
-      check('codex: a relative CODEX_SQLITE_HOME declines the snapshot', keyOf(codexBackend), undefined)
-      delete process.env.CODEX_SQLITE_HOME
-      process.env.CLAUDE_CONFIG_DIR = join('relative', 'claude')
-      check('claude: a relative CLAUDE_CONFIG_DIR declines the snapshot', keyOf(claudeBackend), undefined)
-      process.env.CLAUDE_CONFIG_DIR = join(home, 'Stores', 'Claude')
-      const exactCase = keyOf(claudeBackend)
-      process.env.CLAUDE_CONFIG_DIR = join(home, 'stores', 'claude')
-      check('claude: the key keeps the exact path case', keyOf(claudeBackend) !== exactCase, true)
-      check('dsh: a relative provider root declines the snapshot', readProviderSnapshot({ name: 'session-persistence-jsonl', config: { root: join('relative', 'root') } }), undefined)
-    } finally {
-      for (const [name, value] of Object.entries(saved)) {
-        if (value === undefined) delete process.env[name]
-        else process.env[name] = value
-      }
-    }
+    check('dsh: a relative provider root declines the snapshot', readProviderSnapshot({ name: 'session-persistence-jsonl', config: { root: join('relative', 'root') } }), undefined)
   }
   console.log(`verify-backend-list-snapshot OK (${checks} checks)`)
 } finally {

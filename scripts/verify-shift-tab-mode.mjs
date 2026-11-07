@@ -15,9 +15,9 @@
  * process from the rejection listener, replacing the FAIL line this script
  * exists to print with a raw crash.
  *
- * It also pins the cycle SURFACE the reflex key may walk (against the
- * compiled Claude backend wired through the real channel cycleMode, not a
- * stub): walking the entire cycle repeatedly must replay the pre-bypass
+ * It also pins the cycle SURFACE the reflex key may walk (a typed `modes`
+ * capability that narrows its cycle, wired through the real channel
+ * cycleMode, not a stub): walking the entire cycle repeatedly must replay the pre-bypass
  * order default → acceptEdits → plan → auto and must NEVER land in
  * bypassPermissions — that mode is picker-only (/permission), because one
  * stray reflex press must not turn every confirmation off.
@@ -133,46 +133,25 @@ instance.unmount()
 
 // ---- the real cycle surface: bypass is unreachable from Shift+Tab ------
 // The composer is rerendered against the REAL channel cycleMode (the
-// compiled delegate over the compiled Claude modes capability), so the
-// walk below exercises the shipped narrowing, not a stubbed copy of it.
-const { createClaudeControls } = await import('../lib/types/backends/claude/controls.js')
-const { memoryClaudePrefs } = await import('../lib/types/backends/claude/prefs.js')
+// compiled delegate over a typed `modes` capability that narrows its cycle),
+// so the walk below exercises the shipped narrowing, not a stubbed copy of it.
 const { createCapabilityDelegates } = await import('../lib/types/dsh-adapter/channel/core/actions.js')
 const { setLang } = await import('../lib/types/i18n.js')
 setLang('en')
 const MODE_SET_CALLS = []
 let liveMode = 'default'
-const queryControls = {
-  setPermissionMode(mode) { MODE_SET_CALLS.push(mode) },
-  setModel: async () => undefined,
-  applyFlagSettings: async () => undefined,
-  supportedModels: async () => [
-    { value: 'opus', resolvedModel: 'claude-opus-x', displayName: 'Opus', description: '', supportsAutoMode: true },
-  ],
-  supportedCommands: async () => [],
-  mcpServerStatus: async () => [],
-  reconnectMcpServer: async () => undefined,
-  toggleMcpServer: async () => undefined,
-  getContextUsage: async () => { throw new Error('not needed') },
-  accountInfo: async () => { throw new Error('not needed') },
+const ROSTER = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions'].map(id => ({ id, label: id }))
+const modeCaps = {
+  list: () => ROSTER,
+  // A mode that should only be entered by an explicit pick stays out of the cycle.
+  cycle: () => ROSTER.filter(mode => mode.id !== 'bypassPermissions'),
+  current: () => liveMode,
+  set: async id => { MODE_SET_CALLS.push(id); liveMode = id },
 }
-const claudeControls = createClaudeControls({
-  query: () => queryControls,
-  emit: () => undefined,
-  submitText: async () => undefined,
-  currentModel: () => 'claude-opus-x',
-  currentMode: () => liveMode,
-  noteModel: model => [{ type: 'model.changed', model }],
-  noteMode: mode => { liveMode = mode; return [{ type: 'mode.changed', modeId: mode }] },
-  prefs: memoryClaudePrefs(),
-  debug: () => undefined,
-})
-claudeControls.seed({ models: [{ value: 'opus', resolvedModel: 'claude-opus-x', displayName: 'Opus', description: '', supportsAutoMode: true }] })
-const modeCaps = claudeControls.capabilities.modes
 const delegates = createCapabilityDelegates({
   owner: { current: () => true },
   session: () => ({ capabilities: { modes: modeCaps } }),
-  state: () => ({ provider: 'claude', backendCapabilities: {}, agentBindingGeneration: 0 }),
+  state: () => ({ provider: 'fixture', backendCapabilities: {}, agentBindingGeneration: 0 }),
   notify: () => undefined,
   unavailable: () => undefined,
   unavailableLines: () => [],

@@ -1308,8 +1308,8 @@ ctx.effect(() => () => dispose?.())
 }
 ```
 
-- `id`：`^[a-z0-9][a-z0-9-]{0,31}$`。宿主自己的 id（`dsh`/`claude`/`codex`）是保留字，
-  贡献声明其中之一在准入处被拒（`BACKEND_ID_RESERVED`）。
+- `id`：`^[a-z0-9][a-z0-9-]{0,31}$`。宿主保留的 id（`dsh`，以及已移除的旧内建 `claude`/`codex`）
+  是保留字，贡献声明其中之一在准入处被拒（`BACKEND_ID_RESERVED`）。
 - `label` **只收字面量**——宿主 i18n 键是宿主的词表，贡献不许借它说话。
 - `shortLabel` 必填；`product`、`install`、`unloadExport`、`confirmation` 可选。
 - `install` 是**安装配方**，不是包名：`executor` 说的是"怎么装"（宿主实现的一道程序），

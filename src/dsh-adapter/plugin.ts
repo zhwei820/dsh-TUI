@@ -1612,8 +1612,8 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       if (shadow) return
       channel.setSplashFont(normalizeSplashFont(value.splashFont ?? config.splashFont))
     }
-    /** 品牌外观（`dsh-tui.brand`）：`auto` 跟随后端（Claude 后端整套换橙、
-     *  Codex 后端整套换薰衣草紫），其余固定一档；设置用户层优先于
+    /** 品牌外观（`dsh-tui.brand`）：`auto` = 默认 deepseek，其余固定一档
+     *  （claude 整套换橙、codex 整套换薰衣草紫）；设置用户层优先于
      *  cordis.yml，非法值回落 `auto`。 */
     const applyBrand = (value: Pick<SettingsValue, 'brand'>): void => {
       if (shadow) return
@@ -2583,19 +2583,6 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     handleExit()
   }
 
-  /** /channel changed the active channel's connection. The running CLI child
-   *  cannot change its baseUrl or token, so restart through the same funnel
-   *  branch as a kernel switch: same kernel, new session, no resume target.
-   *  The caller supplies the notice. */
-  const restartFreshSession = (notice: string): void => {
-    if (exited || restartRequested || backendSwitchRequested !== undefined) return
-    if (backendChoice === 'codex') restartRequested = true
-    else backendSwitchRequested = backendChoice
-    logRestartEvent('command: channel connection switch accepted', { backend: backendChoice })
-    notifyChannel(notice)
-    handleExit()
-  }
-
   // Process-level crash backstop (see installNestedUpdateOverflowProcessGuard):
   // an uncaught exception or unhandled rejection that is NOT the React #185
   // overflow would otherwise take Node's default path and kill the process
@@ -2667,7 +2654,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
    * Two of the three boot screens are DSH screens: the workspace home lists
    * DSH sessions and workspaces, and the first-run guide configures a DeepSeek
    * key. The launchpad is not one of them: it is where the first sentence gets
-   * typed, so a remembered claude kernel boots onto it too (the session the
+   * typed, so a remembered plugin kernel boots onto it too (the session the
    * plugin opened keeps warming underneath) — only a resume target skips it
    * and opens straight into its conversation.
    */
@@ -2678,7 +2665,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
    * The launchpad is NOT one-shot the way the workspace home is: every
    * ordinary launch starts on it, because it is where the first sentence gets
    * typed rather than a tutorial that retires itself — on every backend: a
-   * remembered claude kernel lands here exactly like a dsh one (the `dshBoot`
+   * remembered plugin kernel lands here exactly like a dsh one (the `dshBoot`
    * gate below is deliberately absent). The /settings `launchpad` toggle
    * (settings user layer over cordis.yml, resolved into `bootedLaunchpad`
    * above) is the persistent off switch — off boots straight into the chat
@@ -2693,9 +2680,9 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
    * workspace may still never have configured a key.
    */
   const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding()
-  // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免 Claude 后端先画一屏
-  // 蓝再变橙。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
-  setActiveBrand(resolveBrand(config.brand, backendChoice))
+  // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免手选的皮肤先画一屏
+  // 默认蓝再变色。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
+  setActiveBrand(resolveBrand(config.brand))
   const liveThemeHost = (): TuiThemeHost | undefined => getHostThemes(ctx.get('tuiThemes') as TuiThemeRuntime | undefined)
   const buildChat = (): React.ReactElement => React.createElement(Chat, {
     channel,
@@ -2735,8 +2722,6 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     // kernel.json and the exit funnel restarts onto that kernel with a new
     // session. The old kernel's sessions stay listed for /resume.
     onSwitchBackend: switchBackend,
-    // /channel: restart with a new session after the connection changed.
-    onRestartFreshSession: restartFreshSession,
     // The backend registry as the picker sees it: the UI takes data, not the
     // registry (P0). dsh first, then the manifest order — picker order. Entries
     // that registered without an admission are not offered (B-2).

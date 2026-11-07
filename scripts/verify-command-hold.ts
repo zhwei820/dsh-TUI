@@ -26,7 +26,6 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import ts from 'typescript'
 import {
-  BACKEND_CHANNEL_COMMAND,
   GRAY_ZONE_EXEMPT_COMMANDS,
   LOCAL_COMMANDS,
   WORKING_CONVERSATION_COMMANDS,
@@ -36,17 +35,14 @@ import {
 } from '../src/commands.js'
 import { i18nDict } from '../src/i18n.js'
 
-// `/channel` is not in the static roster: a backend serves it only when it
-// declares the typed `channels` capability (`core/session-controls.ts`), so the
-// typed name is the second place a gated command can come from.
 const isLocal = (name: string): boolean =>
-  LOCAL_COMMANDS.some(command => command.name === name) || BACKEND_CHANNEL_COMMAND.name === name
+  LOCAL_COMMANDS.some(command => command.name === name)
 
 // ── 1+2: the gated set names real commands with real notices ───────────────
 const gated = Object.keys(WORKING_GATE_NOTICES)
 assert.deepEqual(gated, [
   'new', 'compact', 'fork', 'model', 'preset', 'workspace', 'update',
-  'resume', 'rewind', 'kernel', 'dsh', 'codex', 'claude', 'channel',
+  'resume', 'rewind', 'kernel', 'dsh',
 ])
 for (const name of gated) {
   assert.ok(isLocal(name), `gated command ${name} must exist in LOCAL_COMMANDS`)
@@ -118,6 +114,7 @@ const files = [...new Set(execFileSync(
   { encoding: 'utf8' },
 ).split('\0'))]
   .filter(file => file.endsWith('.ts') || file.endsWith('.tsx'))
+  .filter(file => existsSync(file))
   .filter(file => file !== 'src/commands.ts' && file !== 'src/i18n.ts')
 for (const key of new Set(Object.values(WORKING_GATE_NOTICES))) {
   for (const file of files) {

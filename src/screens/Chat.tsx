@@ -48,10 +48,9 @@ const MATH_PREVIEW_MAX_ROWS = 64
 import type { TuiShortcutHost } from '../dsh-adapter/shortcuts.js'
 import type { TuiThemeHost } from '../dsh-adapter/themes.js'
 import type { TuiRewindMode } from '../dsh-adapter/extension-events.js'
-import { runOAuthLogin, runProviderWizard, type ProviderWizardOutcome } from '../dsh-adapter/providerWizard.js'
+import { runAccountSignIn, type AccountSignInOutcome } from '../channel/account-sign-in.js'
 import { useKernelPicker } from './chat/useKernelPicker.js'
 import { useModelPicker } from './chat/useModelPicker.js'
-import { useBackendChannels } from './chat/useBackendChannels.js'
 import { backendModeStatus as modeStatus, backendPermissionCommand, parseMcpCommand } from './chat/backendCommands.js'
 import { PermissionStore, type PermissionPanelSource } from '../channel/permissions.js'
 import { goalStatusLines, parseGoalCommand } from '../channel/goal-command.js'
@@ -138,7 +137,6 @@ import type { PluginManageFlow, PluginManageSink, PluginManageStep } from '../ds
 import type { TeamCommandSink } from '../dsh-adapter/team-mode.js'
 import { teamMemberCounts } from '../components/teamRoster.js'
 import { usePluginWriteFlow } from './chat/usePluginWriteFlow.js'
-import { ChannelPicker } from '../components/ChannelPicker.js'
 import type { KernelEntry, KernelStatus } from '../components/kernelCatalog.js'
 import type { KernelBackendId } from '../kernelPrefs.js'
 import { modeDisplayName } from '../sessionModes.js'
@@ -426,7 +424,6 @@ export function Chat({
   onUpdate,
   onRestart,
   onSwitchBackend,
-  onRestartFreshSession,
   onProbeKernels,
   kernelEntries = EMPTY_KERNEL_ENTRIES,
   onResolveSdkInstall,
@@ -483,13 +480,7 @@ export function Chat({
    */
   onSwitchBackend?: (backend: KernelBackendId) => void
   /**
-   * 以新会话重启（组合根实现：走切换内核的同一条退出路径，不写 resume 目标，
-   * 内核不变）。/channel 在激活渠道的连接变了时用它：运行中的 CLI 子进程
-   * 换不了 baseUrl/token，只能换会话。
-   */
-  onRestartFreshSession?: (notice: string) => void
-  /**
-   * Claude 内核探测（组合根注入；Chat 不 import 任何具体后端）。首次需要时
+   * 非 DSH 内核探测（组合根注入；Chat 不 import 任何具体后端）。首次需要时
    * 调一次并缓存结果；探测失败按「未安装」处理。
    */
   onProbeKernels?: () => Promise<Record<string, KernelStatus>>
@@ -848,16 +839,13 @@ export function Chat({
     })
   }
   /**
-   * The guide's access step needs two ACTIONS, and both of them already exist
-   * as flows Chat owns: the subscription sign-in (`runOAuthLogin` over the
-   * shared question panel — the same one `/login` uses on a backend session)
-   * and the `/provider` add flow. Chat hands them to the wizard as plain
-   * callbacks, so the screen keeps importing no adapter VALUES of its own and
-   * the question panel keeps exactly one owner.
+   * The guide's access step hands its sign-in ACTION to Chat: the account
+   * sign-in (`runAccountSignIn` over the shared question panel), so the
+   * screen keeps importing no adapter VALUES of its own and the question
+   * panel keeps exactly one owner.
    *
-   * The catalog tail is the same consistency `/provider` performs: a sign-in
-   * flips a provider's credential-gated catalog from empty to full, so the
-   * model picker's cache, `models` and `providerInfos` must be re-read.
+   * A sign-in fills the account route's catalog (a sign-out empties it), so
+   * the model picker's cache, `models` and `providerInfos` must be re-read.
    */
   const refreshProviderCatalog = React.useCallback((): void => {
     channel.invalidateModelCompletion()
@@ -872,50 +860,21 @@ export function Chat({
     })
   }, [channel])
 
-  const onboardingSignIn = React.useCallback((provider: string): Promise<ProviderWizardOutcome> => {
-    const oauth = channel.providerSetup()?.oauth
+  const onboardingSignIn = React.useCallback((provider: string): Promise<AccountSignInOutcome> => {
+    const oauth = channel.oauthSetup()
     if (oauth === undefined) {
       channel.notify(t('provider-oauth-unmounted', { provider }), { color: 'warning', timeoutMs: 8000 })
       return Promise.resolve('failed')
     }
-    return runOAuthLogin({
-      ask: (request, options) => questionStore.ask(request, options),
+    return runAccountSignIn({
+      ask: request => questionStore.ask(request),
       notify: (text, options) => channel.notify(text, options),
       pushLocal: (title, lines) => channel.pushLocal(title, lines),
     }, oauth, provider).then((outcome) => {
-      // A sign-out empties that provider's catalog just as a sign-in fills it.
       if (outcome === 'added' || outcome === 'signed-out') refreshProviderCatalog()
       return outcome
-    }).catch(() => 'failed' as ProviderWizardOutcome)
+    }).catch(() => 'failed' as AccountSignInOutcome)
   }, [channel, questionStore, refreshProviderCatalog])
-
-  /** `/provider` and the guide's add-provider action: one wizard wiring, one catalog tail. */
-  const runProviderSetup = React.useCallback((): Promise<ProviderWizardOutcome> => {
-    const host = channel.providerSetup()
-    if (host === undefined) {
-      channel.notify(t('provider-unavailable'), { color: 'warning', timeoutMs: 8000 })
-      return Promise.resolve('failed')
-    }
-    return runProviderWizard({
-      host,
-      ask: (request, options) => questionStore.ask(request, options),
-      notify: (text, options) => channel.notify(text, options),
-      pushLocal: (title, lines) => channel.pushLocal(title, lines),
-      working: () => channel.working,
-      switchModel: (provider, model) => switchModelRecorded(provider, model),
-      currentModel: () => channel.model,
-    }).then((outcome) => {
-      // A catalog-changing outcome invalidates every cached model surface so
-      // `/model` (picker + completion) reflects it immediately; the wizard's
-      // live-switch branch already dropped the completion cache via
-      // switchModelRecorded — this covers keep-current, add, edit, delete and
-      // OAuth login/logout.
-      if (outcome === 'added' || outcome === 'updated' || outcome === 'deleted' || outcome === 'signed-out') {
-        refreshProviderCatalog()
-      }
-      return outcome
-    }).catch(() => 'failed' as ProviderWizardOutcome)
-  }, [channel, questionStore, refreshProviderCatalog, switchModelRecorded])
 
   const modelPicker = useModelPicker({
     channel, models, providers: providerInfos, recents: modelProviderTabs ? modelRecents : undefined, open: overlay.kind === 'model',
@@ -1060,7 +1019,7 @@ export function Chat({
    * "点了没反应"，状态还滞留着、等界面关掉才突然弹出来。默认收，白名单只留给覆盖层。
    */
   const overlayCommandNames = React.useMemo(
-    () => new Set(['model', 'effort', 'plan', 'preset', 'permission', 'kernel', 'dsh', 'codex', 'claude']),
+    () => new Set(['model', 'effort', 'plan', 'preset', 'permission', 'kernel', 'dsh']),
     [],
   )
   /**
@@ -1248,10 +1207,28 @@ export function Chat({
     pluginManage.start(flow, flow.begin())
     return true
   }
-  const host = channel.backendChannels?.()
-  const { rows: channelRows, open: openChannelPicker, pick: pickChannel, setMode: runBackendModeCommand, login: runBackendLogin } = useBackendChannels({
-    channel, host, questionStore, dispatchOverlay, onRestartFreshSession, runOAuthLogin,
-  })
+  /** 切换声明了 `modes` 能力的后端的原生模式；绑定在请求途中换掉则作废。 */
+  const runBackendModeCommand = (id: string, name: string): Promise<boolean> => {
+    const modes = channel.backendModes?.()
+    if (modes === undefined) return Promise.resolve(false)
+    const originBinding = channel.agentBindingGeneration
+    return modes.set(id).then(ok => {
+      if (channel.agentBindingGeneration !== originBinding) return false
+      if (ok) channel.notify(t('mode-switched', { name }), { color: 'success' })
+      return ok
+    })
+  }
+  /** 声明了 `auth` 能力的后端的 /login；没有该能力时返回 false 交回 DSH 路径。 */
+  const runBackendLogin = (): boolean => {
+    const auth = channel.backendAuth?.()
+    if (auth === undefined) return false
+    void auth.login((oauth, provider) => runAccountSignIn({
+      ask: request => questionStore.ask(request),
+      notify: (text, options) => channel.notify(text, options),
+      pushLocal: (title, lines) => channel.pushLocal(title, lines),
+    }, oauth, provider)).catch(() => {})
+    return true
+  }
   /**
    * 落地页条件位③（投喂一颗 Star）：与开屏求 star 弹窗**同一口径**——
    * `usageStats`（~/.dsh-tui/usage.json）里有未报过的已达档里程碑
@@ -1271,13 +1248,13 @@ export function Chat({
    */
   const [onboardingPending, setOnboardingPending] = React.useState(onboardingOnBoot === true && !recoveryRemountOnBoot)
   /**
-   * 品牌档（`branding.ts`）：设置项 `dsh-tui.brand`（`auto` = 跟后端）与当前
-   * 后端 id（`backendCapabilities.backendId`，boot 时即定）的合成。开屏词、
+   * 品牌档（`branding.ts`）：设置项 `dsh-tui.brand`（`auto` = 默认 deepseek）
+   * 的解析结果。开屏词、
    * 立绘、大字配色读 prop；主题默认档经 `setActiveBrand` 镜像给
    * ThemeProvider（它挂在 Chat 外层，拿不到 channel）——plugin 已在首帧前
    * 铺过初值，这里负责 `/settings` 切品牌时的实时跟动。
    */
-  const brand = resolveBrand(channel.brand, channel.backendCapabilities?.backendId)
+  const brand = resolveBrand(channel.brand)
   React.useEffect(() => {
     setActiveBrand(brand)
   }, [brand])
@@ -3515,16 +3492,6 @@ export function Chat({
         })
         return true
       }
-      case 'provider': {
-        // Interactive add-provider wizard (/provider): drives the shared
-        // question panel, persists profile + key via the channel's settings/
-        // credentials seams. No picker state — AskUserQuestionPanel renders it.
-        // The wizard notifies on every handled failure, and the runner never
-        // rejects.
-        setHelpOpen(false)
-        void runProviderSetup()
-        return true
-      }
       case 'thinking':
         setHelpOpen(false)
         dispatchOverlay({
@@ -4344,14 +4311,6 @@ export function Chat({
             return goals.clear()
         }
       }
-      case 'channel': {
-        // 渠道选择器。/channel 只在声明了 channels 能力的内核下进命令表，
-        // 能走到这里就说明可用。与 /kernel 一样，再执行一次就收起。
-        setHelpOpen(false)
-        if (overlay.kind === 'channel') dispatchOverlay({ type: 'close' })
-        else openChannelPicker()
-        return true
-      }
       case 'kernel':
         // 内核选择器，每个内核下都可用。
         // 确认后由组合根的 onSwitchBackend 记住选择并以新内核重启。与 /help、
@@ -4361,8 +4320,6 @@ export function Chat({
         else openKernelPicker()
         return true
       case 'dsh':
-      case 'codex':
-      case 'claude':
         setHelpOpen(false)
         return pickKernelById(name).then(() => true)
       case 'restart':
@@ -5576,18 +5533,6 @@ export function Chat({
       }
       return
     }
-    if (overlay.kind === 'channel') {
-      // 名册不冻在 overlay 里（channelRows 是渲染期派生值）：切换/导入后
-      // 选择器自己就刷新成新状态，不需要重开。
-      if (key.upArrow || key.downArrow) {
-        dispatchOverlay({ type: 'move', delta: key.upArrow ? -1 : 1, count: channelRows.length })
-      } else if (plainReturn) {
-        pickChannel(overlay.index)
-      } else if (key.escape) {
-        dispatchOverlay({ type: 'close' })
-      }
-      return
-    }
     if (overlay.kind === 'plan') {
       if (key.upArrow || key.downArrow) {
         dispatchOverlay({ type: 'move', delta: key.upArrow ? -1 : 1, count: 2 })
@@ -6382,18 +6327,6 @@ export function Chat({
               <PluginManagePane step={pluginManage.view.step} busy={pluginManage.view.busy} />
             </Box>
           )}
-          {overlay.kind === 'channel' && (
-            <Box flexDirection="column" marginTop={1}>
-              <ChannelPicker
-                rows={channelRows}
-                focusIndex={overlay.index}
-                onPick={(index) => {
-                  if (approvalSnapshot !== null || questionSnapshot !== null || dialogSnapshot !== null) return
-                  pickChannel(index)
-                }}
-              />
-            </Box>
-          )}
           {overlay.kind === 'plan' && (
             <Box flexDirection="column" marginTop={1}>
               <PlanPicker
@@ -6578,7 +6511,6 @@ export function Chat({
         onClose={closeOnboarding}
         onApplyLang={applyLang}
         onProviderSignIn={onboardingSignIn}
-        onProviderAddProvider={runProviderSetup}
         onRunCommand={(name) => {
           // 与落地页的 onAction 同一条规则：打开整屏界面的命令要先把向导收掉。
           // 走 `closeOnboarding('skipped')` 而不是直接置 false——用户是去试命令、

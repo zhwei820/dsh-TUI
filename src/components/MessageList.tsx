@@ -2190,7 +2190,7 @@ export function LogoHeader({
   whaleIdle?: boolean
   /** Maid portrait swap (passed through to LogoV2; settings `dsh-tui.whaleGirl`). */
   whaleGirl?: boolean
-  /** 品牌档（当前后端 → `resolveBrand`；见 `branding.ts`）。 */
+  /** 品牌档（设置项 → `resolveBrand`；见 `branding.ts`）。 */
   brand?: Brand
   /** 求 star 标语行被点击（一键 star；host 不传则不可点）。 */
   onStarClick?: () => void

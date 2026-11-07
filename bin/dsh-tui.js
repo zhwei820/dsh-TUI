@@ -78,10 +78,10 @@ const ownVersion = ownPackage?.name === '@deepseek-harness-tui/dsh-tui' ? ownPac
 const PACKAGE = '@deepseek-harness-tui/dsh-tui'
 const PROFILE = 'dsh-tui'
 // Kept local so the launcher also works without compiled modules.
-/** 内置内核：只用于文案（"内置 dsh / claude / codex"）与 rescue/safe 提示。
+/** 内置内核：只用于文案（"内置 dsh"）与 rescue/safe 提示。
  *  **不是校验来源**——插件后端由各自 profile 提供，启动器看不到，所以
  *  `--backend` 只做 id 语法校验（P0 D1）。 */
-const BUILTIN_BACKEND_IDS = ['dsh', 'claude', 'codex']
+const BUILTIN_BACKEND_IDS = ['dsh']
 /** 后端 id 语法，与 src/agent/backend-manifest.ts 的 BACKEND_ID_PATTERN 同一规则
  *  （启动器要能在没有编译产物时工作，所以这里是副本；两边改动必须同步）。 */
 const BACKEND_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,31}$/
@@ -548,8 +548,7 @@ const MSG = {
       `Options:\n` +
       `  --resume [id]          Resume the last (or the given) session\n` +
       `  -c, --continue         Same as --resume\n` +
-      `  --backend <id>         Agent backend: dsh | claude | codex, or an installed plugin backend\n` +
-      `                         (claude, codex and plugin backends: experimental)\n` +
+      `  --backend <id>         Agent backend: dsh, or an installed plugin backend (experimental)\n` +
       `  -- <prompt...>        Treat the remaining arguments as literal prompt text\n` +
       `  <path|url>             Open with the given workspace target\n\n` +
       `Leading DSH options (e.g. --dump-config, --patch <path>) are forwarded unchanged.\n` +
@@ -570,8 +569,7 @@ const MSG = {
       `选项：\n` +
       `  --resume [id]          恢复上次（或指定 id 的）会话\n` +
       `  -c, --continue         同 --resume\n` +
-      `  --backend <id>         Agent 后端：dsh | claude | codex，或已安装的插件后端\n` +
-      `                         （claude、codex 与插件后端均为实验性）\n` +
+      `  --backend <id>         Agent 后端：dsh，或已安装的插件后端（实验性）\n` +
       `  -- <提示词...>         将剩余参数作为字面提示词\n` +
       `  <路径|URL>             以指定工作区目标启动\n\n` +
       `前置 DSH 选项（如 --dump-config、--patch <路径>）原样转发。\n` +
@@ -977,8 +975,8 @@ const readBackendLastSession = backendId => {
 }
 
 // env 里的后端选择：先按 boot 侧 parseBackendId 的规则**归一**（trim + 小写）再判定。
-// 拿原始值判定会让两侧分歧：`DSH_TUI_BACKEND=Codex` 时 boot 归一后起 codex，启动器
-// 却当它没命中而读 dsh 的 resume.txt——codex 便拿着 DSH 的会话 id 去恢复（必报错）。
+// 拿原始值判定会让两侧分歧：`DSH_TUI_BACKEND=Plugin` 时 boot 归一后起 plugin 后端，启动器
+// 却当它没命中而读 dsh 的 resume.txt——该后端便拿着 DSH 的会话 id 去恢复（必报错）。
 // 归一后 `dsh` 与非法/空值同样走 resume.txt 分支。
 const backendChoiceFromEnv = () => {
   const raw = process.env.DSH_TUI_BACKEND

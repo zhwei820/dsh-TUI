@@ -182,9 +182,8 @@ const SEND_MESSAGE_EXPLICIT: Readonly<Record<string, AgentMessageState>> = Objec
   expired: 'expired',
 })
 
-/** The settled state of one SendMessage card — the UI-side mirror of
- *  backends/claude/send-message.ts's rules (UI layers must not import
- *  backends, verify:boundary): a call alone is `issued`; an error result is
+/** The settled state of one SendMessage card (a backend's messaging tool;
+ *  UI layers must not import backends, verify:boundary): a call alone is `issued`; an error result is
  *  a refusal fact; a structured `delivery`/`status` field naming a state
  *  marks exactly that; any other shape — including bare success — is
  *  `unknown`, never a guessed delivery. */

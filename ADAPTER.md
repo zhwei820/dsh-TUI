@@ -7,23 +7,20 @@
 | 目录 / 包 | 规则 |
 | --- | --- |
 | `@deepseek-ai/*` | 只在 `src/dsh-adapter/` 内 import |
-| `@anthropic-ai/*` | 只在 `src/backends/claude/` 内 import(由该后端 manifest 的 `vendorPackages` 派生,见下) |
 | `@agentclientprotocol/*` | 只在 `src/backends/acp/` 内 import(为将来的 ACP 后端预留,目录尚不存在) |
 | `@dsh-std/*` | 只在 `src/adapter/standard/` 与 `src/dsh-adapter/` 内 import |
 | `src/agent/`、`src/channel/` | 不 import 厂商包、`src/dsh-adapter/`、`src/backends/` 与 `src/ink/`;`src/agent/` 也不 import `src/channel/`。唯一例外:`src/channel/sanitize.ts → src/ink/stringWidth.ts` |
-| `src/backends/<x>/` | **一座孤岛**:只 import 自己目录、`src/agent/`(它实现的领域)与 `src/backends/shared/`(中立接缝),外加 node 内建与 manifest `vendorPackages` 声明的厂商包。宿主内部——`src/i18n.ts`、`src/utils/`、`src/channel/`、`src/dsh-adapter/`——一律不可读;`import type` 也算(公开面自洽包括类型)。也不 import 其他后端目录。存量违例登记在 `scripts/adapter-boundary.allowlist.json` 的 `backendEntries`(**只减不增**;claude 在 B-3 清零、codex 随 B-5,该段现已为空——规则对每个后端无条件生效) |
+| `src/backends/<x>/` | **一座孤岛**:只 import 自己目录、`src/agent/`(它实现的领域)与 `src/backends/shared/`(中立接缝),外加 node 内建与 manifest `vendorPackages` 声明的厂商包。宿主内部——`src/i18n.ts`、`src/utils/`、`src/channel/`、`src/dsh-adapter/`——一律不可读;`import type` 也算(公开面自洽包括类型)。也不 import 其他后端目录。存量违例登记在 `scripts/adapter-boundary.allowlist.json` 的 `backendEntries`(**只减不增**;该段现已为空——规则对每个后端无条件生效) |
 | `src/backends/shared/` | 后端无关的共享件(原子写、渠道令牌库、平台文案的单一数据源);任何后端都可 import。它自己是后端栈的**地板**,规则分三条:① 不 import scoped(厂商)包;② 在 `src/` 内只 resolve 到 `src/agent/` 与自己目录,外加一条已论证的例外 `channel-tokens.ts → src/utils/credentials.ts`(纯路径助手,不碰宿主字典与宿主状态);③ 相对 import 不得逃出 `src/`(`scripts/`、`vendor/` 也够不着)。**非 scoped 的运行时依赖不归这条管**(`channel-tokens.ts` 的 `yaml` 即一例),由依赖清单与 `verify:manifest-deps` 一类门禁把关。于是它读不到宿主字典 `src/i18n.ts`、宿主投影 `src/channel/` 或宿主工具 `src/utils/`,也不 import 具体后端目录与 `src/dsh-adapter/`——否则每个后端都会经它间接拿到宿主自己的那份东西(D2 的传递性;边界门禁只查直接 specifier,所以这条必须由规则本身兜住) |
-| Codex 后端(`src/backends/codex/`) | 驱动用户安装的 `codex` 二进制,不依赖 Codex npm 包;本地 daemon 的 stdio proxy 用通用 `ws` 处理 WebSocket 帧,协议类型由 `scripts/codex-protocol-sync.mjs` 生成入库;`package.json` 不得出现 `@openai/codex*`(`verify:codex-contract`) |
 | UI 层(`screens/`、`components/`、`hooks/`、`ink/`) | 不 import `src/backends/`;从 `src/dsh-adapter/` 只取类型,运行期经 facade(`src/dsh-adapter/types.ts` 的类型 re-export、`channel.ts`/`plugin.ts` 提供的服务)接触上游。存量值 import 登记在 `scripts/adapter-boundary.allowlist.json`,只减不增 |
-| `native.dsh` | 只允许 `src/dsh-adapter/` 内访问(唯一的 native 通道;两个内置后端都不声明 `nativeKey`) |
+| `native.dsh` | 只允许 `src/dsh-adapter/` 内访问(唯一的 native 通道) |
 | `'@deepseek-ai/…'` 字符串字面量 | 只在 `src/dsh-adapter/` 内出现(运行期拼出来交给 `createRequire` / `import()` 的说明符也算) |
 | 宿主专属模块(`host-contract.ts` 的 `HOST_MODULES`,cordis 除外,含 `@deepseek-ai/dsh` 本身) | 任何地方不得值 import;只由 `src/dsh-adapter/host-dsh.ts` 按宿主 realpath 动态加载,说明符只写在 `host-contract.ts`;`host-dsh.ts` 对 `@deepseek-ai/*` 只能 `import type`;`host-contract.ts` 只给 `host-dsh.ts` 与 `contract.ts` import |
 
 ### 后端 manifest
 
 `src/backends/<id>/manifest.ts` 是后端对宿主、UI 与门禁的**静态声明**,纯数据:
-除 `import type` 外只允许 import 自己目录内无运行时依赖的版本常量(唯一登记例外:
-`backends/claude/manifest.ts → contract.ts`),因为构建期索引会静态 import
+除 `import type` 外只允许 import 自己目录内无运行时依赖的版本常量,因为构建期索引会静态 import
 每个 manifest(每次启动,含只用 DSH 的启动)。字段与语义见
 `src/agent/backend-manifest.ts`;六条容易踩的边界:
 
@@ -34,8 +31,8 @@
 - **`vendorPackages` / `nativeKey`**:门禁的后端作用域规则由这两个字段派生;
   `nativeKey` **缺省即"不使用 native 通道"**,凭空给某个后端补一条规则等于放宽门禁,
   派生结果会与 `scripts/verify-adapter-boundary.ts` 里的期望快照逐字比对。
-- **`unloadExport`**:只用于**模块级/进程级资源池**(如 codex 的 app-server hub,
-  按设置指纹池化、跨会话复用);会话级资源仍归 `fiber` 的 `session.dispose()`。
+- **`unloadExport`**:只用于**模块级/进程级资源池**(如按设置指纹池化、跨会话复用的
+  子进程与连接);会话级资源仍归 `fiber` 的 `session.dispose()`。
   注册表只记"真的加载过"的条目——没加载过的后端不会被 import,也不会被关池。
 - **`install`**:**声明式配方**,不是排他特权(Stage B / B-1)。字段是
   `{ executor, specifier, version }`:清单说**装什么、哪个版本**,以及**交给宿主的哪个
@@ -43,18 +40,16 @@
   `pnpm-profile-add`)。注册表在准入处**查表**派生 `RegisteredBackend.installable`
   ——"这个条目有没有安装面"因此是声明与宿主能力的合取,不再是谁的 id。声明了宿主不认识的
   执行器**不抛错**:按"没有安装面"处理(那张 dim 行退回落检测自己的 hint,不长出一个按不动
-  的按钮)。`install` 缺省也是一等公民:codex 依赖用户自己的 `codex` 二进制,没有包可装 ——
+  的按钮)。`install` 缺省也是一等公民:驱动用户自己安装的系统 CLI 的后端没有包可装 ——
   它要的是"缺什么、怎么补"的呈现,不是一个装不了任何东西的按钮。
-  选择器的 `sdk-install` 浮层带**后端 id**,安装面在打开时按 id 现查——装的是用户点的那一行
-  (Stage A 的做法相反:浮层不带 id、`backends.ts` 静态 import 那一个安装器,于是任何别的
-  后端都只能装成 Claude 的 SDK)。
+  选择器的 `sdk-install` 浮层带**后端 id**,安装面在打开时按 id 现查——装的是用户点的那一行。
 - **公开子集与 in-tree 私有项**:manifest 是 `tui.dsh/v1alpha1#Backend` 公开声明的
   **超集**。`inTree`、`alwaysAvailable`、`nativeKey`、`vendorPackages`、`backendExport`
   与 `label.kind === 'key'` 是仓内私有项,不进公开面;`backendContributionOf()`
   (`src/dsh-adapter/backend-contribution.ts`) 是唯一的投影方向——剥掉私有项、把 key
   标签展开成字面量、缺省声明投影成空列表,结果必须过 `validateBackendSpec()`
   (`tui-profile/protocols/tui-contributions.js`)。`scripts/verify-backend-contribution.ts`
-  断言三个内建后端都投影得干净(私有键零泄漏)、投影是纯函数。
+  断言内建后端都投影得干净(私有键零泄漏)、投影是纯函数。
   `capabilities` 与 `grants` 是这条公开面上的两个新字段:前者必须覆盖运行期
   `AgentSession.capabilities` 实际返回的键集,后者只取宿主权限词表
   (`registry/permissions-0.1.json`);两者的未知名字一律**降级不拒绝**,判定是
@@ -119,7 +114,7 @@ Cordis 插件消费公开服务，不复刻领域逻辑或日志格式。厂商�
   所以它们也在运行期可缺的集合里(缺席不算 drift)。宿主类型包范围为 `0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.1-rc.4 || 0.2.1-rc.5 || 0.2.2-rc.1`
   (`dsh-home-paths` 沿用家族宽范围)。`cordis-plugin-loader` 只当 `unknown` 用,不声明 peer。
 - **能力探测**:`HOST_MODULES` 列出 8 个宿主模块与入口读取的每个导出。`loadHostDsh` 逐项检查,
-  缺模块 / 缺导出即抛出点名原因,入口回退(DSH 内核交给 `dsh --profile`,Claude 内核无宿主解析)
+  缺模块 / 缺导出即抛出点名原因,入口回退(DSH 内核交给 `dsh --profile`)
   并把原因写 stderr 与界面通知。`host-dsh.ts` 用 `Pick<typeof 宿主模块, 契约导出名>` 取类型
   (`profile-boot` 除外,本地声明),契约写了 pinned 宿主不存在的导出时编译失败。
 - **复刻面**:`HOST_REPLICAS` 列出入口复刻的上游符号,`host-replica.snapshot.json` 记录在

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-dsh-TUI 是 DeepSeek Harness 的终端界面应用（`@deepseek-harness-tui/dsh-tui`），零核心改动、只消费 DSH 的公开导出。DSH 是首要适配目标与首方后端；本包正从「DSH 的插件」演进为「拥有自身入口与组装根的终端应用」，届时 DSH 与 claude / codex 一样作为后端按需在进程内加载。Agent、会话、模型、工具、持久化与策略域仍然由 DeepSeek Harness 拥有，本包只消费它们。改动前先读 [docs/contributing.md](docs/contributing.md)（本仓库共享开发契约的权威文本）与 [ADAPTER.md](ADAPTER.md)（上游边界与契约）；整体结构见 [docs/architecture.md](docs/architecture.md)；独立宿主的方案与非目标见 [docs/standalone-host-design.md](docs/standalone-host-design.md)。
+dsh-TUI 是 DeepSeek Harness 的终端界面应用（`@deepseek-harness-tui/dsh-tui`），零核心改动、只消费 DSH 的公开导出。DSH 是首要适配目标与首方后端；本包正从「DSH 的插件」演进为「拥有自身入口与组装根的终端应用」，届时 DSH 作为后端之一按需在进程内加载。Agent、会话、模型、工具、持久化与策略域仍然由 DeepSeek Harness 拥有，本包只消费它们。改动前先读 [docs/contributing.md](docs/contributing.md)（本仓库共享开发契约的权威文本）与 [ADAPTER.md](ADAPTER.md)（上游边界与契约）；整体结构见 [docs/architecture.md](docs/architecture.md)；独立宿主的方案与非目标见 [docs/standalone-host-design.md](docs/standalone-host-design.md)。
 
 ## 仓库布局
 
@@ -9,10 +9,8 @@ src/index.ts        公共 Cordis 插件入口、配置 Schema、对运行时实
 src/dsh-adapter/plugin.ts  运行时实现：TTY 校验、服务注册、Agent 创建/恢复、React 树挂载与收尾
 src/dsh-adapter/host-entry.ts  本包入口：非 DSH 内核不组合完整 DSH profile（改组合轻量 profile：本包的行 + profile 声明的第三方插件）、在裸 Cordis 根上挂运行时；路由判定在 src/hostEntryRoute.ts（docs/standalone-host-design.md）
 src/dsh-adapter/channel.ts  Channel 入口：后端中立核心（channel/core/）+ 仅 DSH 会话挂载的扩展（channel/extensions.ts）
-src/agent/          后端中立的会话领域：AgentEvent、AgentSession、类型化能力（无 I/O、无厂商依赖）
+src/agent/          后端中立的会话领域：AgentEvent、AgentSession、类型化能力（无 I/O、无厂商依赖）；多后端结构见 docs/agent-backend-design.md
 src/channel/        共享投影器（AgentEvent → 视图状态）与审批/问卷等中立 store
-src/backends/claude/  实验性 Claude Agent SDK 后端；多后端结构见 docs/agent-backend-design.md
-src/backends/codex/  Codex app-server 原生后端：协议、hub、翻译器与能力；不捆绑 Codex npm 依赖
 src/dsh-adapter/oauth/    内置订阅 OAuth：provider 路由、/auth、凭据存储与问卷桥接
 src/screens/        Chat.tsx 交互协调器与状态栏呈现
 src/components/     功能组件；design-system/ 是主题感知原语
@@ -56,7 +54,7 @@ pnpm smoke                      # 通用无头屏幕组装冒烟
 
 ## 上游边界与契约
 
-- 厂商包按目录隔离：`@deepseek-ai/*` 只在 `src/dsh-adapter/`，`@anthropic-ai/*` 只在 `src/backends/claude/`；后端中立层 `src/agent/`、`src/channel/` 不 import 厂商包、`src/dsh-adapter/` 与 `src/backends/`；UI 层不 import `src/backends/`，从 `src/dsh-adapter/` 只取类型（存量值 import 的 allowlist 只减不增）。完整规则表见 [ADAPTER.md](ADAPTER.md)；`pnpm run verify:boundary` 扫描全部源码，越界即失败。
+- 厂商包按目录隔离：`@deepseek-ai/*` 只在 `src/dsh-adapter/`；后端中立层 `src/agent/`、`src/channel/` 不 import 厂商包、`src/dsh-adapter/` 与 `src/backends/`；UI 层不 import `src/backends/`，从 `src/dsh-adapter/` 只取类型（存量值 import 的 allowlist 只减不增）。完整规则表见 [ADAPTER.md](ADAPTER.md)；`pnpm run verify:boundary` 扫描全部源码，越界即失败。
 - 校验版本线、peer 范围与 blessed 包清单在 `src/dsh-adapter/contract.ts`；本地检测到 drift 打警告，CI 上 `verify:contract` 直接失败。
 - 本包入口按宿主 realpath 加载已装 `dsh` 的模块：清单、复刻面与偏差的唯一来源是 `src/dsh-adapter/host-contract.ts`，加载只在 `host-dsh.ts`（对 `@deepseek-ai/*` 只 `import type`）；`verify:contract` 跑假宿主回退，有已装宿主时再跑能力探测与复刻指纹（`host-replica.snapshot.json`）；宿主 CLI 不是依赖，版本线移动时在装有该版本 `dsh` 的机器上复核。见 [ADAPTER.md](ADAPTER.md)「独立入口的宿主契约」。
 - 运行时或发布类型引用的 `@deepseek-ai/*` 框架包必须同时是 peer 与 dev 依赖（`verify:manifest-deps` 门禁）；仅测试/脚本使用的框架包只进 dev 依赖。
@@ -65,7 +63,7 @@ pnpm smoke                      # 通用无头屏幕组装冒烟
 ## 约定与红线
 
 - **源码与产物分离**：改 `src/`，绝不直接改 `lib/`，不提交 `lib/` 下的生成结果。
-- **真源投影**：后端的持久化会话记录（DSH 会话事件日志、Claude 的转录文件）是 transcript 真源；不要插入可能与持久化分歧的乐观助手/工具事实。保留事件顺序、序列锚点与 call-ID 匹配。
+- **真源投影**：后端的持久化会话记录（如 DSH 会话事件日志）是 transcript 真源；不要插入可能与持久化分歧的乐观助手/工具事实。保留事件顺序、序列锚点与 call-ID 匹配。
 - **职责分层**：投影属于共享投影器 `src/channel/projection.ts`，TUI 动作属于 channel 核心 `dsh-adapter/channel/core/` 与 DSH 扩展 `channel/extensions.ts`（新后端经会话能力接入，不写 channel 代码），交互模式与按键优先级属于 `Chat.tsx`，终端协议、布局与帧差分属于 `ink/`。不要为界面好写而在 TUI 里重实现 DSH 域服务——经 channel 或既有注册表缝隙适配。
 - **注册即效应**：资源经 Cordis 注册，用 `ctx.effect` 或既有单一退出漏斗清理。渲染失败必须响亮且非零退出；正常退出前恢复终端状态（raw 模式、光标、alt-screen、同步输出、鼠标、焦点）。
 - **渲染安静**：TUI 活动期间不加 `console.log` 或 stdout 诊断；用 opt-in 的 stderr/调试路径（`DSH_TUI_DEBUG`、`DSH_TUI_RENDER_LOG`）。

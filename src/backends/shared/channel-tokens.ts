@@ -1,9 +1,9 @@
 /**
  * The credential seam of a backend's channel profiles (shared by every
- * backend, docs/codex-backend-design.md D15): channel
+ * backend; served as `BackendHost.tokenStore`): channel
  * tokens live in the DSH credential store — the same `~/.dsh/.credentials.yaml`
- * (0600) the /provider wizard writes through the dsh credentials service
- * (providerWizard.ts's deriveKeyRef convention) — and channels.json holds
+ * (0600) the dsh credentials service writes (refs follow the
+ * `<ROUTE>_API_KEY` convention) — and channels.json holds
  * only the derived `tokenRef`, never a literal token.
  *
  * This module is a direct, host-side file view of that store (a non-DSH
@@ -167,10 +167,3 @@ export function memoryChannelTokens(initial: Record<string, string> = {}): Chann
     declared: ref => Object.hasOwn(data, ref),
   }
 }
-
-/** @deprecated The pre-D15 name (kept for one phase): {@link ChannelTokenStore}. */
-export type ClaudeChannelTokens = ChannelTokenStore
-/** @deprecated The pre-D15 name (kept for one phase): {@link fileChannelTokens}. */
-export const fileClaudeChannelTokens = fileChannelTokens
-/** @deprecated The pre-D15 name (kept for one phase): {@link memoryChannelTokens}. */
-export const memoryClaudeChannelTokens = memoryChannelTokens

@@ -211,12 +211,12 @@ async function runChild(reportFile: string, thirdPartyId: string, unknownId: str
     record('unknown', {
       ...unknown,
       pinned: unknown.afterAssembly !== null,
-      memoryWins: await rememberedKernel(unknown.afterAssembly, { memory: 'claude' }),
-      envWins: await rememberedKernel(unknown.afterAssembly, { envRaw: 'claude', envKnown: () => true }),
+      memoryWins: await rememberedKernel(unknown.afterAssembly, { memory: 'remembered-agent' }),
+      envWins: await rememberedKernel(unknown.afterAssembly, { envRaw: 'remembered-agent', envKnown: () => true }),
       // Negative control: the raw Config value (what a membership-free schema
       // keeps) would outrank the memory — the boot must pass the membership
       // parse into the resolver, which is what makes "no pin" hold.
-      rawWouldWin: await rememberedKernel(unknownId, { memory: 'claude' }),
+      rawWouldWin: await rememberedKernel(unknownId, { memory: 'remembered-agent' }),
     })
 
     const invalid = await probeConfigRow({ profileUrl: plainUrl, config: { backend: 'has:colon' } })
@@ -225,11 +225,11 @@ async function runChild(reportFile: string, thirdPartyId: string, unknownId: str
     const absent = await probeConfigRow({ profileUrl: plainUrl, config: {} })
     record('absent', { ...absent, pinned: absent.afterAssembly !== null })
 
-    const builtin = await probeConfigRow({ profileUrl: plainUrl, config: { backend: ' Codex ' } })
+    const builtin = await probeConfigRow({ profileUrl: plainUrl, config: { backend: ' DSH ' } })
     record('builtin', {
       ...builtin,
       pinned: builtin.afterAssembly !== null,
-      backendChoice: await rememberedKernel(builtin.afterAssembly, { memory: 'dsh' }),
+      backendChoice: await rememberedKernel(builtin.afterAssembly, { memory: 'remembered-agent' }),
     })
 
     const fixture = writeBundleFixture(join(dir, 'profile'), thirdPartyId)
@@ -240,7 +240,7 @@ async function runChild(reportFile: string, thirdPartyId: string, unknownId: str
     record('third-party', {
       ...thirdParty,
       pinned: thirdParty.afterAssembly !== null,
-      backendChoice: await rememberedKernel(thirdParty.afterAssembly, { memory: 'claude' }),
+      backendChoice: await rememberedKernel(thirdParty.afterAssembly, { memory: 'remembered-agent' }),
       moduleImported: existsSync(fixture.marker),
     })
   } finally {
@@ -309,7 +309,7 @@ check('a well-formed uninstalled id survives the schema, but has no membership b
 check('an uninstalled Config value does not pin the boot (the old "not configured" semantics)',
   unknown.pinned === false, JSON.stringify(unknown))
 check('the remembered kernel and the env chain still win for an uninstalled Config value',
-  unknown.memoryWins === 'claude' && unknown.envWins === 'claude', JSON.stringify(unknown))
+  unknown.memoryWins === 'remembered-agent' && unknown.envWins === 'remembered-agent', JSON.stringify(unknown))
 check('negative control: the raw Config value would outrank the memory — the boot must pass the membership parse',
   unknown.rawWouldWin === UNKNOWN_ID, JSON.stringify(unknown))
 
@@ -323,8 +323,8 @@ check('an absent backend key reads as not configured and never pins',
 
 const builtin = rowOf('builtin')
 check('an ordinary registered choice still normalizes, pins and selects',
-  builtin.raw === 'codex' && builtin.afterAssembly === 'codex'
-  && builtin.pinned === true && builtin.backendChoice === 'codex', JSON.stringify(builtin))
+  builtin.raw === 'dsh' && builtin.afterAssembly === 'dsh'
+  && builtin.pinned === true && builtin.backendChoice === 'dsh', JSON.stringify(builtin))
 
 // ── the wiring of both call sites, in the real sources ────────────────────────
 // The behavioral cases above prove the schema; these prove that the row still

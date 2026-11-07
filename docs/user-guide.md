@@ -316,13 +316,13 @@ dsh-tui
 | 命令 | 参数 | 作用 |
 |---|---|---|
 | `/new` | 无 | 新开会话（无二次确认；旧会话可 `/resume` 恢复） |
-| `/resume` | 无 | 打开**会话管理界面**（工作区栏 + 会话栏、实时筛选、固定常用、跨工作区）：切换会话只是**停放**，旧会话转后台继续跑，正在跑的回合不中断（与 `/tree` 同类：浏览与切换都不打断当前回合；仅 Claude 后端例外，回合运行中切换会被拒绝） |
+| `/resume` | 无 | 打开**会话管理界面**（工作区栏 + 会话栏、实时筛选、固定常用、跨工作区）：切换会话只是**停放**，旧会话转后台继续跑，正在跑的回合不中断（与 `/tree` 同类：浏览与切换都不打断当前回合） |
 | `/home` / `/agentview` / `/bg` | 无 | 同一个会话管理界面（`/home`=工作区视角 · `/agentview`=托管会话状态 · `/bg`=转后台并打开，别名 `/background`） |
 | `/tree` | 无 | 会话分叉树：悬停预览、点击回退 / 分叉 / 切换分支 |
 | `/fork` | 无 | 把当前会话复制成可恢复的副本（原会话不受影响）；DSH 有历史的副本记录来源，归入同一会话家族 |
 | `/restart` | 无 | 重启进程并恢复本会话。回合运行中也可用：会中断该回合，排队输入（连同附带的图片）在重启后以暂存消息保留（在暂存区按 ⏎ 才发送）；若工具不响应中断、进程无法正常收尾，约 5 秒后退出并打印恢复本会话的命令 |
-| `/kernel` | 无 | 内核选择器：在 DSH、Codex 与实验性的 Claude 后端之间切换，记住选择并重启进入新会话（回合运行中会被拒绝）；见 [Claude 后端](claude-backend.md) |
-| `/dsh` / `/codex` / `/claude` | 无 | 直接选择对应内核，检查与重启流程同 `/kernel`；选择当前内核不重启，回合运行中不能切换，未安装 Claude 时进入安装向导 |
+| `/kernel` | 无 | 内核选择器：在内置 DSH 与已装配的第三方后端之间切换，记住选择并重启进入新会话（回合运行中会被拒绝） |
+| `/dsh` | 无 | 直接选择 DSH 内核，检查与重启流程同 `/kernel`；当前已是 DSH 时不重启，回合运行中不能切换 |
 | `/rename` | `<新名称>` | 重命名当前会话（无参时显示当前标题与用法） |
 | `/recap` | 无 | 最近活动摘要（一行）+ 建议标题；面板内 `a` 键或点击一键应用标题。设置 `dsh-tui.recapOnOpen`（默认开）开启时，打开/恢复会话自动在底部显示一条分隔线 + `回顾：` 摘要行，悬停可查看操作、点击展开，发送新消息后自动消失 |
 | `/workspace` | `resume` / `rename <名称>` / `open <路径或URI>` | 管理工作区；`open` 支持绝对路径、file URI、插件 scheme |
@@ -357,7 +357,6 @@ dsh-tui
 
 | 命令 | 参数 | 作用 |
 |---|---|---|
-| `/channel` | 无 | 中转渠道档案（仅 Claude 后端）；**回合运行中导入 / 新建 / 管理，以及需要重启进程的切换会被拒绝**（选择器本身仍可打开），见 [交互与命令](interaction.md#渠道档案channel仅-claude) |
 | `/model` | 无 | 模型选择器；**同会话切换模型**（保留 session ID、历史和标题，下一次请求使用新路由），选择持久化到 `~/.dsh-tui/model.json` |
 | `/effort` | `status` / `<id>` | 推理强度：无参滑杆（`←/→` 实时调整）；`status` 当前档位；`<id>` 直接设定。持久化 `~/.dsh-tui/effort.json`；新会话起始档看 /settings 的 `effortDefault`（§5.3） |
 | `/thinking` | 无 | 扩展思考显示开关（流式时思考逐条展开） |
@@ -463,7 +462,7 @@ dsh-TUI 不预装通用技能；`/skills` 浏览 DSH 发现的技能，可直调
 - `/model`：选择器。**同会话切换模型**（保留 session ID 和历史，下一次请求使用新路由）；
   持久化 `~/.dsh-tui/model.json`，下次启动直接沿用它（cordis.yml/profile 中的
   `provider`/`model` 只是首次启动的部署默认值）。
-- DSH 的顶部标签以「最近使用」开头，再列各提供商，`Tab` / `Shift+Tab` 切换提供商；Codex 与 Claude 直接显示模型目录，不显示这些标签。所有后端均用 `↑/↓` 选模型、`←/→` 调推理等级、`Enter` 一并应用、`Esc` 取消草稿，支持点击可用的标签、模型、档位与选择/取消提示，以及滚轮移动模型焦点。点击推理档位会立即应用当前聚焦模型与该强度，并关闭选择器。
+- DSH 的顶部标签以「最近使用」开头，再列各提供商，`Tab` / `Shift+Tab` 切换提供商。所有后端均用 `↑/↓` 选模型、`←/→` 调推理等级、`Enter` 一并应用、`Esc` 取消草稿，支持点击可用的标签、模型、档位与选择/取消提示，以及滚轮移动模型焦点。点击推理档位会立即应用当前聚焦模型与该强度，并关闭选择器。
 - 回合运行中切换会被拒绝。
 - `/preset` 可选：`standard`（默认全功能）、`ptc`、`minimal`（内核「极简模式」：只暴露一个持久 shell 工具，无 compaction、无计划模式；也因此没有压缩、工具结果不剪枝——长会话可能撞上下文上限，`/compact` 与问卷不可用，Help 与 `/` 补全会标注，进入该预设时提示一次）、
   `cordis`、`liangshen`（梁神模式）。
@@ -610,7 +609,7 @@ dsh-tui 自身区块在 0.1.7 写入当前 profile 的 `cordis.patch.yml`，旧�
 | statusBar.* | 上表全部状态栏开关（compact/model/thinking/cwd/contextUsage/cache/tokens/cost/tps/gitBranch/sessionTitle/sessionId/mode/contextBar/activity/trajectory/pluginFields/pluginFieldsOrder；statusBar.sessionId 是底栏显示开关，与 cordis 的启动 sessionId 无关；pluginFieldsOrder 是插件字段名单：`''`=不显示、`*`=全部、`a,b;c;d`=三组即三槽） |
 
 **effortDefault**：模型没有该档时向下选择最近的可用档位，否则回到模型默认，并弹提示。DSH 的优先级为 settings 用户层 > 上次 `/effort`
-（effort.json，即上次实际运行的档位）> cordis `effort`（部署默认值）> 模型默认。Claude/Codex 通过自身控制接口和后端偏好应用修改；启动采用自动模式或恢复会话时保留原有选择，在设置中主动选择自动会重置为模型默认。
+（effort.json，即上次实际运行的档位）> cordis `effort`（部署默认值）> 模型默认。非 DSH 后端通过自身控制接口和后端偏好应用修改；启动采用自动模式或恢复会话时保留原有选择，在设置中主动选择自动会重置为模型默认。
 
 **scrollGutter**：scrollbar 轨道可直接拖；`Shift`/`Alt`/`Ctrl`+拖动仍是文字选择。
 

@@ -69,7 +69,7 @@ export const CHANNEL_METHOD_FEATURES: Readonly<Record<string, string>> = Object.
   listEfforts: 'models',
   setEffort: 'models',
   listProviders: 'provider-setup',
-  providerSetup: 'provider-setup',
+  oauthSetup: 'credentials',
   describeCredential: 'credentials',
   oauthProviderStatuses: 'credentials',
   listPresets: 'presets',

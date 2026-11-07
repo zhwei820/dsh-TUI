@@ -47,8 +47,6 @@ const GATES = [
   'verify:script-home-isolation',
   'verify:agent-domain',
   'verify:contract',
-  'verify:claude-contract',
-  'verify:codex-contract',
   'verify:herdr',
   'verify:manifest-deps',
   'verify:oauth',

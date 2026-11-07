@@ -404,12 +404,8 @@ natives — `@img/sharp-*` and the Claude SDK's
   platform's own natives and the platform-agnostic wasm fallbacks stay; foreign
   ones are skipped at resolution, so they no longer appear in the lockfile
   either.
-- The SDK is never installed by an update: it only enters a profile when you
-  pick that backend in the kernel picker, and the installer recomputes the list
-  for the current machine first, so exactly one platform's bundle lands. An
-  unused backend keeps taking no space.
-- Move the profile to another platform or musl container and the next update or
-  kernel install there refreshes it.
+- Move the profile to another platform or musl container and the next update
+  there refreshes it.
 - An existing profile's lockfile still lists every platform, so its first
   update downloads them once more before the filter takes effect.
 - Entries outside those two platform tables (a user's `fsevents`, a

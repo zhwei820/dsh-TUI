@@ -9,7 +9,7 @@
 import type { LocalCommand } from '../../../adapter/ports/channel-catalog.js'
 import type { AgentEvent } from '../../../agent/events.js'
 import type { AgentSession } from '../../../agent/session.js'
-import { BACKEND_CHANNEL_COMMAND, BACKEND_GOAL_COMMAND, BACKEND_PERMISSION_COMMAND, LOCAL_COMMANDS } from '../../../commands.js'
+import { BACKEND_GOAL_COMMAND, BACKEND_PERMISSION_COMMAND, LOCAL_COMMANDS } from '../../../commands.js'
 import { t } from '../../../i18n.js'
 import { logForDebugging } from '../../../utils/debug.js'
 import type { ChannelState } from '../types.js'
@@ -19,15 +19,13 @@ import type { ChannelState } from '../types.js'
  *  `permission` is not a LOCAL_COMMANDS name: it appears only when the
  *  snapshot appended it for the session's typed `modes` capability (see
  *  channel/capabilities.ts), and then rides as BACKEND_PERMISSION_COMMAND.
- *  `channel` follows the same ride-along for the typed `channels`
- *  capability (BACKEND_CHANNEL_COMMAND), `goal` for `goals`
+ *  `goal` follows the same ride-along for the typed `goals` capability
  *  (BACKEND_GOAL_COMMAND). */
 export function localCommandsFor(names: readonly string[]): readonly LocalCommand[] {
   if (names.length === LOCAL_COMMANDS.length && LOCAL_COMMANDS.every((command, index) => command.name === names[index])) return LOCAL_COMMANDS
   const served = LOCAL_COMMANDS.filter(command => names.includes(command.name))
   const appended = [
     ...(names.includes('permission') ? [BACKEND_PERMISSION_COMMAND] : []),
-    ...(names.includes('channel') ? [BACKEND_CHANNEL_COMMAND] : []),
     ...(names.includes('goal') ? [BACKEND_GOAL_COMMAND] : []),
   ]
   return appended.length === 0 ? served : [...served, ...appended]
@@ -159,11 +157,8 @@ export function createSessionControls(deps: {
 
   /**
    * Footer model name: when the backend maps the live model id to the model
-   * that actually serves the request (relay channels echo the requested id
-   * back, see backends/claude/modelEnv.ts), the footer shows the mapped
-   * name; data surfaces keep the raw id. A /channel switch also calls this:
-   * the backend reads the mapping lazily, so re-running it after the store
-   * changed repaints the footer immediately.
+   * that actually serves the request (`models.display`), the footer shows
+   * the mapped name; data surfaces keep the raw id.
    */
   const refreshModelDisplay = (session: AgentSession): void => {
     const state = deps.state()

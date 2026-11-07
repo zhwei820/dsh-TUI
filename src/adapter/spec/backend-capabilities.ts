@@ -25,7 +25,6 @@ export const BACKEND_CAPABILITY_NAMES: readonly string[] = Object.freeze([
   'models',
   'effort',
   'modes',
-  'channels',
   'compact',
   'init',
   'rewind',

@@ -2,8 +2,8 @@
  * The host's install-executor table (roadmap Stage B / B-1, §6 item 12).
  *
  * Stage A locked the install surface to a **backend id** — `backend-registry.ts`
- * kept `HOST_INSTALLABLE_BACKEND_ID = 'claude'` and `backends.ts` statically
- * imported that one backend's installer. That held only while the host had
+ * kept one hard-coded installable id and `backends.ts` statically imported
+ * that one backend's installer. That held only while the host had
  * exactly one consumer writing manifests. A manifest now names an **executor**
  * instead, and the registry looks the name up in this table when the entry
  * registers: the value is data any mounted bundle can be checked against

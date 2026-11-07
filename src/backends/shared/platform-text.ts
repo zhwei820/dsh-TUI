@@ -1,5 +1,5 @@
 /**
- * The platform copy the host UI and the built-in backends both render, as one
+ * The platform copy the host UI and any in-tree backend both render, as one
  * source (C-2): the status line's rate-limit window, /doctor, /rename, rewind
  * and the names of the tool cards a backend shares with the host's own cards.
  *
@@ -9,15 +9,15 @@
  * two copies of one string, with nothing keeping them equal. The values now
  * come from here; each side still carries the entry in its own dictionary and
  * renders it the way it always did. `scripts/verify-i18n.ts` compares the host
- * dictionary and both backend dictionaries against this file verbatim, so a
- * copy that drifts — or an inline one written back over the spread — turns
- * that gate red.
+ * dictionary against this file verbatim, so a copy that drifts — or an inline
+ * one written back over the spread — turns that gate red. (No in-tree backend
+ * ships today; the seam stays so the next one reads the same values.)
  *
  * D2 is unchanged: a third-party contribution must not be able to speak with
  * the host's words. The layers a contribution occupies
  * (`src/{screens,components,hooks,ink}/**`, `src/channel/**`) are kept out of
  * `src/backends/**` by `scripts/verify-adapter-boundary.ts`, so this file is
- * read only by the host dictionary and the two in-tree backends — never by a
+ * read only by the host dictionary and in-tree backends — never by a
  * plugin. The seam itself may not read the host dictionary either (same gate),
  * which is what keeps this route one-way.
  */
@@ -30,8 +30,8 @@ export interface PlatformTextEntry {
 }
 
 /**
- * The shared platform copy. The keys are the union of what the claude and
- * codex text modules render on a platform surface; the host dictionary spreads
+ * The shared platform copy. The keys are the strings the host and in-tree
+ * backends render on a platform surface; the host dictionary spreads
  * this object in, so its `keyof` stays a literal union and `t()` keeps its
  * type safety — do not widen this declaration with a `Record<string, …>`
  * annotation, which would collapse that union to `string`.

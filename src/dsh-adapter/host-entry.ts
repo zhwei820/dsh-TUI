@@ -98,8 +98,8 @@ function noteHostUnavailable(kernel: KernelBackendId, error: unknown): void {
 
 /**
  * Fallback when the funnel is not up (or refused): also close what the
- * funnel's teardown closes — the codex hub pool is process-wide and no
- * session's dispose closes it. Dynamic import keeps backends off the entry's
+ * funnel's teardown closes — a backend's pool (`unloadExport`) is
+ * process-wide and no session's dispose closes it. Dynamic import keeps backends off the entry's
  * load surface.
  */
 async function disposeEntryRoot(ctx: Context): Promise<void> {

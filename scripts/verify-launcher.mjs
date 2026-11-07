@@ -18,9 +18,9 @@
  *   - 面向用户的消息双语：DSH_TUI_LANG=zh 输出中文，否则默认英文
  *   - shellQuote 单元（win32 的 shell:true 路径 CI 跑不到 Windows，只能靠
  *     单测覆盖转义规则本身）
- *   - 内核分流：判定为 Claude 的启动走本包入口（host-entry.js），开关关闭、
- *     dsh 一次性开关、交接到 dsh 时仍走 `dsh --profile`；入口读到 Config 行
- *     钉在 DSH 上时原样交给 dsh
+ *   - 内核分流：开关关闭、dsh 一次性开关、交接到 dsh 时走 `dsh --profile`；
+ *     入口读到 Config 行钉在 DSH 上时原样交给 dsh（非 DSH 内核经入口的纯路由
+ *     判定在 verify-host-entry.ts，子进程里没有已注册的插件后端可选）
  *
  * 运行：pnpm build && node scripts/verify-launcher.mjs
  */
@@ -423,19 +423,13 @@ const entryRan = result => /interactive terminal/u.test(`${result.stderr}${resul
 const kernelPrefs = join(tmp, '.dsh-tui', 'kernel.json')
 const profilePatch = join(home, 'profiles', 'dsh-tui', 'cordis.patch.yml')
 resetStubLog()
-r = runEntry(['--backend', 'claude'])
-check('host entry: --backend claude starts the entry, not dsh --profile', launchCalls().length === 0 && entryRan(r))
-resetStubLog()
-r = runEntry(['--backend', 'claude'], { DSH_TUI_HOST_ENTRY: '0' })
+r = runEntry(['--backend', 'acme-agent'], { DSH_TUI_HOST_ENTRY: '0' })
 check('host entry: DSH_TUI_HOST_ENTRY=0 keeps dsh --profile', launchCalls().length === 1 && !entryRan(r))
 resetStubLog()
-r = runEntry(['--backend', 'claude', '--dump-config'])
+r = runEntry(['--backend', 'acme-agent', '--dump-config'])
 check('host entry: a dsh switch always goes to dsh', launchCalls().at(-1)?.includes('<--dump-config>') === true && !entryRan(r))
 mkdirSync(dirname(kernelPrefs), { recursive: true })
-writeFileSync(kernelPrefs, JSON.stringify({ backend: 'claude' }))
-resetStubLog()
-r = runEntry([])
-check('host entry: the remembered kernel (kernel.json) routes too', launchCalls().length === 0 && entryRan(r))
+writeFileSync(kernelPrefs, JSON.stringify({ backend: 'acme-agent' }))
 resetStubLog()
 r = runEntry([], { DSH_TUI_BACKEND_HANDOFF: 'dsh' })
 check('host entry: a kernel-switch handoff to dsh beats the memory', launchCalls().length === 1 && !entryRan(r))
@@ -443,7 +437,7 @@ rmSync(kernelPrefs, { force: true })
 mkdirSync(dirname(profilePatch), { recursive: true })
 writeFileSync(profilePatch, '- id: dsh-tui\n  config:\n    backend: dsh\n')
 resetStubLog()
-r = runEntry(['--backend', 'claude', 'foo'])
+r = runEntry(['--backend', 'acme-agent', 'foo'])
 check('host entry: a Config row pinning dsh is handed on to dsh with the app args', launchCalls().at(-1) === '<--profile><dsh-tui><--><foo>' && !entryRan(r))
 rmSync(profilePatch, { force: true })
 // The stub dsh is no host the entry can load, so the default DSH route falls

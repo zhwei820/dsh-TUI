@@ -16,9 +16,9 @@ export interface BackendDetection {
   readonly version?: string
   /**
    * Not installed, yet a version was read: the CLI is there but older than
-   * this backend supports (codex's "too old"). The picker then says "upgrade"
-   * instead of "not installed", which is what the detection hint explains.
-   * Replaces the host's `id === 'codex'` branch (P0 D5-2).
+   * this backend supports ("too old"). The picker then says "upgrade"
+   * instead of "not installed", which is what the detection hint explains
+   * (P0 D5-2).
    */
   readonly stale?: true
   /** A version outside the validated range (warn, never block). */
@@ -34,8 +34,7 @@ export interface BackendDetection {
 }
 
 /**
- * One-click install surface for an optional backend's SDK peer (the Claude
- * backend's wizard is the first consumer). These types live here so the UI
+ * One-click install surface for an optional backend's SDK peer. These types live here so the UI
  * layer can read them without importing a backend package; the install
  * implementation itself stays inside the backend.
  */
@@ -97,29 +96,6 @@ export type OpenTarget =
    *  every project the backend knows). */
   | { readonly kind: 'resume'; readonly sessionId: string; readonly cwd?: string }
 
-/** A usable OAuth access token and its expiry (epoch ms). Token material:
- *  only ever handed to the backend's child process, never logged. */
-export interface OAuthAccess {
-  readonly access: string
-  readonly expires: number
-}
-
-/** The host's stored OAuth login for one provider (dsh-auth on DSH hosts). */
-export interface OAuthCredentialSource {
-  /**
-   * The stored credential, refreshed first when it is about to expire;
-   * undefined when none is stored. Rejects when a needed refresh fails.
-   *
-   * `rejected` is the access token the backend just refused: it is refreshed
-   * only while the store still holds that very token (compare-and-swap). A
-   * credential rotated meanwhile (a fresh `/login`, another process's
-   * refresh) is returned as is, never force-refreshed.
-   */
-  fresh(options?: { readonly rejected?: string; readonly signal?: AbortSignal }): Promise<OAuthAccess | undefined>
-  /** Whether a credential is stored, without touching the network. */
-  stored(): Promise<boolean>
-}
-
 /** Host-owned credential refs; token material never enters events or logs. */
 export interface BackendTokenStore {
   read(ref: string): string | undefined
@@ -160,9 +136,6 @@ export interface BackendHost {
   /** One line a backend child process wrote to stderr (never the terminal:
    *  the host logs it and folds repeats into notices). */
   stderr?(line: string): void
-  /** The host's stored OAuth login for a provider id (`anthropic`), when the
-   *  host keeps one. */
-  oauthCredential?(provider: string): OAuthCredentialSource | undefined
 }
 
 /** Where an offline listing looks. */

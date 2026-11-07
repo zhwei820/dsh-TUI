@@ -388,11 +388,9 @@
         host: 127.0.0.1
         port: 0
 
-    # Built-in subscription OAuth sign-in: mounts available pi-ai routes
-    # (ChatGPT/Codex, Claude, Grok; newer pi-ai adds OpenAI direct and Meta)
-    # plus the /auth command. Its facade also delegates DeepSeek sign-in to
-    # the Host-owned account service when available. The TUI's /provider
-    # wizard gains its OAuth branch from ctx.dshAuth. Entry-level inject only —
+    # Built-in DeepSeek account sign-in: mounts ctx.dshAuth plus the /auth
+    # command, delegating to the Host-owned account service when available
+    # (third-party subscription routes are no longer mounted). Entry-level inject only —
     # the internal module's own inject is empty so a stale patch cannot
     # deadlock a composition lacking these services (#183 pattern).
     - id: dsh-tui-auth
@@ -475,7 +473,7 @@
         preset: !!js process.env.DSH_TUI_PRESET ?? undefined
         workspace: !!js process.env.DSH_TUI_WORKSPACE_TARGET ?? undefined
         sessionId: !!js process.env.DSH_TUI_RESUME_SESSION ?? undefined
-        # Agent backend (`dsh-tui --backend claude` → DSH_TUI_BACKEND); unset → /kernel's remembered pick, else dsh.
+        # Agent backend (`dsh-tui --backend <id>` → DSH_TUI_BACKEND); unset → /kernel's remembered pick, else dsh.
         backend: !!js process.env.DSH_TUI_BACKEND || undefined
 
     # Live working-line data source (thinking copy / running tool / turn

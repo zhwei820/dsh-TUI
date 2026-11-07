@@ -1,6 +1,6 @@
 /** Non-DSH backend loading, detection and startup session ownership. */
 import type { Context } from '@deepseek-ai/cordis'
-import type { AgentBackend, BackendHost, OAuthCredentialSource, OpenTarget, SdkInstallSurface, SdkInstallTarget, SdkInstaller } from '../agent/backend.js'
+import type { AgentBackend, BackendHost, OpenTarget, SdkInstallSurface, SdkInstallTarget, SdkInstaller } from '../agent/backend.js'
 import type { AgentEvent } from '../agent/events.js'
 import type { AgentSession } from '../agent/session.js'
 import { formatSessionRef } from '../agent/refs.js'
@@ -44,8 +44,6 @@ export function installSurfaceFor(id: string): SdkInstallSurface | undefined {
   }
 }
 
-const credentialSources = new Map<string, OAuthCredentialSource>()
-
 /**
  * The host services of one backend. Built per backend (not once for all of
  * them) because `dataDir` is backend-scoped: `<DATA_DIR>/backends/<id>` is the
@@ -57,7 +55,6 @@ const credentialSources = new Map<string, OAuthCredentialSource>()
  * shipped language fails to compile here until the domain contract knows it.
  */
 export async function createBackendHost(ctx: Context, backendId: string, cwd: string, stderr: (line: string) => void): Promise<BackendHost> {
-  const { createOAuthCredentialSource } = await import('./oauth-credential-source.js')
   const appVersion = installedTuiVersion()
   return {
     cwd,
@@ -68,14 +65,6 @@ export async function createBackendHost(ctx: Context, backendId: string, cwd: st
     warn: message => ctx.logger.warn(message),
     stderr,
     tokenStore: fileChannelTokens(undefined, message => logForDebugging(message)),
-    oauthCredential: provider => {
-      let source = credentialSources.get(provider)
-      if (source === undefined) {
-        source = createOAuthCredentialSource(provider)
-        credentialSources.set(provider, source)
-      }
-      return source
-    },
   }
 }
 

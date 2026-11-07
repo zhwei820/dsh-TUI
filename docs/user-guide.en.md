@@ -356,13 +356,13 @@ The command menu = built-in commands (aliases included) + DSH registry commands 
 | Command | Args | Effect |
 |---|---|---|
 | `/new` | none | start a new session (no confirmation; the old session stays under `/resume`) |
-| `/resume` | none | open the **session manager** (workspace + session columns, live filter, pins, cross-workspace): switching just **parks** the outgoing session — it keeps running in the background and the active turn is not interrupted (like `/tree`: neither browsing nor switching cuts a running turn short; on the Claude backend a mid-turn switch is refused instead) |
+| `/resume` | none | open the **session manager** (workspace + session columns, live filter, pins, cross-workspace): switching just **parks** the outgoing session — it keeps running in the background and the active turn is not interrupted (like `/tree`: neither browsing nor switching cuts a running turn short) |
 | `/home` / `/agentview` / `/bg` | none | the same session manager (`/home`=workspace view · `/agentview`=hosted session state · `/bg`=send to background and open, alias `/background`) |
 | `/tree` | none | session fork tree: hover to preview, click to rewind / fork / switch branch |
 | `/fork` | none | copy the current session into a resumable clone (original unaffected); a DSH copy with history records its source and belongs to the same session family |
 | `/restart` | none | restart the process and resume this session. Allowed mid-turn too: the running turn is interrupted and queued input comes back as held messages with their images (nothing is sent until you press ⏎ on the dock); if a tool ignores the interrupt and the process cannot shut down cleanly, it exits after ~5 s and prints the command that resumes this session |
-| `/kernel` | none | kernel picker: switch between DSH, Codex and the experimental Claude backend; remembers the pick and restarts into a new session (rejected mid-turn); see [Claude backend](claude-backend.en.md) |
-| `/dsh` / `/codex` / `/claude` | none | directly choose the named kernel through the same checks and restart flow as `/kernel`; the current kernel does not restart, a running turn blocks switching, and missing Claude opens the install wizard |
+| `/kernel` | none | kernel picker: switch between the built-in DSH and assembled third-party backends; remembers the pick and restarts into a new session (rejected mid-turn) |
+| `/dsh` | none | directly choose the DSH kernel through the same checks and restart flow as `/kernel`; no restart when DSH is already current, and a running turn blocks switching |
 | `/rename` | `<新名称>` | rename the current session (no arg shows the current title and usage) |
 | `/recap` | none | recent-activity summary (one line) + suggested title; press `a` or click to apply the title. With `dsh-tui.recapOnOpen` (default on), opening/resuming a session auto-shows a divider + `回顾：` summary line at the bottom; hover to view actions, click to expand, gone after the next message |
 | `/workspace` | `resume` / `rename <名称>` / `open <路径或URI>` | manage workspaces; `open` accepts an absolute path, file URI, or plugin scheme |
@@ -397,7 +397,6 @@ The command menu = built-in commands (aliases included) + DSH registry commands 
 
 | Command | Args | Effect |
 |---|---|---|
-| `/channel` | none | relay channel profiles (Claude backend only); **import / add / manage and any switch that needs a process restart are refused while a turn runs** (the picker itself still opens), see [Interaction](interaction.en.md#channel-profiles-channel-claude-only) |
 | `/model` | none | model selector; **switch within the same session** (ID, history, and title kept; the next request uses the new route), choice persisted to `~/.dsh-tui/model.json` |
 | `/effort` | `status` / `<id>` | reasoning effort: no-arg slider (`←/→` adjust); `status` current level; `<id>` set directly. Persisted to `~/.dsh-tui/effort.json` and reused by the next launch (it outranks the cordis.yml `effort` default); new-session start level follows /settings `effortDefault` (§5.3) |
 | `/thinking` | none | extended-thinking display toggle (thinking expands item by item while streaming) |
@@ -506,7 +505,7 @@ Switching within a session requires DSH `0.1.2-alpha.3` or later; older versions
 - `/model`: selector. **Switch within the same session** (ID and history kept; the next request uses the new route);
   persisted to `~/.dsh-tui/model.json` and reused by the next launch (a `provider`/`model`
   pair in cordis.yml/profile is only the first-run deployment default).
-- DSH provider tabs start with **Recently used**, and `Tab` / `Shift+Tab` switch providers; Codex and Claude show their catalogs directly without these tabs. All backends use `↑/↓` to select a model, `←/→` to adjust its effort, `Enter` to apply both, and `Esc` to cancel the draft. Click the available tabs, models, effort levels, or select/cancel hints; clicking an effort level immediately applies the focused model and that effort and closes the picker. The wheel moves model focus.
+- DSH provider tabs start with **Recently used**, and `Tab` / `Shift+Tab` switch providers. All backends use `↑/↓` to select a model, `←/→` to adjust its effort, `Enter` to apply both, and `Esc` to cancel the draft. Click the available tabs, models, effort levels, or select/cancel hints; clicking an effort level immediately applies the focused model and that effort and closes the picker. The wheel moves model focus.
 - Switching is rejected mid-turn.
 - `/preset` options: `standard` (default full features), `ptc`, `minimal` (the kernel's Minimal preset: one persistent-shell tool only, no compaction, no plan mode — and therefore no compaction and no tool-result pruning, so a long session can hit the context limit and `/compact` plus questions are unavailable; Help and `/` completion mark the command, and entering the preset says so once),
   `cordis`, `liangshen` (Liangshen mode).
@@ -672,7 +671,7 @@ Common items below, full list on the /settings screen. Most topics (**Appearance
 | statusBar.* | all status-bar toggles above (compact/model/thinking/cwd/contextUsage/cache/tokens/cost/tps/gitBranch/sessionTitle/sessionId/mode/contextBar/activity/trajectory/pluginFields/pluginFieldsOrder; statusBar.sessionId is the bottom-bar display toggle, unrelated to cordis startup sessionId; pluginFieldsOrder is the plugin field list: `''`=none, `*`=all, `a,b;c;d`=three groups and three slots) |
 
 **effortDefault**: when the model lacks that level, choose the nearest lower offered tier or the model default and show a notice. On DSH, priority is settings user layer > the last `/effort`
-(effort.json, the level the last session ran) > cordis `effort` (deployment default) > model default. Claude/Codex apply edits through their own controls and backend preferences; Auto at startup and resumed sessions preserve the selection, while explicitly choosing Auto resets the model default.
+(effort.json, the level the last session ran) > cordis `effort` (deployment default) > model default. Non-DSH backends apply edits through their own controls and backend preferences; Auto at startup and resumed sessions preserve the selection, while explicitly choosing Auto resets the model default.
 
 **scrollGutter**: the scrollbar track can be dragged directly; `Shift`/`Alt`/`Ctrl`+drag is still text selection.
 

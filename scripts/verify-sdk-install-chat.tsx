@@ -10,7 +10,7 @@ process.env.DSH_TUI_LANG = 'en'
 import type { SdkInstallResult } from '../src/agent/backend.js'
 import type { AgentSession } from '../src/agent/session.js'
 
-const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { setLang, t }, { kernelEntriesOf }, { listBackends, registerBackend }, { findText, settled, sleep, viewportLines }] = await Promise.all([
+const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { setLang, t }, { kernelEntriesOf }, registry, { findText, settled, sleep, viewportLines }, { FIXTURE_CLI_ID, registerFixtureBackends }] = await Promise.all([
   import('node:stream'),
   import('react'),
   import('@xterm/headless'),
@@ -23,7 +23,11 @@ const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { Qu
   import('../src/components/kernelCatalog.js'),
   import('../src/dsh-adapter/backend-registry.js'),
   import('./lib/term-test.mjs'),
+  import('./lib/fixture-backends.js'),
 ])
+const { listBackends, registerBackend } = registry
+// The session runs on a plugin-shaped kernel (DSH is the only in-tree one).
+registerFixtureBackends(registry)
 
 setLang('en')
 const recipes = [
@@ -62,7 +66,7 @@ for (const fullscreen of [false, true]) for (const columns of [100, 50]) {
   }
   const stdin = new In()
   const session: AgentSession = {
-    ref: { backendId: 'claude', sessionId: '55555555-5555-4555-8555-555555555555' },
+    ref: { backendId: FIXTURE_CLI_ID, sessionId: '55555555-5555-4555-8555-555555555555' },
     cwd: process.cwd(), status: 'idle', capabilities: { native: {} },
     history: () => Promise.resolve([]), subscribe: () => () => undefined,
     submit: () => Promise.resolve({ accepted: true }),
@@ -102,8 +106,8 @@ for (const fullscreen of [false, true]) for (const columns of [100, 50]) {
   }
   const open = async (recipe: typeof recipes[number]): Promise<void> => {
     // The kernel corner remains clickable when narrow layouts hide action buttons.
-    check(`${tag}: current kernel visible`, await settled(() => findText(term, '▸ Claude') !== null), screen())
-    click(findText(term, '▸ Claude')!)
+    check(`${tag}: current kernel visible`, await settled(() => findText(term, '▸ FixtureCLI') !== null), screen())
+    click(findText(term, '▸ FixtureCLI')!)
     check(`${tag}: picker contains ${recipe.id}`, await settled(() => screen().includes(t('kernel-picker-title')) && findText(term, recipe.label) !== null), screen())
     click(findText(term, recipe.label)!)
     check(`${tag}: ${recipe.id} resolves its own target`, await settled(() => screen().includes(recipe.version) && screen().includes(recipe.dir)), screen())

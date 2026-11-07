@@ -24,7 +24,7 @@ export const BACKEND = Object.freeze({
  * own seed legitimately carries them, so this is deliberately **not** a shape rule
  * (one declaration shape is valid for the seed and invalid for a bundle): the host
  * refuses a contribution whose `id` is in this set at admission, with
- * `BACKEND_ID_RESERVED`. Mirrored by the host registry (`BUILTIN_BACKEND_IDS`); the
+ * `BACKEND_ID_RESERVED`. Mirrored by the host registry (`RESERVED_BACKEND_IDS`); the
  * two lists are compared bidirectionally by
  * `scripts/verify-backend-contribution.ts`.
  */

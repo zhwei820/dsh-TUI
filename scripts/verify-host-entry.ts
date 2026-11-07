@@ -17,6 +17,12 @@ import { findHostDsh, launcherScriptPaths, resolveLauncherPath } from '../src/ds
 import { stripResumeArgs } from '../src/sessionHistory.js'
 import { restartArgv } from '../src/update.js'
 import type { KernelBackendId } from '../src/kernelPrefs.js'
+import * as registry from '../src/dsh-adapter/backend-registry.js'
+import { FIXTURE_CLI_ID, FIXTURE_SDK_ID, registerFixtureBackends } from './lib/fixture-backends.js'
+
+// DSH is the only in-tree backend; the non-DSH kernels below are plugin-shaped
+// fixtures registered through the real gate.
+registerFixtureBackends(registry)
 
 let passed = 0
 const check = (label: string, ok: boolean, detail?: unknown): void => {
@@ -28,41 +34,41 @@ const check = (label: string, ok: boolean, detail?: unknown): void => {
 const root = mkdtempSync(join(tmpdir(), 'verify-host-entry-'))
 const memory = join(root, 'kernel.json')
 const noMemory = join(root, 'absent.json')
-writeFileSync(memory, JSON.stringify({ backend: 'claude' }))
+writeFileSync(memory, JSON.stringify({ backend: FIXTURE_SDK_ID }))
 /** A remembered kernel that is not installed: the registry's half rejects it. */
 const ghostMemory = join(root, 'kernel-ghost.json')
 writeFileSync(ghostMemory, JSON.stringify({ backend: 'ghost-backend' }))
 
 // ── entryKernel ───────────────────────────────────────────────────────
 check('nothing set: dsh', entryKernel({}, { memoryFile: noMemory }) === 'dsh')
-check('kernel.json: claude', entryKernel({}, { memoryFile: memory }) === 'claude')
+check('kernel.json: a registered plugin kernel', entryKernel({}, { memoryFile: memory }) === FIXTURE_SDK_ID)
 check('DSH_TUI_BACKEND beats kernel.json', entryKernel({ DSH_TUI_BACKEND: 'dsh' }, { memoryFile: memory }) === 'dsh')
 check('an invalid DSH_TUI_BACKEND means dsh, not the memory', entryKernel({ DSH_TUI_BACKEND: 'nope' }, { memoryFile: memory }) === 'dsh')
 check('a legal but uninstalled id means dsh too (membership is the registry\'s half)',
   entryKernel({ DSH_TUI_BACKEND: 'ghost-backend' }, { memoryFile: memory }) === 'dsh')
 check('an uninstalled kernel.json entry does not decide the boot either',
   entryKernel({}, { memoryFile: ghostMemory }) === 'dsh')
-check('the Config row beats DSH_TUI_BACKEND', entryKernel({ DSH_TUI_BACKEND: 'claude' }, { configured: 'dsh', memoryFile: noMemory }) === 'dsh')
-check('a handoff beats the Config row', entryKernel({ DSH_TUI_BACKEND_HANDOFF: 'claude' }, { configured: 'dsh', memoryFile: noMemory }) === 'claude')
+check('the Config row beats DSH_TUI_BACKEND', entryKernel({ DSH_TUI_BACKEND: FIXTURE_SDK_ID }, { configured: 'dsh', memoryFile: noMemory }) === 'dsh')
+check('a handoff beats the Config row', entryKernel({ DSH_TUI_BACKEND_HANDOFF: FIXTURE_SDK_ID }, { configured: 'dsh', memoryFile: noMemory }) === FIXTURE_SDK_ID)
 
 // ── configuredBackend ─────────────────────────────────────────────────
 const patch = join(root, 'cordis.patch.yml')
 check('no patch file: no pin', configuredBackend('x', patch) === undefined)
-writeFileSync(patch, '- id: other\n  config: { backend: claude }\n- id: dsh-tui\n  config:\n    preset: !!js process.env.DSH_TUI_PRESET\n    backend: Claude\n')
-check('the dsh-tui row\'s backend, normalized', configuredBackend('x', patch) === 'claude')
-writeFileSync(patch, '- id: dsh-tui\n  config: { backend: claude }\n- id: dsh-tui\n  config: { backend: codex }\n')
-check('a later dsh-tui row overrides the earlier backend', configuredBackend('x', patch) === 'codex')
+writeFileSync(patch, '- id: other\n  config: { backend: fixture-sdk }\n- id: dsh-tui\n  config:\n    preset: !!js process.env.DSH_TUI_PRESET\n    backend: Fixture-SDK\n')
+check('the dsh-tui row\'s backend, normalized', configuredBackend('x', patch) === FIXTURE_SDK_ID)
+writeFileSync(patch, '- id: dsh-tui\n  config: { backend: fixture-sdk }\n- id: dsh-tui\n  config: { backend: fixture-cli }\n')
+check('a later dsh-tui row overrides the earlier backend', configuredBackend('x', patch) === FIXTURE_CLI_ID)
 for (const form of ['process.env.DSH_TUI_BACKEND', 'process.env.DSH_TUI_BACKEND || undefined', 'process.env.DSH_TUI_BACKEND ?? undefined']) {
   writeFileSync(patch, `- id: dsh-tui\n  config:\n    backend: !!js ${form}\n`)
   check(`the bundle row's env-forwarding form is no pin (${form})`, configuredBackend('x', patch) === undefined)
 }
-writeFileSync(patch, '- id: dsh-tui\n  config:\n    backend: !!js process.env.DSH_TUI_BACKEND ?? "claude"\n')
+writeFileSync(patch, '- id: dsh-tui\n  config:\n    backend: !!js process.env.DSH_TUI_BACKEND ?? "fixture-sdk"\n')
 check('a !!js backend with its own default is dynamic', configuredBackend('x', patch) === 'dynamic')
 check('a dynamic row hands the launch to the profile', delegatesToProfile('dynamic', {}))
-check('a handoff outranks a dynamic row', !delegatesToProfile('dynamic', { DSH_TUI_BACKEND_HANDOFF: 'claude' }))
-check('DSH_TUI_BACKEND does not (the row outranks it)', delegatesToProfile('dynamic', { DSH_TUI_BACKEND: 'claude' }))
-check('a static row stays in the entry', !delegatesToProfile('claude', {}) && !delegatesToProfile(undefined, {}))
-check('the entry treats a dynamic row as no pin', entryKernel({ DSH_TUI_BACKEND: 'claude' }, { configured: 'dynamic', memoryFile: noMemory }) === 'claude')
+check('a handoff outranks a dynamic row', !delegatesToProfile('dynamic', { DSH_TUI_BACKEND_HANDOFF: FIXTURE_SDK_ID }))
+check('DSH_TUI_BACKEND does not (the row outranks it)', delegatesToProfile('dynamic', { DSH_TUI_BACKEND: FIXTURE_SDK_ID }))
+check('a static row stays in the entry', !delegatesToProfile(FIXTURE_SDK_ID, {}) && !delegatesToProfile(undefined, {}))
+check('the entry treats a dynamic row as no pin', entryKernel({ DSH_TUI_BACKEND: FIXTURE_SDK_ID }, { configured: 'dynamic', memoryFile: noMemory }) === FIXTURE_SDK_ID)
 writeFileSync(patch, '- id: dsh-tui\n  config:\n    lang: en\n')
 check('a row without backend is no pin', configuredBackend('x', patch) === undefined)
 writeFileSync(patch, '- id: dsh-tui\n  config:\n    backend: ghost-backend\n')

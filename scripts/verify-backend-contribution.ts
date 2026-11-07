@@ -7,11 +7,11 @@
  *     leaking through, and the projection is pure.
  *  2. **Single source** — the capability vocabulary equals `SessionCapabilities`'
  *     member names (bidirectional, TS AST) and the reserved id set equals the
- *     registry's built-in ids.
+ *     registry's reserved ids (the built-ins plus the retired claude / codex).
  *  3. **Admission** — the verdicts this host can produce, the shape of a
  *     `waiting_authorization` refusal, and the reason codes the contract profile
  *     publishes (each published code needs a producer, so a phantom name fails).
- *  4. **The probe backend** — the resource invariants claude and codex are held to
+ *  4. **The probe backend** — the resource invariants an in-tree backend is held to
  *     (never loaded means never imported, never closed; only what was loaded is
  *     closed), the two install-surface shapes, and the declaration covering what
  *     the session actually serves.
@@ -54,7 +54,7 @@ import type { ContractRegistry } from '../src/adapter/standard/types.js'
 import { buildHostDescriptorFromLifecycles } from '../src/adapter/standard/descriptor.js'
 import { verifyAndPromote } from '../src/adapter/kernel/lifecycle.js'
 import { buildHostCapabilityLifecycles, refreshHostCapabilityLifecycles } from '../src/adapter/upstream/host-descriptor-driver.js'
-import { BUILTIN_BACKEND_IDS } from '../src/kernelPrefs.js'
+import { BUILTIN_BACKEND_IDS, RESERVED_BACKEND_IDS } from '../src/kernelPrefs.js'
 import { backendAdmission } from '../src/dsh-adapter/backend-admission.js'
 import { backendContributionOf } from '../src/dsh-adapter/backend-contribution.js'
 import { getBackend, listBackends, listOfferedBackends, loadBackend, registerBackend, unloadBackends } from '../src/dsh-adapter/backend-registry.js'
@@ -89,7 +89,7 @@ const leakedKeys = (projection: Record<string, unknown>): readonly string[] => [
   ...Object.keys(projection).filter(key => !PUBLIC_SPEC_KEYS.includes(key)),
   ...IN_TREE_PRIVATE_KEYS.filter(key => key in projection),
 ]
-for (const id of ['dsh', 'claude', 'codex'] as const) {
+for (const id of BUILTIN_BACKEND_IDS) {
   const manifest = getBackend(id)?.manifest
   assert.ok(manifest !== undefined, `built-in manifest ${id} is registered`)
   const projection = backendContributionOf(manifest)
@@ -101,19 +101,18 @@ for (const id of ['dsh', 'claude', 'codex'] as const) {
   check(`${id}: the registry admitted the projected declaration`,
     getBackend(id)?.admission.decision === 'compatible', getBackend(id)?.admission)
 }
-check('the AgentBackends declare session surfaces, the non-AgentBackend declares none',
-  (getBackend('claude')?.manifest.capabilities?.length ?? 0) > 0
-    && (getBackend('codex')?.manifest.capabilities?.length ?? 0) > 0
-    && getBackend('dsh')?.manifest.capabilities?.length === 0)
+check('the non-AgentBackend (dsh) declares no session surface',
+  getBackend('dsh')?.manifest.capabilities?.length === 0)
 check('bad baseline goes red — the private-key checker catches a leaked `nativeKey`',
-  leakedKeys({ ...backendContributionOf(getBackend('codex')!.manifest), nativeKey: 'codex' }).includes('nativeKey'))
+  leakedKeys({ ...backendContributionOf(getBackend('dsh')!.manifest), nativeKey: 'dsh' }).includes('nativeKey'))
 // The dogfood experiment the plan calls for: take a built-in out of the in-tree set
 // and the *only* thing left to refuse is its host label key — refused by the
 // projection itself, which is why the exported projection cannot be used to launder
 // a first-party name. (Registration refuses the same combination one step earlier.)
-check('dogfood: flipping `inTree` on a built-in reds on its host label key, and nothing else does',
-  throws(() => backendContributionOf({ ...getBackend('claude')!.manifest, inTree: false }))
-    && throws(() => validateBackendSpec(backendContributionOf(getBackend('claude')!.manifest))) === false)
+const keyLabelled = { id: 'dogfood-agent', label: { kind: 'key', key: 'kernel-label-dsh' }, shortLabel: 'Dogfood', inTree: true, capabilities: [], grants: [] } as const
+check('dogfood: flipping `inTree` on an in-tree manifest reds on its host label key, and nothing else does',
+  throws(() => backendContributionOf({ ...keyLabelled, inTree: false }))
+    && throws(() => validateBackendSpec(backendContributionOf(keyLabelled))) === false)
 
 // ── 2. Single source: capability names and reserved ids ───────────────────────
 {
@@ -138,17 +137,17 @@ check('dogfood: flipping `inTree` on a built-in reds on its host label key, and 
     ['inventedCapability'].filter(name => !members.includes(name)).length === 1
       && members.filter(name => ![...members, 'inventedCapability'].includes(name)).length === 0
       && ['inventedCapability'].filter(name => !BACKEND_CAPABILITY_NAMES.includes(name)).length === 1)
-  const builtInIds = BUILTIN_BACKEND_IDS as readonly string[]
-  const onlyRegistry = builtInIds.filter(id => !BACKEND_RESERVED_IDS.includes(id))
-  const onlyProfile = BACKEND_RESERVED_IDS.filter(id => !builtInIds.includes(id))
-  check('the reserved id list is exactly the registry built-ins, both ways',
+  const reservedIds = RESERVED_BACKEND_IDS as readonly string[]
+  const onlyRegistry = reservedIds.filter(id => !BACKEND_RESERVED_IDS.includes(id))
+  const onlyProfile = BACKEND_RESERVED_IDS.filter(id => !reservedIds.includes(id))
+  check('the reserved id list is exactly the registry\'s reserved ids, both ways',
     onlyRegistry.length === 0 && onlyProfile.length === 0, { onlyRegistry, onlyProfile })
 }
 
 // ── 3. Admission: the verdicts this host can produce ──────────────────────────
 {
   const facts = {
-    reservedIds: new Set<string>(BUILTIN_BACKEND_IDS),
+    reservedIds: new Set<string>(RESERVED_BACKEND_IDS),
     capabilityNames: new Set<string>(BACKEND_CAPABILITY_NAMES),
     permissionNames: new Set<string>(EXPECTED_PERMISSIONS.map(permission => permission.name)),
     granted: new Set<string>(),
@@ -216,7 +215,7 @@ check('dogfood: flipping `inTree` on a built-in reds on its host label key, and 
   await unloadBackends()
   check('probe: a second unload pass closes nothing (idempotent)', probePoolState().closes === 1)
 
-  // codex's real combination: **no install recipe *and* a process-level pool**. Loading the bare
+  // A system-CLI backend's combination: **no install recipe *and* a process-level pool**. Loading the bare
   // entry books its pool (its module is already evaluated, so `opens` stays where it was) and
   // unloading it closes that pool — "nothing to install" must not read as "nothing to close".
   await loadBackend('probe-backend-bare' as never)
@@ -228,7 +227,7 @@ check('dogfood: flipping `inTree` on a built-in reds on its host label key, and 
   check('probe: the declared recipe makes the entry installable, and it is the entry\'s own recipe',
     entry?.installable === true && installSurfaceFor(PROBE_BACKEND_ID)?.specifier === PROBE_INSTALL_SPECIFIER)
   const bare = listBackends().find(candidate => candidate.id === 'probe-backend-bare')
-  check('probe: a manifest with no recipe is not installable and carries no surface, yet keeps its pool hook (codex\'s shape)',
+  check('probe: a manifest with no recipe is not installable and carries no surface, yet keeps its pool hook',
     bare?.installable === false && installSurfaceFor('probe-backend-bare') === undefined
       && bare?.manifest.unloadExport === 'closeProbePool')
   check('bad baseline goes red — the installable predicate is the declaration, not the id',
@@ -265,7 +264,7 @@ check('dogfood: flipping `inTree` on a built-in reds on its host label key, and 
   // and the two the projection feeds straight into the family validator.
   const manifestCases: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
     ['a non-in-tree manifest may not wear a built-in id', { ...probeManifest, id: 'dsh' }],
-    ['a non-in-tree manifest may not use a host label key', { ...probeManifest, id: 'probe-key', label: { kind: 'key', key: 'kernel-label-claude' } }],
+    ['a non-in-tree manifest may not use a host label key', { ...probeManifest, id: 'probe-key', label: { kind: 'key', key: 'kernel-label-dsh' } }],
     ['a non-in-tree manifest may not declare a native channel', { ...probeManifest, id: 'probe-native', nativeKey: 'probe' }],
     ['capabilities must be strings', { ...probeManifest, id: 'probe-caps', capabilities: [42] }],
     ['the install recipe must be complete', { ...probeManifest, id: 'probe-install', install: { executor: 'pnpm-profile-add', specifier: PROBE_INSTALL_SPECIFIER } }],
@@ -276,11 +275,11 @@ check('dogfood: flipping `inTree` on a built-in reds on its host label key, and 
   // (b) What the *declaration* validator must refuse, independent of any registry:
   // a contribution's spec is data from outside this process, and these are the
   // shapes that would let it claim something the host does not offer.
-  const projection = backendContributionOf(getBackend('claude')!.manifest)
+  const projection = backendContributionOf(probeManifest)
   const specCases: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
     ['a declaration may not carry an unknown field', { ...projection, extra: true }],
-    ['a declaration may not carry an in-tree private key', { ...projection, nativeKey: 'claude' }],
-    ['a label is literal text, never a host key', { ...projection, label: { kind: 'key', key: 'kernel-label-claude' } }],
+    ['a declaration may not carry an in-tree private key', { ...projection, nativeKey: 'probe' }],
+    ['a label is literal text, never a host key', { ...projection, label: { kind: 'key', key: 'kernel-label-dsh' } }],
     ['a label must carry text', { ...projection, label: {} }],
     ['capabilities must be an array of strings', { ...projection, capabilities: 'permissions' }],
     ['grants must be an array', { ...projection, grants: [1] }],

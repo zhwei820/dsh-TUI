@@ -1,10 +1,9 @@
 /**
- * Best-effort host-side conveniences for OAuth flows: opening the default
+ * Best-effort host-side conveniences for sign-in flows: opening the default
  * browser and copying short text to the clipboard.
  *
- * pi-ai's flows emit an `auth_url` event whose instructions assume the host
- * opens the browser itself ("A browser window should open…"), because the
- * authorize URL is hundreds of characters — unclickable and practically
+ * The DeepSeek account flow emits an authorization URL the host is expected
+ * to open itself, because the authorize URL is hundreds of characters — unclickable and practically
  * uncopyable once a terminal panel wraps it (wrap artifacts inside the
  * encoded `redirect_uri` are exactly how hand-copied URLs die with
  * `invalid_authorize_request`). These helpers restore that host contract.

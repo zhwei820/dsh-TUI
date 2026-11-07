@@ -106,7 +106,6 @@ function fixture(jobs?: unknown, options: { throwOnEvent?: string; effectCleanup
   const unregister = registerTuiChannel(ctx, raw)
   const mount = mountChannelUi(ctx, raw, undefined, 'new')
   bindChannelCommands(raw, mount.channel)
-  assert.equal(mount.channel.backendChannels(), undefined, 'DSH has no native channel host')
   assert.equal(mount.channel.backendModes(), undefined, 'DSH keeps its shared mode pipeline')
   assert.equal(mount.channel.backendMcp(), undefined, 'DSH reports MCP status without server controls')
   mount.channel.setWhale(false)
@@ -125,9 +124,8 @@ function fixture(jobs?: unknown, options: { throwOnEvent?: string; effectCleanup
   await tick()
   assert.ok(writes.includes('submit'))
   const settings = mount.channel.settingsHost()!
-  const provider = mount.channel.providerSetup()!
+  const oauth = mount.channel.oauthSetup()!
   await settings.write('x', [])
-  await provider.writeProfile('x', {})
   const retained = mount.channel.submit
   const dismiss = mount.channel.notify('sticky', { timeoutMs: 0 })
   assert.equal(raw.notifications.length, 1)
@@ -136,7 +134,7 @@ function fixture(jobs?: unknown, options: { throwOnEvent?: string; effectCleanup
   dismiss()
   assert.throws(() => retained('late'), /lifetime/)
   assert.throws(() => settings.write('x', []), /lifetime/)
-  assert.throws(() => provider.oauth!.logout('x'), /lifetime/)
+  assert.throws(() => oauth.logout('x'), /lifetime/)
   await assert.rejects(raw.switchWorkspace({ cwd: '/other', label: 'other' } as never), /lifetime/)
   unregister()
   raw.releaseContributions()
@@ -146,38 +144,26 @@ function fixture(jobs?: unknown, options: { throwOnEvent?: string; effectCleanup
 // writes and every retained callback stay behind the production UI lease.
 for (const mode of ['new', 'passive-shadow', 'replay-shadow'] as const) {
   const { ctx, raw } = fixture()
-  const option = { id: 'native', name: 'Native', models: [], tiers: [] }
   let writes = 0
-  raw.backendChannels = () => ({
-    snapshot: () => ({ channels: [option], activeId: option.id }),
-    peekImport: () => ({ tiers: { opus: 'mapped' } }),
-    activate: () => { writes += 1; return { ok: true, restart: false } },
-    importFromSettings: () => { writes += 1; return { option, restart: false } },
-    save: () => { writes += 1; return option }, remove: () => { writes += 1; return true },
-  })
-  raw.backendAuth = () => ({ login: async present => { writes += 1; await present(raw.providerSetup()!.oauth!, 'anthropic') } })
+  raw.backendAuth = () => ({ login: async present => { writes += 1; await present(raw.oauthSetup()!, 'anthropic') } })
   raw.backendModes = () => ({ snapshot: () => ({ modes: [{ id: 'default', name: 'Default' }], currentIndex: 0 }), set: async () => { writes += 1; return true } })
   raw.backendMcp = () => ({ reconnect: async () => { writes += 1; return true }, toggle: async () => { writes += 1; return true } })
   const unregister = registerTuiChannel(ctx, raw)
   const mount = mountChannelUi(ctx, raw, undefined, mode)
   try {
-    const channels = mount.channel.backendChannels()!
     const modes = mount.channel.backendModes()!
     const mcp = mount.channel.backendMcp()!
     const auth = mount.channel.backendAuth()!
     let logout!: () => Promise<boolean>
-    assert.equal(channels.snapshot().activeId, 'native')
-    assert.equal(channels.peekImport()?.tiers.opus, 'mapped')
     assert.equal(modes.snapshot().currentIndex, 0)
-    assert.ok(Object.isFrozen(channels.snapshot().channels[0]), 'native roster rows are detached immutable values')
-    const calls = [() => channels.activate('native'), () => channels.importFromSettings(), () => channels.save({ id: 'native', name: 'Native' }), () => channels.remove('native'), () => modes.set('default'), () => mcp.reconnect('server'), () => mcp.toggle('server', true), () => auth.login(async oauth => { logout = () => oauth.logout('anthropic'); return 'cancelled' })]
+    const calls = [() => modes.set('default'), () => mcp.reconnect('server'), () => mcp.toggle('server', true), () => auth.login(async oauth => { logout = () => oauth.logout('anthropic'); return 'cancelled' })]
     for (const call of calls) {
       if (mode === 'new') await call()
       else assert.throws(call, /shadow policy/)
     }
     assert.equal(writes, mode === 'new' ? calls.length : 0)
     mount.dispose()
-    for (const call of [...calls, () => channels.snapshot(), () => channels.peekImport(), () => modes.snapshot()]) assert.throws(call, /lifetime/)
+    for (const call of [...calls, () => modes.snapshot()]) assert.throws(call, /lifetime/)
     if (mode === 'new') assert.throws(logout, /lifetime/)
   } finally { mount.dispose(); unregister(); raw.releaseContributions() }
 }
@@ -301,12 +287,10 @@ for (const mode of ['passive-shadow', 'replay-shadow'] as const) {
   )
   assert.equal(creates, 0, 'shadow UI refuses the internal workspace-target /new seam before Agent creation')
   const settings = mount.channel.settingsHost()!
-  const provider = mount.channel.providerSetup()!
+  const oauth = mount.channel.oauthSetup()!
   assert.throws(() => settings.write('x', []), /shadow policy/)
   assert.throws(() => settings.writeCredential('x', 'secret'), /shadow policy/)
-  assert.throws(() => provider.writeProfile('x', {}), /shadow policy/)
-  assert.throws(() => provider.readCredential('x'), /shadow policy/)
-  assert.throws(() => provider.oauth!.login(), /shadow policy/)
+  assert.throws(() => oauth.login(), /shadow policy/)
   assert.throws(() => mount.channel.subagentControl.interrupt('child'), /shadow policy/)
   assert.equal(writes.length, 0)
   unregister()
@@ -695,25 +679,6 @@ for (const deferred of [false, true]) {
   save({ id: 'saved', mediaType: 'image/png' })
   await assert.rejects(pending, /session changed while the image was being staged/)
   mount.dispose(); unregister(); raw.releaseContributions()
-}
-
-// A conflict can complete an existing request, but cannot start a new retry after revoke.
-for (const method of ['writeProfile', 'mutateProfile', 'removeProfile'] as const) {
-  const { ctx, raw, services } = fixture()
-  let reject!: (error: Error) => void
-  let mutations = 0
-  const settings = services.settings as { mutate: () => Promise<void> }
-  settings.mutate = () => { mutations += 1; return new Promise((_, no) => { reject = no }) }
-  const unregister = registerTuiChannel(ctx, raw)
-  const mount = mountChannelUi(ctx, raw, undefined, 'new')
-  const provider = mount.channel.providerSetup()!
-  const pending = method === 'writeProfile' ? provider.writeProfile('x', {})
-    : method === 'mutateProfile' ? provider.mutateProfile('x', []) : provider.removeProfile('x')
-  mount.dispose()
-  reject(Object.assign(new Error('conflict'), { code: 'SETTINGS_CONFLICT' }))
-  await assert.rejects(pending, /lifetime/)
-  assert.equal(mutations, 1)
-  unregister(); raw.releaseContributions()
 }
 
 // Data and recursive executable leaves do not escape the capability boundary.

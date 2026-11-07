@@ -530,16 +530,10 @@ for (const api of ['legacy', 'forms']) {
     llm: { listConfigurableProviders: () => [{ settingsNs: 'llm-pi-ai', provider: 'test', displayName: 'Test' }] },
   }
   const hosts = createSettingsHosts({ get: name => services[name] })
-  const provider = hosts.providerSetup()
-  assert.ok(provider, `${api}: provider wizard is available`)
-  assert.equal(provider.routeExists('test'), true)
-  assert.equal(provider.routeExists('missing'), false)
-  assert.equal(provider.listRefUsers('TEST_CREDENTIAL').length, 1)
-  assert.equal(provider.listConfiguredProviders().length, 1)
   const host = hosts.settingsHost()
   assert.equal(host.listNamespaces()[0].revision, 7)
   const ops = [{ op: 'set', path: ['providers', 'test', 'baseURL'], value: 'https://new.invalid' }]
   await host.write('llm-pi-ai', ops, 7)
   assert.deepEqual(mutations, [['llm-pi-ai', ops, 7]], 'writes retain revision fencing and path operations')
 }
-console.log(`PASS: settings scopes, config snapshots and provider reads (${modernSchema ? 'production sections, exact Loader IDs, volatile updates, shortcut resets and disposal' : 'legacy schema'})`)
+console.log(`PASS: settings scopes and config snapshots (${modernSchema ? 'production sections, exact Loader IDs, volatile updates, shortcut resets and disposal' : 'legacy schema'})`)

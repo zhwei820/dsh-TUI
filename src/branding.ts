@@ -1,23 +1,17 @@
 /**
- * 品牌档案：开屏与主题按当前后端展示。
+ * 品牌档案：开屏与主题的整套外观。
  *
- * 默认 `deepseek`（雾蓝 + `DEEPSEEK`/`HARNESS` + 鲸鱼/鲸鱼娘）；当会话绑在
- * Claude 后端（`backendCapabilities.backendId === 'claude'`，见
- * `backends/claude/`）时切到 `claude`（橙色 + `CLAUDE`/`CODE` + Claude 娘，
- * 立绘见 `assets/claude-girl/`）；Codex 后端切到 `codex`（薰衣草紫 +
- * `CODEX`/`HARNESS` + 标语 "Build anything with Codex"，立绘槽固定淡紫恶
- * 魔精灵 `assets/codex-girl/`——点击切红色按钮变体几秒，图像协议不可用时
- * 回落字符画）。启动页与对话页的主题跟着换：ThemeProvider 在品牌未被显式
- * 锁定时把默认档替换成该品牌的主题对（显式 `DSH_TUI_THEME` / 会话内
- * `/theme` 手选永远优先）。
+ * 默认 `deepseek`（雾蓝 + `DEEPSEEK`/`HARNESS` + 鲸鱼/鲸鱼娘）。另有两套手动
+ * 皮肤：`claude`（橙色 + `CLAUDE`/`CODE` + Claude 娘，立绘见
+ * `assets/claude-girl/`）与 `codex`（薰衣草紫 + `CODEX`/`HARNESS` + 标语
+ * "Build anything with Codex"，立绘槽固定淡紫恶魔精灵 `assets/codex-girl/`
+ * ——点击切红色按钮变体几秒，图像协议不可用时回落字符画）。启动页与对话页的
+ * 主题跟着换：ThemeProvider 在品牌未被显式锁定时把默认档替换成该品牌的主题对
+ * （显式 `DSH_TUI_THEME` / 会话内 `/theme` 手选永远优先）。
  *
- * 手动档：设置项 `dsh-tui.brand`（`auto` | `deepseek` | `claude` |
- * `codex`，默认 `auto` = 跟后端自动切，`/settings` 可实时改）。
+ * 设置项 `dsh-tui.brand`（`auto` | `deepseek` | `claude` | `codex`，默认
+ * `auto` = `deepseek`，`/settings` 可实时改）；`auto` 只为兼容旧配置保留。
  * `DSH_TUI_BRAND` 环境变量优先级最高（预览/测试缝）。
- *
- * 后端在一个进程内不变（切内核 = 重启进程走 `kernel.json` 记忆），所以品牌
- * 实际上是 boot 时定死的；但读取仍走 `backendCapabilities`（在 ui-policy
- * 的 reactive 清单里），未来进程内热切也不用改这里。
  */
 
 /** One backend look: splash words, tagline, and (when branded) a theme pair. */
@@ -43,24 +37,14 @@ export function normalizeBrandSetting(value: unknown): BrandSetting {
 }
 
 /**
- * 后端 id → 品牌档：`claude` → claude；`codex` → 仅标题；`dsh`、未知与
- * `acp:*` 外部代理一律回落默认品牌（未来某代理想要自己的品牌再单加）。
- * @param backendId - `channel.backendCapabilities.backendId`。
+ * 合成当前品牌：`DSH_TUI_BRAND`（测试缝，最高）> 设置项显式锁定 > 默认 `deepseek`。
+ * @param setting - 归一化后的设置值（`auto` = 默认品牌）。
  */
-export function brandOfBackend(backendId: string | undefined): Brand {
-  return backendId === 'claude' ? 'claude' : backendId === 'codex' ? 'codex' : 'deepseek'
-}
-
-/**
- * 合成当前品牌：`DSH_TUI_BRAND`（测试缝，最高）> 设置项显式锁定 > 后端自动。
- * @param setting - 归一化后的设置值（`auto` = 跟后端）。
- * @param backendId - 当前后端 id。
- */
-export function resolveBrand(setting: BrandSetting | undefined, backendId: string | undefined): Brand {
+export function resolveBrand(setting: BrandSetting | undefined): Brand {
   const forced = process.env.DSH_TUI_BRAND
   if (forced === 'claude' || forced === 'deepseek' || forced === 'codex') return forced
   if (setting === 'claude' || setting === 'deepseek' || setting === 'codex') return setting
-  return brandOfBackend(backendId)
+  return 'deepseek'
 }
 
 /** 一副开屏标题词：两行大字 + 窄终端纯文字档。 */
@@ -131,7 +115,7 @@ export const BRAND_SETTING_OPTIONS: readonly {
   readonly label: string
   readonly descriptions: { readonly zh: string }
 }[] = [
-  { value: 'auto', label: 'Follow backend (default)', descriptions: { zh: '跟随后端（默认）' } },
+  { value: 'auto', label: 'Default (DeepSeek)', descriptions: { zh: '默认（DeepSeek）' } },
   { value: 'deepseek', label: 'DeepSeek (mist blue)', descriptions: { zh: 'DeepSeek（雾蓝）' } },
   { value: 'claude', label: 'Claude Code (orange)', descriptions: { zh: 'Claude Code（橙）' } },
   { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },

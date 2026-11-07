@@ -4,13 +4,11 @@
  * the default model.
  *
  * The guide's first step used to be a read-only credential check, which left
- * the user with an environment variable and no action. The configuration
- * surfaces already exist (`/provider`, `dsh-auth`'s subscription sign-in);
- * what was missing is the piece that catches their RESULT. That result is
- * observable: `dsh-auth`'s catalog is credential-gated
- * (`dsh-adapter/oauth/index.ts`, `CredentialGatedAdapter`), so a provider
- * with no stored credential lists no models — the moment a sign-in or key
- * write lands, its models appear in `channel.listModels()`.
+ * the user with an environment variable and no action. The sign-in surface
+ * already exists (`dsh-auth`'s DeepSeek account sign-in); what was missing is
+ * the piece that catches its RESULT. That result is observable: the account
+ * route lists no models until a credential is stored — the moment a sign-in
+ * lands, its models appear in `channel.listModels()`.
  *
  * Everything here is a pure function of two catalog snapshots, so the
  * three-way decision the product wants — nothing new, exactly one model, or

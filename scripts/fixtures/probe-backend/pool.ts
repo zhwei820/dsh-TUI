@@ -6,7 +6,7 @@
  * importing the backend module — reading a counter is not loading a backend.
  * Importing this file has no effect of its own.
  *
- * The pool it stands for is the real thing codex has (`closeAllCodexHubs`): a
+ * The pool it stands for is what a backend's app-server hub would be: a
  * process-wide resource keyed by nothing session-specific, which no session's
  * `dispose()` can own, so the registry books it and the one exit funnel closes it
  * (P0 D4).

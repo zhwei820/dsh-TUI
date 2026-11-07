@@ -1,7 +1,6 @@
 /**
- * N9 + backend-owned login: production channel capability routing and one
- * Claude session over the fake SDK. DSH's synchronous template route stays
- * separate. No personal state, credentials, CLI process or network.
+ * N9 + backend-owned login: production channel capability routing over a
+ * fixture session. DSH's synchronous template route stays separate. No personal state, credentials, CLI process or network.
  * Run: node --import tsx/esm scripts/verify-init-capability.ts
  */
 import assert from 'node:assert/strict'
@@ -15,15 +14,13 @@ const home = mkdtempSync(join(tmpdir(), 'dsh-tui-init-'))
 process.env.HOME = home
 process.env.USERPROFILE = home
 process.env.DSH_HOME = home
-process.env.CLAUDE_CONFIG_DIR = join(home, 'claude')
 process.env.DSH_TUI_LANG = 'en'
-const [{ createChannel }, { channelCapabilities }, { completeCommands, LOCAL_COMMANDS, parseCommandName }, { openClaudeSession }, { fakeClaudeSdk, claudeDeps, tick }] = await Promise.all([
+const [{ createChannel }, { channelCapabilities }, { completeCommands, LOCAL_COMMANDS, parseCommandName }] = await Promise.all([
   import('../src/dsh-adapter/channel.js'),
   import('../src/channel/capabilities.js'),
   import('../src/commands.js'),
-  import('../src/backends/claude/session.js'),
-  import('./lib/claude-fake-sdk.js'),
 ])
+const tick = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
 let passed = 0
 const check = (label: string, ok: unknown): void => { assert.ok(ok, label); passed += 1; console.log('PASS ' + label) }
 const context = (oauth?: unknown) => ({
@@ -96,15 +93,6 @@ try {
     await legacy.backendAuth()!.login(async () => 'added')
     check('auth without login keeps the original status/OAuth/reconnect path', statusCalls === 1 && reconnects === 1)
   } finally { legacy.releaseContributions() }
-
-  const fake = fakeClaudeSdk()
-  const claude = await openClaudeSession(claudeDeps(fake.sdk, { cwd: home }))
-  try {
-    check('Claude declares the optional init capability', claude.capabilities.init !== undefined)
-    await claude.capabilities.init!.run()
-    await tick()
-    check('Claude init submits its actual CLI /init command', fake.queries[0]!.inputs.length === 1 && (fake.queries[0]!.inputs[0]!.message as { content: unknown }).content === '/init')
-  } finally { await claude.dispose() }
 } finally {
   rmSync(home, { recursive: true, force: true })
 }

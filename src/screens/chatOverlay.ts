@@ -104,7 +104,6 @@ export type ChatOverlay =
   /** `/channel` 渠道档案选择器（仅 channels 能力的后端，即 Claude）：只带
    *  焦点下标——名册由后端渠道宿主派生，
    *  切换/导入后选择器自己就刷新成新状态，不需要把名册冻进 overlay。 */
-  | { kind: 'channel'; index: number }
   | { kind: 'history'; query: string; cursor: number; focus: number }
   | {
       kind: 'rewind'
@@ -178,7 +177,7 @@ export type ChatOverlayAction =
    *  with the authoritative focus (preset roster), or a mouse
    *  click on a row of a panel that stays open (effort slider, workspace
    *  flow). Ignored unless that panel is still up. */
-  | { type: 'set-index'; kind: 'preset' | 'effort' | 'permission' | 'mode' | 'kernel' | 'workspace-flow' | 'rewind' | 'file-actions' | 'panel' | 'channel'; index: number }
+  | { type: 'set-index'; kind: 'preset' | 'effort' | 'permission' | 'mode' | 'kernel' | 'workspace-flow' | 'rewind' | 'file-actions' | 'panel'; index: number }
   /** Edit the history-search draft (query text, caret, focused match). */
   | { type: 'history-edit'; query?: string; cursor?: number; focus?: number }
   /** Workspace flow: an action is running (keys except Esc are swallowed). */
@@ -257,7 +256,6 @@ export function chatOverlayReducer(state: ChatOverlay, action: ChatOverlayAction
         || state.kind === 'lang'
         || state.kind === 'panel'
         || state.kind === 'kernel'
-        || state.kind === 'channel'
         || state.kind === 'file-actions'
       ) {
         return { ...state, index: wrapIndex(state.index, action.delta, action.count) }

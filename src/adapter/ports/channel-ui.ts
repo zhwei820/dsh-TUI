@@ -1,11 +1,11 @@
 /** Host-owned in-process Channel contract. No runtime or upstream imports. */
-import type { ChatRow, AgentStatus, TokenUsage, TurnUsageSummary, TurnOutcome, SessionCostByModel, SubagentCostEntry, NotificationItem, ChannelGoal, TodoPanelItem, LoadedContext, PendingMessage, ChannelSceneMetadata, SubagentState, SubagentControl, BackgroundJobState, JobControl, StagedImageInput, StagedImageHandle, ComposerImageRef, ComposerSubmission, ExternalCommandOutcome, TranscriptImage, ResumeResult, EffortOption, PermissionPresetSnapshot, PresetOption, LlmModelInfo, LlmProviderInfo, SkillInfo, CredentialStatus, AgentViewRow, AgentViewDispatchResult, BackgroundResult, RawTrajEvent, TrajectoryLane, TrajectorySource, ChannelSelection, AttachedContext, CompactionStatus, ContextOccupancy, ContextBreakdown, TeamView, ChannelCapabilities, ChannelCostReport, ChannelRateLimit, ChannelSessionRef, BackendModeOption, BackendChannelOption, BackendChannelInput } from './channel-view.js'
+import type { ChatRow, AgentStatus, TokenUsage, TurnUsageSummary, TurnOutcome, SessionCostByModel, SubagentCostEntry, NotificationItem, ChannelGoal, TodoPanelItem, LoadedContext, PendingMessage, ChannelSceneMetadata, SubagentState, SubagentControl, BackgroundJobState, JobControl, StagedImageInput, StagedImageHandle, ComposerImageRef, ComposerSubmission, ExternalCommandOutcome, TranscriptImage, ResumeResult, EffortOption, PermissionPresetSnapshot, PresetOption, LlmModelInfo, LlmProviderInfo, SkillInfo, CredentialStatus, AgentViewRow, AgentViewDispatchResult, BackgroundResult, RawTrajEvent, TrajectoryLane, TrajectorySource, ChannelSelection, AttachedContext, CompactionStatus, ContextOccupancy, ContextBreakdown, TeamView, ChannelCapabilities, ChannelCostReport, ChannelRateLimit, ChannelSessionRef, BackendModeOption } from './channel-view.js'
 import type { SpinnerMode, ToolBackground, ScrollGutterMode, PageMarginSetting, StatusBarConfig, SessionModeSpec, SplashFontSetting, JobGroupFoldMode, BrandSetting } from './channel-display.js'
 import type { LocalCommand, CommandCompletion, BalanceResult, FileCandidate, RecapOutcome } from './channel-catalog.js'
 import type { AgentCapabilities } from './channel-capabilities.js'
 import type { TuiRewindMode, SessionTreeData, SessionSummary, PreviewEntry, ForeignSource, ForeignSessionRow, ForeignImportOutcome } from './channel-session.js'
 import type { TuiWorkspaceTarget, TuiWorkspaceCommand, TuiWorkspaceCommandResult, TuiWorkspaceEntry } from './channel-workspace.js'
-import type { ProviderSetupHost, OAuthProviderStatus, OAuthSetupHost, SettingsHost, TuiSettingsSection } from './channel-settings.js'
+import type { OAuthProviderStatus, OAuthSetupHost, SettingsHost, TuiSettingsSection } from './channel-settings.js'
 
 /** One backend session's sign-in surface (`ChannelUi.backendAuth`). */
 export interface BackendAuthHost {
@@ -15,15 +15,6 @@ export interface BackendAuthHost {
   logout?(): Promise<boolean>
 }
 
-/** Relay profile management for the bound backend session. */
-export interface BackendChannelsHost {
-  snapshot(): { readonly channels: readonly BackendChannelOption[]; readonly activeId: string | undefined }
-  activate(id: string): { readonly ok: boolean; readonly restart: boolean }
-  importFromSettings(): { readonly option: BackendChannelOption; readonly restart: boolean } | undefined
-  save(input: BackendChannelInput): BackendChannelOption | undefined
-  remove(id: string): boolean
-  peekImport(): { readonly baseUrl?: string; readonly tiers: Readonly<Record<string, string>> } | undefined
-}
 export interface BackendModesHost { snapshot(): { modes: readonly BackendModeOption[]; currentIndex: number }; set(id: string): Promise<boolean> }
 export interface BackendMcpHost { reconnect(name: string): Promise<boolean>; toggle(name: string, enabled: boolean): Promise<boolean> }
 /** The bound session's typed `goals` capability (`/goal` on a non-DSH
@@ -111,10 +102,8 @@ export interface ChannelUi {
   /** Resolved model id (from the plugin config). */
   readonly model: string
   /** Display name of the live model when a channel mapping says the id the
-   *  runtime echoes is not what actually serves the request (relay channels
-   *  echo the requested id back; backends/claude/modelEnv.ts resolves it
-   *  from the user ANTHROPIC_*_MODEL env plus the local model-names.json).
-   *  UI renders this instead of `model` when present; attribution and
+   *  runtime echoes is not what actually serves the request (the session's
+   *  `models.display` capability). UI renders this instead of `model` when present; attribution and
    *  matching keep using `model`. */
   readonly modelDisplay: string | undefined
   /** Provider route of the live agent. */
@@ -297,9 +286,8 @@ export interface ChannelUi {
    *  `daily` (the default) rotates by local date, any other id pins that one
    *  face — see `components/splashFonts.ts` for the registry. */
   readonly splashFont: SplashFontSetting
-  /** Brand look (settings `dsh-tui.brand`): `auto` (the default) follows the
-   *  active backend — Claude boots orange (`CLAUDE`/`CODE` title, Claude girl,
-   *  ember theme); the other values pin one look. See `branding.ts`. */
+  /** Brand look (settings `dsh-tui.brand`): `auto` (the default) is the
+   *  DeepSeek look; the other values pin one look. See `branding.ts`. */
   readonly brand: BrandSetting
   /** Apply a brand-look change (see the public Channel type). */
   setBrand(setting: BrandSetting): void
@@ -626,7 +614,6 @@ export interface ChannelUi {
   readonly modeIndex: number
   /** Shift+Tab: advance to the next configured session mode. */
   cycleMode(): Promise<void>
-  backendChannels(): BackendChannelsHost | undefined
   backendModes(): BackendModesHost | undefined
   backendMcp(): BackendMcpHost | undefined
   /** Backend-owned `/init`; DSH keeps its synchronous initWorkspace path. */
@@ -675,8 +662,8 @@ export interface ChannelUi {
   /** Provider display identities for the same routes (picker group labels). */
   listProviders(): Promise<readonly LlmProviderInfo[]>
   /** Drop the `/model <provider/id>` completion cache so the next `/model `
-   *  refetch reflects a provider-catalog change (`/provider` add/edit/delete,
-   *  OAuth sign-in/out) — the same consistency the picker's per-open refetch
+   *  refetch reflects a provider-catalog change (account sign-in/out) — the
+   *  same consistency the picker's per-open refetch
    *  already provides. */
   invalidateModelCompletion(): void
   /** The live agent's full skill catalog for `/skills` (issue #204) — name,
@@ -691,10 +678,9 @@ export interface ChannelUi {
    *  queries the official balance endpoint. The key is used only for the
    *  request header — never logged, printed or persisted. */
   balanceInfo(): Promise<BalanceResult>
-  /** Runtime capabilities for the `/provider` wizard, over the settings /
-   *  credentials / llm seams; undefined when the composition lacks them
-   *  (bare cordis.yml start without the dsh-base services). */
-  providerSetup(): ProviderSetupHost | undefined
+  /** The mounted dsh-auth-style sign-in api (DeepSeek account); undefined
+   *  without the plugin, so sign-in actions stay hidden. */
+  oauthSetup(): OAuthSetupHost | undefined
   /** OAuth sign-in states from a mounted dsh-auth-style plugin; undefined
    *  without the plugin, so `/login` renders exactly what it did before. */
   oauthProviderStatuses(): Promise<readonly OAuthProviderStatus[] | undefined>

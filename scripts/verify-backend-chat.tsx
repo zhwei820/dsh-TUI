@@ -9,7 +9,7 @@
  */
 process.env.FORCE_COLOR = '3'
 
-const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { setLang, t }, { default: instances }, { findText, settled, sleep, viewportLines }, { kernelEntriesOf }, { listBackends }] =
+const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { setLang, t }, { default: instances }, { findText, settled, sleep, viewportLines }, { kernelEntriesOf }, registry, { FIXTURE_CLI_ID, FIXTURE_SDK_ID, FIXTURE_SDK_VERSION, registerFixtureBackends }] =
   await Promise.all([
     import('node:stream'),
     import('react'),
@@ -24,7 +24,11 @@ const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { Qu
     import('./lib/term-test.mjs'),
     import('../src/components/kernelCatalog.js'),
     import('../src/dsh-adapter/backend-registry.js'),
+    import('./lib/fixture-backends.js'),
   ])
+const { listBackends } = registry
+// DSH is the only in-tree kernel: the non-DSH session runs on a plugin-shaped row.
+registerFixtureBackends(registry)
 const { activateModernEmojiWidths } = await import('./lib/modern-widths.mjs')
 import type { AgentEvent, AgentEventMeta } from '../src/agent/events.js'
 import type { AgentInput, AgentSession, SubmitPlacement } from '../src/agent/session.js'
@@ -43,7 +47,7 @@ const submits: { input: AgentInput; placement: SubmitPlacement }[] = []
 const mcpCalls: string[] = []
 const listeners = new Set<(batch: readonly AgentEvent[], meta: AgentEventMeta) => void>()
 const session: AgentSession = {
-  ref: { backendId: 'claude', sessionId: '44444444-4444-4444-8444-444444444444' },
+  ref: { backendId: FIXTURE_SDK_ID, sessionId: '44444444-4444-4444-8444-444444444444' },
   cwd: process.cwd(),
   status: 'idle',
   capabilities: {
@@ -153,7 +157,7 @@ try {
   check('the slash menu offers served commands', await settled(() => commandMenuOpen() && screen().includes('Start a new conversation')), screen())
   await clearLine()
   // The composition root serves /restart and /kernel by respawning the
-  // process (a Claude session included), so every backend lists them.
+  // process (a plugin session included), so every backend lists them.
   check('restart and kernel are offered on a non-DSH backend',
     channel.commandCompletions('/rest').some(command => command.name === 'restart')
       && channel.commandCompletions('/kern').some(command => command.name === 'kernel'),
@@ -161,7 +165,7 @@ try {
 
   await typeLine('/preset')
   stdin.write('\r')
-  const refusal = t('cmd-unavailable-backend', { cmd: 'preset', backend: 'Claude' })
+  const refusal = t('cmd-unavailable-backend', { cmd: 'preset', backend: 'FixtureSDK' })
   check('a typed unavailable command explains itself', await settled(() => toasts().includes(refusal)), toasts())
   check('the refused command never reaches the model', submits.length === 0)
   await clearLine()
@@ -169,7 +173,7 @@ try {
   emit([{ type: 'turn.start', turn: 1, origin: 'user', time: Date.now() }])
   await typeLine('/rewind')
   stdin.write('\r')
-  const rewindRefusal = t('cmd-unavailable-backend', { cmd: 'rewind', backend: 'Claude' })
+  const rewindRefusal = t('cmd-unavailable-backend', { cmd: 'rewind', backend: 'FixtureSDK' })
   check('while working it is refused, not steered in', await settled(() => toasts().includes(rewindRefusal)) && submits.length === 0, toasts())
   emit([{ type: 'turn.end', turn: 1, reason: { kind: 'completed' }, time: Date.now() }])
   await clearLine()
@@ -281,7 +285,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
 
 // ── /resume with the sidebar split open routes by workspace capability ──
 // The workspace PANEL reads the DSH workspace ledger. A backend without
-// that capability (the Claude browser shape) used to have its /resume
+// that capability (a plugin backend's browser shape) used to have its /resume
 // swallowed by the panel: no catalog read, no history on screen — while
 // the user asked for their sessions. Such backends keep the full-screen
 // supervisor; a DSH channel keeps the panel route.
@@ -322,18 +326,18 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     }
   }
   try {
-    // The Claude shape: resume wired, no workspace capability.
+    // A plugin backend's shape: resume wired, no workspace capability.
     let catalogReads = 0
     const opened: string[] = []
     const historyId = 'c7c7c7c7-c7c7-47c7-87c7-c7c7c7c7c7c7'
     const stamp = Date.now()
     const historyRow = {
-      id: historyId, kind: { kind: 'root' }, title: { text: 'claude history session', source: 'prompt' },
+      id: historyId, kind: { kind: 'root' }, title: { text: 'plugin history session', source: 'prompt' },
       cwd: process.cwd(), createdAt: stamp - 60_000, updatedAt: stamp - 30_000, bytes: 2048, hasPrompt: true,
-      agentPreset: 'standard', model: 'claude-opus', label: undefined, branch: 'main', childCount: 0, backendId: 'fake',
+      agentPreset: 'standard', model: 'fixture-opus', label: undefined, branch: 'main', childCount: 0, backendId: 'fake',
     }
-    const claude = await mountSplitChat(freshSession({}), {
-      model: 'claude-opus',
+    const plugin = await mountSplitChat(freshSession({}), {
+      model: 'fixture-opus',
       provider: '',
       openSession: async target => {
         opened.push(`${target.kind}:${target.sessionId ?? target.cwd ?? ''}`)
@@ -344,38 +348,38 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     try {
       await sleep(300) // 固定窗:pacing the key handlers attach after the first frame.
       check('a backend with a session catalog offers every session-manager command',
-        ['resume', 'home', 'agentview', 'bg', 'background'].every(name => claude.commands().includes(name)),
-        claude.commands().join(','))
-      claude.write('\u001b[D')
+        ['resume', 'home', 'agentview', 'bg', 'background'].every(name => plugin.commands().includes(name)),
+        plugin.commands().join(','))
+      plugin.write('\u001b[D')
       check('empty ← on a non-DSH backend opens the session manager',
-        await settled(() => claude.text().includes('claude history session'), { timeoutMs: 6_000 }), claude.text())
+        await settled(() => plugin.text().includes('plugin history session'), { timeoutMs: 6_000 }), plugin.text())
       check('opening the session manager does not attempt an unsupported background handoff',
-        !claude.toasts().some(message => message.includes('bg') || message.includes('unavailable')),
-        claude.toasts().join(' | '))
-      claude.write('\u001b')
+        !plugin.toasts().some(message => message.includes('bg') || message.includes('unavailable')),
+        plugin.toasts().join(' | '))
+      plugin.write('\u001b')
       check('Esc returns to the same backend conversation',
-        await settled(() => !claude.text().includes('claude history session')), claude.text())
-      for (const char of '/bg') claude.write(char)
+        await settled(() => !plugin.text().includes('plugin history session')), plugin.text())
+      for (const char of '/bg') plugin.write(char)
       await sleep(60) // 固定窗:pacing the prompt applies typed characters on its own render tick.
-      claude.write('\r')
+      plugin.write('\r')
       check('/bg opens the same manager on a backend without background handoff',
-        await settled(() => claude.text().includes('claude history session'), { timeoutMs: 6_000 }), claude.text())
-      claude.write('\u001b')
+        await settled(() => plugin.text().includes('plugin history session'), { timeoutMs: 6_000 }), plugin.text())
+      plugin.write('\u001b')
       check('Esc after /bg keeps the same backend conversation attached',
-        await settled(() => !claude.text().includes('claude history session')), claude.text())
-      for (const char of '/resume') claude.write(char)
+        await settled(() => !plugin.text().includes('plugin history session')), plugin.text())
+      for (const char of '/resume') plugin.write(char)
       await sleep(60) // 固定窗:pacing the prompt applies typed characters on its own render tick.
-      claude.write('\r')
-      check('/resume with the sidebar open lists the backend history', await settled(() => claude.text().includes('claude history session'), { timeoutMs: 6_000 }), claude.text())
+      plugin.write('\r')
+      check('/resume with the sidebar open lists the backend history', await settled(() => plugin.text().includes('plugin history session'), { timeoutMs: 6_000 }), plugin.text())
       check('… reading the catalog rather than opening the workspace panel', catalogReads >= 1, String(catalogReads))
-      check('… the workspace panel stayed closed', !claude.text().includes(t('panel-workspace-current')), claude.text())
-      claude.write('\u001b[C')
+      check('… the workspace panel stayed closed', !plugin.text().includes(t('panel-workspace-current')), plugin.text())
+      plugin.write('\u001b[C')
       await sleep(60) // 固定窗:pacing 按键步间：焦点切换无可观测锚点
-      claude.write('\u001b[B')
+      plugin.write('\u001b[B')
       await sleep(60) // 固定窗:pacing 让光标移动渲染一帧
-      claude.write('\r')
+      plugin.write('\r')
       check('Enter on the history row really opens it through the backend', await settled(() => opened.includes(`resume:${historyId}`), { timeoutMs: 6_000 }), opened.join(' '))
-    } finally { claude.unmount() }
+    } finally { plugin.unmount() }
 
     // The DSH shape keeps today's panel route (positive control).
     const stubAgentCtx = { on: () => () => undefined }
@@ -400,7 +404,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
 }
 
 // ── backend-native permission modes: /permission + the footer mode chip ──
-// The Claude shape over the fake-session harness: the typed `modes`
+// A plugin backend's shape over the fake-session harness: the typed `modes`
 // capability is the whole surface. /permission behaves like the DSH preset
 // pipeline (bare opens a picker, <id> sets directly, status reports the
 // current mode), and the footer mode segment — hidden for a base mode on
@@ -684,7 +688,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
   }
 }
 
-// ── the backend's own working line (the Claude shape): capability → store ──
+// ── the backend's own working line (a plugin backend): capability → store ──
 // A backend that folds its own working activity publishes through the typed
 // `workingActivity` capability; the channel forwards into the SAME store the
 // DSH projection fills, and Chat's spinner slot shows the published line.
@@ -699,7 +703,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
   const emit = (events: readonly AgentEvent[]): void => {
     for (const listener of [...listeners]) listener(events, { replay: false, wake: 'sync' })
   }
-  /** Push one view the way the Claude session's fold does. */
+  /** Push one view the way a backend session's fold does. */
   const pushActivity = (view: WorkingActivityView): void => {
     for (const listener of [...activityListeners]) listener(view)
   }
@@ -758,40 +762,6 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     term.dispose()
   }
 }
-// An open channel picker must follow a capability roster replaced by /new.
-{
-  const catalog = (id: string): NonNullable<AgentSession['capabilities']['channels']> => {
-    const option = { id, name: id, models: [], tiers: [] }
-    return { list: () => [option], activeId: () => id, setActive: () => {}, importFromSettings: () => undefined, save: () => option, remove: () => false, peekSettingsImport: () => undefined }
-  }
-  const initial = freshSession({ channels: catalog('old-roster') })
-  const replacement = { ...freshSession({ channels: catalog('new-roster') }), ref: { backendId: 'fake', sessionId: 'b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1' } }
-  const channel = createChannel(ctx, initial, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', openSession: () => Promise.resolve(replacement) })
-  const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
-  class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
-  class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }
-  const stdin = new In()
-  const screen = (): string => viewportLines(term, 30).join('\n')
-  const instance = await ui.render(
-    React.createElement(Chat, { channel: channel as never, questionStore: new QuestionStore(), approvalStore: new ApprovalStore(), onExit: () => undefined, fullscreen: false, trajectorySeen: true }),
-    { stdout: new Out() as never, stdin: stdin as never, stderr: new Out() as never, exitOnCtrlC: false, patchConsole: false },
-  )
-  try {
-    check('channel roster fixture paints', await settled(() => screen().includes('fake-model')), screen())
-    for (const char of '/channel') stdin.write(char)
-    check('channel draft paints', await settled(() => screen().includes('/channel')), screen())
-    stdin.write('\r')
-    check('channel picker shows the original session roster', await settled(() => screen().includes('old-roster')), screen())
-    check('channel roster fixture really rebinds through /new', await channel.newSession())
-    check('an open channel picker replaces its cached roster on session rebind',
-      await settled(() => screen().includes('new-roster') && !screen().includes('old-roster')), screen())
-  } finally {
-    instance.unmount()
-    channel.releaseContributions()
-    term.dispose()
-  }
-}
-
 // /login follows the backend's auth host, not the DSH credential report.
 for (const route of ['missing', 'ready', 'failed'] as const) {
   const calls: string[] = []
@@ -874,9 +844,9 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
       && backendPermissionCommand({ modes: [], currentIndex: -1 }, '', '') === undefined)
 }
 // ── B-1: the row you press Enter on decides which install surface runs ────────
-// Stage A resolved ONE host-global surface at composition time — Claude's wizard,
-// behind an `sdk-install` overlay that carried no backend id at all — so a second
-// installable backend could only ever have installed Claude's SDK. The surface is
+// Stage A resolved ONE host-global surface at composition time — one backend's
+// wizard, behind an `sdk-install` overlay that carried no backend id at all — so
+// a second installable backend could only ever have installed that SDK. The surface is
 // now looked up per backend id, at the moment the row is picked (Stage B /
 // §6 item 12). These two rows are that fact end to end: one with a recipe opens the
 // wizard of *its own* recipe (a version and a directory nobody else declares), and
@@ -888,7 +858,7 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
   const asked: string[] = []
   const session: AgentSession = {
     ...freshSession({}),
-    ref: { backendId: 'claude', sessionId: 'b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1' },
+    ref: { backendId: FIXTURE_SDK_ID, sessionId: 'b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1' },
   }
   const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' })
   const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
@@ -906,12 +876,12 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
       trajectorySeen: true,
       // The registry projection the composition root hands in, plus the two facts
       // the picker needs: nobody is installed, and exactly one backend has an
-      // install surface this host can run (claude's manifest recipe).
+      // install surface this host can run (fixture-sdk's manifest recipe).
       kernelEntries: kernelEntriesOf(listBackends()),
-      onProbeKernels: () => Promise.resolve({ claude: { installed: false }, codex: { installed: false } }),
+      onProbeKernels: () => Promise.resolve({ [FIXTURE_SDK_ID]: { installed: false }, [FIXTURE_CLI_ID]: { installed: false } }),
       onResolveSdkInstall: (id) => {
         asked.push(id)
-        return id === 'claude'
+        return id === FIXTURE_SDK_ID
           ? {
               executor: 'pnpm-profile-add',
               specifier: `@acme/verify-sdk@${INSTALL_VERSION}`,
@@ -942,11 +912,11 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
         && !screen().includes(t('sdk-install-title'))) && asked.length === 0,
       `${asked.join()} | ${channel.notifications.map(item => item.text).join(' | ')} | ${screen()}`)
     stdin.write('\x1b[A')
-    await sleep(150) // 固定窗:pacing 同上（回到 Claude 行）。
+    await sleep(150) // 固定窗:pacing 同上（回到 fixture-sdk 行）。
     stdin.write('\r')
     check('B-1: the wizard is built from THAT row\'s recipe — its version and its target, not a host constant',
       await settled(() => screen().includes(t('sdk-install-title')) && screen().includes(INSTALL_VERSION) && screen().includes(INSTALL_DIR)
-        && !screen().includes('0.3.287')) && asked.join() === 'claude', `${asked.join()} | ${screen()}`)
+        && !screen().includes(FIXTURE_SDK_VERSION)) && asked.join() === FIXTURE_SDK_ID, `${asked.join()} | ${screen()}`)
   } finally {
     instance.unmount()
     channel.releaseContributions()

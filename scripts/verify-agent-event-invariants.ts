@@ -1,22 +1,16 @@
 /**
- * Lifecycle invariants across ALL committed DSH/Claude/Codex JSONL fixtures,
+ * Lifecycle invariants across ALL committed DSH JSONL fixtures,
  * both live and replay paths. Reads only scrubbed repository fixtures. No
  * processes, personal transcripts, credential stores or provider requests.
  * Run: node --import tsx/esm scripts/verify-agent-event-invariants.ts
  */
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { basename, join, relative } from 'node:path'
+import { join, relative } from 'node:path'
 import type { AgentEvent } from '../src/agent/events.js'
 import { createDshTranslator } from '../src/dsh-adapter/backend/translate.js'
-import { createClaudeTranslator } from '../src/backends/claude/translate.js'
-import { replayClaudeTranscript, type ClaudeSubagentTranscript } from '../src/backends/claude/replay.js'
-import { createItemContext } from '../src/backends/codex/translate/items.js'
-import { createLiveTranslator } from '../src/backends/codex/translate/live.js'
-import { replayTurns } from '../src/backends/codex/translate/replay.js'
 import { setLang } from '../src/i18n.js'
 import { agentEventInvariantViolations, assertAgentEventInvariants, type AgentEventInvariantOptions } from './lib/agent-event-invariants.js'
-import { loadWire, notificationsOf, recordedTurns, turnThreads, WIRE_DIR } from './lib/codex-translate-harness.js'
 
 setLang('en')
 type Rec = Record<string, unknown>
@@ -55,113 +49,6 @@ for (const file of jsonlFiles(join(FIXTURES, 'dsh')).filter(file => !file.endsWi
     const events = replay ? [...translator.translateReplay(log)] : log.flatMap(event => [...translator.translateEvent(event)])
     if (existsSync(frames)) for (const frame of read(frames)) events.push(...translator.translateFrame(frame as unknown as Parameters<typeof translator.translateFrame>[0]))
     verify(relative(FIXTURES, file) + (replay ? ' replay' : ' live'), events, { allowOpenLastTurn: unclosedSourceTurn(source) })
-  }
-}
-
-// Every Claude format: live wire, SDK read-API main/subagent dumps, notice
-// messages and the on-disk bench chain. Replays use the real replay adapter,
-// not a second mapping. Input admission is indexed before its output events.
-for (const file of jsonlFiles(join(FIXTURES, 'claude'))) {
-  const source = read(file)
-  const transcript = source.some(line => line.kind === 'main' || line.kind === 'subagent')
-  const wire = source.some(line => line.dir === 'in' || line.dir === 'out')
-  const main: Rec[] = []
-  const child = new Map<string, Rec[]>()
-  const uuids = new Set<unknown>()
-  const addMain = (message: Rec): void => {
-    if (message.type !== 'assistant' && message.type !== 'user') return
-    if (message.uuid !== undefined && uuids.has(message.uuid)) return
-    if (message.uuid !== undefined) uuids.add(message.uuid)
-    main.push(message)
-  }
-  const translator = createClaudeTranslator({ cwd: '/fixture/project', userRows: wire ? 'lifecycle' : 'replay', now: () => 0 })
-  const events: AgentEvent[] = []
-  const enqueuedInputs: { id: string; beforeEvent: number }[] = []
-  let recordingOpen = false
-  let hasResult = false
-  for (const line of source) {
-    const message = rec(line.msg ?? line)
-    if (transcript && line.kind === 'subagent') {
-      const id = String(line.agentId)
-      const messages = child.get(id) ?? []
-      messages.push(message)
-      child.set(id, messages)
-    } else addMain(message)
-    if (wire && line.dir === 'in') {
-      const placement = line.placement === 'steer' || line.placement === 'followup' || line.placement === 'now' ? line.placement : 'turn'
-      const id = String(message.uuid)
-      const content = rec(message.message).content
-      translator.registerInput(id, typeof content === 'string' ? content : '', placement)
-      if (placement === 'steer' || placement === 'followup') enqueuedInputs.push({ id, beforeEvent: events.length })
-      continue
-    }
-    if (wire && line.dir !== 'out') continue
-    if (message.parent_tool_use_id === undefined || message.parent_tool_use_id === null) {
-      if (message.type === 'command_lifecycle' && message.state === 'started') recordingOpen = true
-      if (message.type === 'result') { recordingOpen = false; hasResult = true }
-    }
-    events.push(...translator.translate(message))
-  }
-  // A read-API dump has no result records: as a live stream it is a prefix.
-  // Wire tails only get the exception when their native lifecycle is open.
-  verify(relative(FIXTURES, file) + ' live', events, { enqueuedInputs, allowOpenLastTurn: wire ? recordingOpen : !hasResult })
-  const recorded = join(FIXTURES, 'claude', 'transcripts', basename(file))
-  if (wire && existsSync(recorded)) {
-    // A wire echo lacks the read API's isQueuedCommand / compact metadata.
-    // Use the actual paired dump when recorded, never infer that metadata.
-    const rows = read(recorded)
-    main.splice(0, main.length, ...rows.filter(line => line.kind === 'main').map(line => rec(line.msg)))
-    child.clear()
-    for (const line of rows) if (line.kind === 'subagent') {
-      const id = String(line.agentId)
-      const messages = child.get(id) ?? []
-      messages.push(rec(line.msg))
-      child.set(id, messages)
-    }
-  }
-  const subagents = new Map<string, ClaudeSubagentTranscript>()
-  for (const [agentId, messages] of child) {
-    const parent = messages.find(message => typeof message.parent_tool_use_id === 'string')?.parent_tool_use_id
-    if (typeof parent === 'string') subagents.set(parent, { agentId, messages })
-  }
-  verify(relative(FIXTURES, file) + ' replay', replayClaudeTranscript(main, { cwd: '/fixture/project', subagents }).events)
-}
-
-// Codex live notifications and every recorded full history of each thread.
-// p1's history was read by the p2 connection (as the existing equivalence gate).
-for (const file of readdirSync(WIRE_DIR).filter(file => file.endsWith('.jsonl')).sort()) {
-  const name = file.slice(0, -'.jsonl'.length)
-  const wire = loadWire(name)
-  for (const thread of turnThreads(wire)) {
-    const notifications = notificationsOf(wire, thread)
-    const context = createItemContext({ cwd: '/TMP/cwd', now: () => 0 })
-    const translator = createLiveTranslator(context, { model: '', effort: null, modeId: 'auto' })
-    const events = notifications.flatMap(({ method, params }) => translator.notification(method, params))
-    const open = new Set<unknown>()
-    for (const { method, params } of notifications) {
-      if (method === 'turn/started') open.add(rec(params.turn).id)
-      if (method === 'turn/completed') open.delete(rec(params.turn).id)
-    }
-    const label = 'codex/' + name + ' thread ' + thread.slice(-6)
-    verify(label + ' live', events, { allowOpenLastTurn: open.size > 0 })
-    let turns = name === 's3-lifecycle-p1' ? recordedTurns(loadWire('s3-lifecycle-p2'), thread, 0) : recordedTurns(wire, thread)
-    let replaySource = ' replay'
-    if (turns === undefined) {
-      // Some ephemeral/child threads recorded no read API response. Their
-      // actual turn notifications are replayable native snapshots too, but
-      // completed notifications contain summary items, not full tool history.
-      const snapshots = new Map<unknown, Rec>()
-      for (const { method, params } of notifications) {
-        if (method === 'turn/started' || method === 'turn/completed') {
-          const turn = rec(params.turn)
-          snapshots.set(turn.id, turn)
-        }
-      }
-      turns = [...snapshots.values()]
-      replaySource = ' replay (native turn snapshots; no full history)'
-    }
-    const last = rec(turns.at(-1))
-    verify(label + replaySource, replayTurns(turns, createItemContext({ cwd: '/TMP/cwd', now: () => 0 })), { allowOpenLastTurn: last.status === 'inProgress' })
   }
 }
 

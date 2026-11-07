@@ -5,8 +5,8 @@
 
 ## 目标与边界
 
-DSH 是 `SubagentControl.history` → `SubagentTranscriptPage` 契约的第二个实现
-（第一个是 Claude 后端读子代理转录文件）。界面、页签、分页、去重与 live 尾部合并
+DSH 实现了 `SubagentControl.history` → `SubagentTranscriptPage` 契约（该契约最早由已移除的
+实验性 Claude 后端读子代理转录文件引入）。界面、页签、分页、去重与 live 尾部合并
 都复用共享件（`SubagentDetailScene` / `AgentTranscriptScene` /
 `src/components/messages/subagentTranscript.ts`），没有按后端分支的代码。
 
@@ -42,8 +42,7 @@ DSH 是 `SubagentControl.history` → `SubagentTranscriptPage` 契约的第二�
    时用有界的单事件探测（指数 + 二分，每次 `read(offset, 1)`，最多 48 次、
    跨度上限 2^24）找日志末端，不整本读取后再切片，也不直接读文件。
 6. **窗口**：child 自己的历史是 `[cut, total)`（fork 继承前缀永不翻页）。首页 =
-   最后 `min(400, own)` 条 source 事件（与 Claude 的 400 message 页、共享
-   `TRANSCRIPT_OLDER_CHUNK` 同宽）；older 请求按
+   最后 `min(400, own)` 条 source 事件（与共享 `TRANSCRIPT_OLDER_CHUNK` 同宽）；older 请求按
    `[cut + skip - count, cut + skip)` 取。`skippedFromStart` / `hasOlder` 均以
    own 事件计。窗口 cursor 是 **source record**（SessionEvent），与
    SessionLogOffset 同一零基语义，不与 event seq 混用（seq 即位置，anchor 是
@@ -102,6 +101,6 @@ snapshot API、不自己读日志文件）。
   出现明显延迟，需要上游 sessionPersistence 提供廉价的 eventCount 或定位到末尾的 API，
   这里只需替换「总长发现」一步。
 - 页界切开的 tool call/result：result 落在 newer 页时其 call 在 older 页，
-  fold 按共享规则丢弃孤儿 result（与 Claude 同语义）；活跃 child 由
+  fold 按共享规则丢弃孤儿 result；活跃 child 由
   `mergeLiveWindow` 按 callId 补齐状态。
 - 不支持嵌套子会话：`listChildren` 只核对直接子会话。

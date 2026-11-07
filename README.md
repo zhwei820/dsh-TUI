@@ -36,7 +36,7 @@ Image files referenced with `@path` use the same admission and resize/conversion
 
 Panels without a verified Component identity are temporary: settings show their title and a distinct number for this run. Their toggles take effect immediately without being saved, and unrelated settings changes preserve that choice. Old `actN:panel` entries cannot be mapped safely: remove the placeholder and select the current panel again. Verified Components named `actN` keep their public runtime address; an explicit selection uses `component:actN:panel` in saved preferences to avoid claiming an old anonymous entry.
 
-The default reasoning-effort setting offers the current backend/model’s declared tiers, including custom IDs. Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable. On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default. Claude/Codex retain backend preferences for Auto at startup and for resumed sessions; explicitly choosing Auto resets the model default. Explicit settings changes affect the next request; unsupported preferences fall back with a notice and are never forced onto a route.
+The default reasoning-effort setting offers the current backend/model’s declared tiers, including custom IDs. Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable. On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default. Non-DSH backends retain backend preferences for Auto at startup and for resumed sessions; explicitly choosing Auto resets the model default. Explicit settings changes affect the next request; unsupported preferences fall back with a notice and are never forced onto a route.
 
 Resuming a DSH session preserves its recorded reasoning effort (or its live selection when reattaching). The saved default seeds new sessions; explicit `/effort` and effort-default settings changes still apply to the current session’s next request.
 
@@ -44,14 +44,14 @@ Resuming a DSH session preserves its recorded reasoning effort (or its live sele
 - **Pixel whale pet** — three startup intros, click to wake; freezes after the first task.
 - **Launchpad and first-run guide** — every ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions, dropping whole blocks on short/narrow terminals; whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title; on by default — /settings `launchpad` off boots straight into chat); command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it. The first run walks a four-step wizard (accounts & models / language+theme / model+workspace / shortcuts), re-runnable with `/setup`; its first step signs in to a subscription and catches the models it brings in (none → no question, one → that one, several → you choose), or adds an API key through the `/provider` wizard, which asks which of the enabled models to switch to or keeps the current one.
 - **Terminal-native UI** — streaming Markdown, tool cards, `/` and `@` completion, `#L12-14` ranges, history search, zh/en UI.
-- **Task completion notifications** — DSH, Claude and Codex notify after successful live work settles, with no queued follow-up or active goal. The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters). OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings. `/settings` → Conversation: `taskNotifications` = `unfocused` (default), `always`, or `off`; `notificationMethod` = `auto` (default), `osc9`, `bel`, or `windows`. Auto uses separate title/body fields on Ghostty/WezTerm (OSC 777) and Kitty (OSC 99); iTerm2/Warp and explicit `osc9` use a title prefix; other terminals ring the bell; delivery follows your terminal's notification/bell settings. On local Windows, `auto` resolves to `windows`, the system's native notifications: a task-completion toast. The first toast registers that user's AppUserModelID under HKCU, the toast appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route), and for DSH sessions an enabled, active external DSH notification plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications; if that AppUserModelID cannot be written, the notification falls back to the bell instead of going silent. SSH sessions keep the attached terminal's notification protocol in `auto` mode; explicit `windows` still selects the host's native transport. tmux requires `set -g allow-passthrough on` for OSC notifications and `set -g focus-events on` for focus reporting. Terminals without focus reporting need `always`. Replay, cancellation and failures do not notify. Works in inline and fullscreen modes.
+- **Task completion notifications** — sessions notify after successful live work settles, with no queued follow-up or active goal. The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters). OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings. `/settings` → Conversation: `taskNotifications` = `unfocused` (default), `always`, or `off`; `notificationMethod` = `auto` (default), `osc9`, `bel`, or `windows`. Auto uses separate title/body fields on Ghostty/WezTerm (OSC 777) and Kitty (OSC 99); iTerm2/Warp and explicit `osc9` use a title prefix; other terminals ring the bell; delivery follows your terminal's notification/bell settings. On local Windows, `auto` resolves to `windows`, the system's native notifications: a task-completion toast. The first toast registers that user's AppUserModelID under HKCU, the toast appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route), and for DSH sessions an enabled, active external DSH notification plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications; if that AppUserModelID cannot be written, the notification falls back to the bell instead of going silent. SSH sessions keep the attached terminal's notification protocol in `auto` mode; explicit `windows` still selects the host's native transport. tmux requires `set -g allow-passthrough on` for OSC notifications and `set -g focus-events on` for focus reporting. Terminals without focus reporting need `always`. Replay, cancellation and failures do not notify. Works in inline and fullscreen modes.
 - **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes. The `/model` picker shows the same cursor during movement between provider tabs, model rows, and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row. The session manager also moves this cursor between the workspace rail, session rows, and search box; typing claims the search caret, and navigation returns it to the focused row. Configure animation and trail effects in your terminal.
 - **Images** — Kitty/Sixel thumbnails, centered preview with zoom and pan, paste-time fitting, text fallback. Kitty images scale to the reserved cells' physical pixels, including on HiDPI terminals.
 - **Mermaid diagrams** — ````mermaid ```` fences drawn as Unicode diagrams.
 - **LaTeX math** — `$…$` and `$$…$$` formulas as Unicode text, fractions and limits stacked in display blocks; `mathRendering: image` typesets block and one-row inline formulas as terminal images on graphics terminals.
 - **Timeline rail** — every turn clickable; timeline / scrollbar / hidden gutter.
 - **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize it. All eight built-in panels are enabled by default, and so are plugin panels registered later (`sidePanel.panels: '*'`; untick a row in `/settings` to switch to an explicit list). The header shows each inactive panel's symbol; hover to see its name. Narrow terminals and inline mode keep full-screen panels. In the `todo` panel a long goal wraps to the panel width with its phase on a separate row; when the content exceeds the viewport, focus the panel and scroll with `↑`/`↓` or the wheel (every todo is reachable too) (the compact goal row above the chat input stays a single truncated line with a hover tooltip).
-- **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata. Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused.
+- **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata. Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused. TPS includes hidden reasoning time and excludes tool execution time; decode spans of 500ms or less are excluded from TPS samples, while token and cost totals still include all reported usage.
   Context-bar fill follows backend occupancy; colors estimate content composition. Compaction clears obsolete estimates, and missing composition displays a single used block with a measured used count in both hover details.
 - **One session manager** — `/resume` `/home` `/agentview` `/bg` `⌸`.
 - **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, fullscreen draft editor.
@@ -135,8 +135,7 @@ older supported hosts retain their compatibility paths. See [configuration](docs
 
 On DSH 0.2.1-rc.2 and later, `/settings` also selects DeepSeek Search / Fetch APIs and edits their
 endpoint and result limits, supporting custom Loader entry IDs and a masked API
-key input saved through DSH's credential store. Official Flash model labels show the `1017` release
-marker while retaining the `deepseek-flash` model ID.
+key input saved through DSH's credential store.
 
 `/settings` groups its sections into pages: the TUI's own settings sit under
 **General**, and plugins that declare a page get their own tab (`Tab` / `Shift+Tab`, or a click on the strip in fullscreen, switches pages; the strip is hidden when only one page exists).
@@ -166,12 +165,9 @@ Afterwards `dsh-tui` and `dsh --profile dsh-tui` are equivalent.
 
 > **New-user note**: pnpm ≥11 blocks dependencies with install scripts by
 > default and reports `ERR_PNPM_IGNORED_BUILDS`. Updates skip foreign-platform
-> natives — the `@img/sharp-*` packages and the Claude SDK's per-platform
-> bundles — so only this machine's binaries are fetched. `/update` and
-> `dsh-tui update` write both settings automatically. An update never installs
-> the Claude SDK on its own: it enters a profile only when you pick that
-> backend in the kernel picker, which then installs the pinned SDK for the
-> running platform. No manual step needed. Details:
+> natives (such as the `@img/sharp-*` packages), so only this machine's binaries
+> are fetched. `/update` and `dsh-tui update` write both settings automatically.
+> No manual step needed. Details:
 > [Getting started](docs/getting-started.en.md#pnpm-install-script-blocks-and-foreign-platform-natives).
 
 After startup the TUI checks for newer versions in the background. It never
@@ -248,106 +244,6 @@ passes that id to the selected backend as-is. The one exception is safe mode's
 "retry normal startup": it retries the kernel and session recorded in
 `last-run.json`, so a record whose backend is gone degrades to a warning plus a cold
 start — that retry is the last way back.
-
-### Experimental: Claude backend
-
-dsh-TUI can also run its session on Claude: the same interface, driving the
-Claude Code CLI through the Claude Agent SDK. Your project's `CLAUDE.md`,
-settings, hooks, MCP servers and plugins load as the CLI loads them.
-
-```sh
-# once, in the dsh-tui profile directory (the SDK is an optional dependency)
-cd ~/.dsh/profiles/dsh-tui && pnpm add @anthropic-ai/claude-agent-sdk@0.3.287
-dsh-tui --backend claude     # or pick Claude in /kernel; that choice is remembered
-```
-
-The easiest install: open the kernel picker (the launchpad "Kernel" entry or
-`/kernel`) and press Enter on the dim Claude row — the wizard locates the
-profile directory and installs the pinned SDK for you; the command above is
-its manual equivalent.
-The confirmation shows the exact package and version. Closing the wizard,
-including clicking outside it on the launchpad, cancels a pending installation.
-
-- **Sign-in**: a `/channel` relay profile, your dsh-auth `anthropic` sign-in
-  (`/login`), `ANTHROPIC_API_KEY` or cloud-provider variables, or an existing
-  `claude login`, in that order. A `claude` on `PATH` is used when present, then
-  one in the native install directory under your home (`~/.local/bin`, or
-  `%USERPROFILE%\.local\bin` on Windows); every candidate has to launch and
-  report a version, and the SDK's bundled binary is used only when none does.
-- **Works**: streaming, tool cards, approvals and questions, `/model`,
-  `/effort`, Claude's permission modes (`/permission`, `Shift+Tab`),
-  `/compact`, `/context`, `/mcp`, `/resume`, `/fork`, double-`Esc` rewind,
-  subagents, background jobs, images, `/btw`, and the USD cost Claude reports.
-- **Not available**: DSH-only commands such as `/tree`, `/preset`,
-  `/provider`, `/workspace`, `/agentview` and `/bg`. One process runs one
-  backend; `/kernel` switches by restarting into a new session.
-- **Startup**: the screen appears before the session opens, with only a light
-  profile composed (this package plus the profile's third-party plugins); see
-  [Claude backend](docs/claude-backend.en.md#known-limitations). The DSH kernel
-  starts from the same entry and loads DSH in the same process behind its first
-  screen; `DSH_TUI_HOST_ENTRY=0` restores the old launch path for every kernel.
-
-Details and known limitations: [Claude backend](docs/claude-backend.en.md).
-
-### Experimental: native Codex backend
-
-Run your own Codex through `codex app-server`, sharing its configuration,
-login, instructions, skills, hooks, MCP and native threads:
-
-```sh
-npm install -g @openai/codex@0.160.1
-dsh-tui --backend codex
-dsh-tui --backend codex --resume <thread-id>
-```
-
-Protocol baseline **0.160.1**, minimum **0.144.0**; other versions may show
-drift. `CODEX_EXECUTABLE` selects a binary; `/kernel` remembers the backend.
-`codex resume <id>` can open the same thread after the other writer exits.
-This is not `migrate codex`, which imports history into DSH.
-With native credentials, a writer conflict for an idle thread retained by the
-official background server triggers a reconnection to that server. Managed
-subscription credentials and `/channel` connections use private app-server processes.
-
-Streaming/tool cards, approvals, questions, steer/queue/interrupt, model and
-effort controls, Plan, `/review`, `/diff`, `/usage`, `/init`, skills and MCP
-share the existing UI. Async questions open the questionnaire while Codex
-continues working; answers steer the turn (or queue if unavailable), and
-dismissing the question leaves work running. **Shift+Tab only toggles Plan**, keeping its underlying
-permission preset; Full Access requires an explicit choice. Existing Codex
-settings are respected, not overwritten with defaults. `/login` offers
-ChatGPT OAuth, a device code or an API key (the last writes to Codex’s own
-credential store). Relay `/channel` connections take precedence; managed
-subscription tokens are only injected on first-party routes. dsh-TUI does
-not write `~/.codex/config.toml` or log out your native Codex account. A
-provider `env_key` from your own config (e.g. `DEEPSEEK_API_KEY`) that the
-shell did not export is injected from the DSH credential store when the ref
-is stored there — the active store first, then the default `~/.dsh` one — so
-keep the key in the store, no per-shell export needed. When nothing can
-supply it, the session still starts and the reason is reported once as a
-start notice: Codex itself rejects every turn of that provider.
-
-For Claude and Codex, `/channel` tokens (`CHANNEL_*` refs) belong to the
-active `DSH_HOME` only. Disconnecting a channel cannot revive a token from
-the default home; reconnect it in the active home if needed. Provider
-`env_key` credentials retain the fallback described above.
-
-TPS includes hidden reasoning time and excludes tool execution time. Live
-text estimates are corrected when Codex reports output token usage. Decode
-spans of 500ms or less are excluded from TPS samples; token and cost totals
-still include all reported usage.
-
-Native browsing/archive, fork/conversation rewind (the first message requires
-Codex app-server 0.160.1+), paged history, images,
-subagents, polled background terminals, goals and `/btw`/`/recap` use the
-existing surfaces. `/logout` removes only the matching dsh-auth credential;
-already-loaded managed tokens require a normal restart, not native logout.
-The real 0.160.1 app-server passed nine credential-free offline checks and eight
-daemon-resume checks, with no model turn or charge; real subscription login, credentialed model calls
-and real-TTY interaction were not run. Only Codex identification/title
-changes automatically, not palette or companion.
-Using ChatGPT subscription tokens in third-party clients is subject to
-OpenAI’s terms. Full instructions and current boundaries:
-[Codex backend](docs/codex-backend.en.md).
 
 ### Experimental: DSH Agent Teams
 
@@ -487,16 +383,16 @@ Full reference: [Interaction and commands](docs/interaction.en.md).
 
 On DSH, `/fork` keeps the current session open and creates a resumable copy; a copy with history records its parent and appears in the same session family.
 
-`/dsh`, `/codex`, and `/claude` switch directly to the named kernel, just like choosing it in `/kernel`: the choice is remembered and the process restarts into a new session. A running turn blocks switching; choosing the current kernel keeps the session. Availability checks and the Claude install wizard follow the same picker flow.
+`/dsh` switches directly to the DSH kernel, just like choosing it in `/kernel`: the choice is remembered and the process restarts into a new session. A running turn blocks switching; when DSH is already current the session is kept. Availability checks follow the same picker flow.
 
-`/model` shows models and reasoning effort on one page. DSH has provider tabs with **Recently used** first, moving the current model to the top; `Tab` / `Shift+Tab` select the next / previous provider. Codex and Claude open their model catalogs directly, without provider or recents tabs. `↑/↓` select a model, `←/→` adjust its effort, `Enter` applies the model and any explicit effort draft, and `Esc` cancels. Changing only the model preserves the backend's preference handling. Mouse users can click the available tabs, models, effort levels, and select/cancel hints; clicking an effort level immediately applies the focused model and that effort and closes the picker. The wheel moves through models.
+`/model` shows models and reasoning effort on one page. DSH has provider tabs with **Recently used** first, moving the current model to the top; `Tab` / `Shift+Tab` select the next / previous provider. `↑/↓` select a model, `←/→` adjust its effort, `Enter` applies the model and any explicit effort draft, and `Esc` cancels. Changing only the model preserves the backend's preference handling. Mouse users can click the available tabs, models, effort levels, and select/cancel hints; clicking an effort level immediately applies the focused model and that effort and closes the picker. The wheel moves through models.
 
 Short terminals keep the focused model and select/cancel actions visible, hiding descriptions and neighboring models first, then the effort row when only two rows remain.
-Shortcuts sit below the title and effort levels have their own section; DSH, Claude, and Codex use the terminal background while covering the text underneath.
+Shortcuts sit below the title and effort levels have their own section; the picker uses the terminal background while covering the text underneath.
 
 In `/provider`'s model list, focus a model and press `Tab` to edit its context window, max output tokens, reasoning efforts, and image input capability.
 
-The session manager focuses the most recently used session in the current workspace; if there is no history, it focuses the new-session card. Moving between the workspace rail and session list preserves the selected session, including when the mouse enters the list. Switching to another workspace selects its latest session; switching back also starts from its latest session instead of restoring an earlier selection. Press `←` to move to the workspace rail. DST preloads the session list in the background after startup and updates the cache on success. The manager paints the last successful list immediately. Opening `/resume` while that read is pending shares the request and receives results that have already arrived. This first-paint snapshot survives restarts on DSH, Claude and Codex and is isolated by backend and storage directory. With or without a snapshot, all three backends prioritize the current workspace before filling in other workspaces. Fresh sessions and titles merge into the list immediately; cached rows from other workspaces remain until the full read finishes. Background updates preserve a session the user has selected manually. Claude and Codex first request up to 32 recent sessions within their native cwd scope: Claude's SDK includes Git worktrees in the same repository, while Codex matches the session cwd exactly. Codex listings reuse the running connection and read the first 32 regular results alongside the state DB shortcut, then fill in later pages. The browser groups sessions by their own cwd. DSH resolves the current workspace's metadata first and publishes it before reading other workspaces' logs, even when it has fewer than 32 sessions. Titles that require a deeper DSH log scan appear first with a fallback name and update in place when recovery finishes.
+The session manager focuses the most recently used session in the current workspace; if there is no history, it focuses the new-session card. Moving between the workspace rail and session list preserves the selected session, including when the mouse enters the list. Switching to another workspace selects its latest session; switching back also starts from its latest session instead of restoring an earlier selection. Press `←` to move to the workspace rail. DST preloads the session list in the background after startup and updates the cache on success. The manager paints the last successful list immediately. Opening `/resume` while that read is pending shares the request and receives results that have already arrived. This first-paint snapshot survives restarts and is isolated by backend and storage directory. With or without a snapshot, the current workspace loads first before other workspaces are filled in. Fresh sessions and titles merge into the list immediately; cached rows from other workspaces remain until the full read finishes. Background updates preserve a session the user has selected manually. The browser groups sessions by their own cwd. DSH resolves the current workspace's metadata first and publishes it before reading other workspaces' logs, even when it has fewer than 32 sessions. Titles that require a deeper DSH log scan appear first with a fallback name and update in place when recovery finishes.
 The session manager shows the selected workspace's absolute path once, beneath the source tabs (wrapping when needed; hover reveals exceptionally long paths). Session rows show their title and essential status/time instead of repeating the directory; DSH size and model remain in the title tooltip.
 With DSH's current JSONL backend, startup and `/new` keep initial permission events in memory until further session activity saves the complete log. Flushing a session that holds only initialization leaves it unstored. Restarting an unstored empty session starts fresh.
 The project rail uses one line per directory on every backend and source tab; the selected project’s path appears once above the panes.
@@ -514,7 +410,7 @@ PID reuse across platforms.
 
 **Background jobs**: card headers open the focused task panel. Click the card body or use `Ctrl+O` to toggle the command between its first statement and full script. Commands and output use separate colored edges with `❯` (`>` on Windows) and `≡` on their first rows; output always stays at the latest two visible rows. `/jobs` and the side panel keep the full output scrollable, while `e` toggles the focused command. Consecutive blank script lines collapse to one.
 
-**Background sessions**: On the DSH backend, `/bg` or `←` on an empty prompt backgrounds the current session and opens the session manager; `Esc` returns to it. Background sessions run in this process and stop when the TUI exits. Logs survive. On Claude/Codex, those entries open the session manager without backgrounding the session.
+**Background sessions**: On the DSH backend, `/bg` or `←` on an empty prompt backgrounds the current session and opens the session manager; `Esc` returns to it. Background sessions run in this process and stop when the TUI exits. Logs survive. On other kernels, those entries open the session manager without backgrounding the session.
 
 Full commands: [Interaction and commands](docs/interaction.en.md).
 
@@ -679,7 +575,7 @@ Everything, bilingual: [docs/README.md](docs/README.md).
 
 No sandbox of its own: dsh-TUI uses the active DSH profile's filesystem, shell, sandbox and approval policies. Permission presets come from the DSH `permissionPresets` registry.
 
-**Permission persistence** (all three backends): the Claude and Codex backends keep their `/permission` picks in `~/.dsh-tui/backends/<id>/prefs.json`; the DSH pick is kept at `~/.dsh-tui/permission.json`. Every durable preset switch teaches it (picker, typed `/permission`, Shift+Tab static modes, or a switch the official command performed on its own), and a session that never customized its permission planes starts on the remembered preset — applied through the same official switch path. "Never customized" is about the user: the composition writes its own default preset into every fresh session at creation, and those events do not count. Plan-mode transients and the experimental Auto review preset (see below) are excluded, a `DSH_PERMISSION_MODE` launch pin (this run's initial permission plane) outranks the file, and an identity the mounted roster no longer offers is skipped.
+**Permission persistence**: the DSH `/permission` pick is kept at `~/.dsh-tui/permission.json`. Every durable preset switch teaches it (picker, typed `/permission`, Shift+Tab static modes, or a switch the official command performed on its own), and a session that never customized its permission planes starts on the remembered preset — applied through the same official switch path. "Never customized" is about the user: the composition writes its own default preset into every fresh session at creation, and those events do not count. Plan-mode transients and the experimental Auto review preset (see below) are excluded, a `DSH_PERMISSION_MODE` launch pin (this run's initial permission plane) outranks the file, and an identity the mounted roster no longer offers is skipped.
 
 **Auto review** (DSH, experimental): `/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-auto-review`, the `auto` preset (shown as "Auto review", tagged `EXP`) appears in `/permission` and its completions live, and disappears when the plugin is removed. It is session-only: the model reviews every tool call before it runs, there is no file sandbox, and each call costs one extra model request; its approval prompts show the localized reason, and a subagent denial reads "Auto review denied; not executed". Picking it in the picker first shows a risk confirmation (`Enter` enables, `Esc` goes back; in fullscreen its Enable / Go back rows are clickable); a typed `/permission auto` switches directly. Once the current session has selected it, the picker skips the confirmation and Shift+Tab stops skipping it.
 

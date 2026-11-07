@@ -3,7 +3,7 @@
  * （AC-A1..A6，#1089 / #857）。
  *
  * 覆盖：
- *  - AC-A5：价目表按 #857 更新（v4-flash / -vision-exp 用 Flash 价，v4-pro 行移除），
+ *  - AC-A5：价目表只收录 deepseek-flash（V4.1-Flash），旧模型 id 不再计价，
  *    priceForModel 前缀匹配结果；
  *  - AC-A1：SubagentActivityStore 消费 durable assistant/message.usage，按
  *    (provider, model) 累计并进入 estimateCostFromBucketsCny；
@@ -117,14 +117,8 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 // ═════════════════════ AC-A5：价目表按 #857 更新 ═════════════════════
 
 {
-  const flash = priceForModel('deepseek-v4-flash')
-  check('AC-A5 priceForModel(v4-flash) = Flash 价', flash !== undefined
-    && JSON.stringify(flash) === JSON.stringify(FLASH_PRICE), JSON.stringify(flash))
-  const vision = priceForModel('deepseek-v4-flash-vision-exp')
-  check('AC-A5 priceForModel(v4-flash-vision-exp) = Flash 价（最长前缀）', vision !== undefined
-    && JSON.stringify(vision) === JSON.stringify(FLASH_PRICE), JSON.stringify(vision))
-  check('AC-A5 v4-pro 行已移除', priceForModel('deepseek-v4-pro') === undefined
-    && !Object.prototype.hasOwnProperty.call(DEEPSEEK_MODEL_PRICES, 'deepseek-v4-pro'))
+  check('AC-A5 旧模型 id 已移除', ['deepseek-v4-flash', 'deepseek-v4-flash-vision-exp', 'deepseek-v4-pro']
+    .every(id => priceForModel(id) === undefined && !Object.prototype.hasOwnProperty.call(DEEPSEEK_MODEL_PRICES, id)))
   check('AC-A5 既有 deepseek-flash 仍为 Flash 价', priceForModel('deepseek-flash') !== undefined
     && JSON.stringify(priceForModel('deepseek-flash')) === JSON.stringify(FLASH_PRICE))
   check('AC-A5 未收录模型不估价', priceForModel('gpt-4o') === undefined)
@@ -136,7 +130,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
   const buckets = emptyCostBuckets()
   addUsageToCostBuckets(buckets, { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0 }, true)
   const estimate = estimateCostFromBucketsCny([
-    { provider: 'deepseek-official', model: 'deepseek-v4-flash', buckets, scope: 'main' },
+    { provider: 'deepseek-official', model: 'deepseek-flash', buckets, scope: 'main' },
   ])
   check('estimate 主会话高峰 1M 输入 = ¥2.00', estimate !== undefined
     && close(estimate.total, 2.0) && close(estimate.main, 2.0) && close(estimate.subagent, 0), JSON.stringify(estimate))
@@ -144,7 +138,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
   const subBuckets = emptyCostBuckets()
   addUsageToCostBuckets(subBuckets, { input: 500_000, output: 250_000, cacheRead: 100_000, cacheWrite: 50_000 }, false)
   const split = estimateCostFromBucketsCny([
-    { provider: 'deepseek-official', model: 'deepseek-v4-flash', buckets, scope: 'main' },
+    { provider: 'deepseek-official', model: 'deepseek-flash', buckets, scope: 'main' },
     { provider: 'deepseek-official', model: 'deepseek-flash', buckets: subBuckets, scope: 'subagent' },
   ])
   // 子代理空闲桶：0.5M×1.0 + 0.1M×0.02 + 0.05M×1.0 + 0.25M×4.0 = 0.5+0.002+0.05+1.0 = 1.552
@@ -214,7 +208,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
     if (item.peak !== undefined) addUsageToCostBuckets(usage, item.peak, true)
     if (item.idle !== undefined) addUsageToCostBuckets(usage, item.idle, false)
     const priced = estimateCostFromBucketsCny([
-      { provider: 'deepseek-official', model: 'deepseek-v4-flash', buckets: usage, scope: 'main' },
+      { provider: 'deepseek-official', model: 'deepseek-flash', buckets: usage, scope: 'main' },
     ])
     check(`计价 ${item.name} = ¥${item.expected}`, priced !== undefined && close(priced.total, item.expected),
       priced === undefined ? 'total=undefined' : JSON.stringify(priced))
@@ -225,12 +219,12 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const store = new SubagentActivityStore()
-  store.onSpawned('child-a', 'deepseek-official', 'deepseek-v4-flash')
+  store.onSpawned('child-a', 'deepseek-official', 'deepseek-flash')
   store.onSessionEvent('child-a', durableMessage(1, PEAK, { inputTokens: 1_000_000, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }))
   const snapshot = store.costSnapshot()
   check('AC-A1 子代理 durable usage 进入按模型桶', snapshot.entries.length === 1
     && snapshot.entries[0]?.provider === 'deepseek-official'
-    && snapshot.entries[0]?.model === 'deepseek-v4-flash'
+    && snapshot.entries[0]?.model === 'deepseek-flash'
     && snapshot.entries[0]?.buckets.peak.input === 1_000_000, JSON.stringify(snapshot.entries))
   const estimate = estimateCostFromBucketsCny(snapshot.entries.map(entry => ({ ...entry, scope: 'subagent' as const })))
   check('AC-A1 子代理按其自身模型计价 = ¥2.00', estimate !== undefined
@@ -239,7 +233,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const store = new SubagentActivityStore()
-  store.onSpawned('child-b', 'deepseek-official', 'deepseek-v4-flash')
+  store.onSpawned('child-b', 'deepseek-official', 'deepseek-flash')
   store.onSessionEvent('child-b', durableMessage(1, IDLE, { inputTokens: 1_000_000, outputTokens: 500_000, cacheReadTokens: 800_000, cacheWriteTokens: 100_000 }))
   store.onSessionEvent('child-b', durableMessage(2, PEAK, { inputTokens: 0, outputTokens: 250_000, cacheReadTokens: 0, cacheWriteTokens: 0 }))
   const entry = store.costSnapshot().entries[0]
@@ -257,7 +251,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const store = new SubagentActivityStore()
-  store.onSpawned('child-live', 'deepseek-official', 'deepseek-v4-flash')
+  store.onSpawned('child-live', 'deepseek-official', 'deepseek-flash')
   store.onSessionEvent('child-live', durableMessage(1, PEAK, { inputTokens: 100, outputTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 0 }))
   const before = store.costSnapshot()
   // live chunk usage 只更新展示 token，不计费（否则同回合双计）。
@@ -285,7 +279,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const store = new SubagentActivityStore()
-  store.onSpawned('child-replay', 'deepseek-official', 'deepseek-v4-flash')
+  store.onSpawned('child-replay', 'deepseek-official', 'deepseek-flash')
   const usage = { inputTokens: 1_000_000, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
   const first = durableMessage(7, PEAK, usage)
   store.onSessionEvent('child-replay', first)
@@ -304,7 +298,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
     JSON.stringify(store.costSnapshot().entries))
   check('AC-A3b reset 清掉去重水位（更小的 seq 不被旧水位挡住）', (() => {
     store.reset()
-    store.onSpawned('child-replay', 'deepseek-official', 'deepseek-v4-flash')
+    store.onSpawned('child-replay', 'deepseek-official', 'deepseek-flash')
     store.onSessionEvent('child-replay', durableMessage(3, PEAK, { inputTokens: 5, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }))
     return store.costSnapshot().entries[0]?.buckets.peak.input === 5
   })())
@@ -314,7 +308,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const state = {
-    ...createInitialChannelView({ model: 'deepseek-v4-flash', provider: 'deepseek', cwd: '/tmp' }, {
+    ...createInitialChannelView({ model: 'deepseek-flash', provider: 'deepseek', cwd: '/tmp' }, {
       agentId: 'agent', sessionId: 'session', mode: { id: 'default', name: 'Default' } as never, cwdDescription: '/tmp',
     }),
     emit: noop,
@@ -344,8 +338,8 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
     main: state.mainCost,
     subagents: state.subagentCost,
   }))
-  check('AC-A4 各模型按各自单价求和 = ¥4.00', estimate !== undefined
-    && close(estimate.total, 4.0) && close(estimate.main, 4.0), JSON.stringify(estimate))
+  check('AC-A4 各模型按各自单价求和：未收录的旧模型桶只报 token', estimate !== undefined
+    && close(estimate.total, 2.0) && close(estimate.main, 2.0) && estimate.unpricedTokens === 500_000, JSON.stringify(estimate))
   check('AC-A3/A4 channel.tokens 既有累计语义不变', state.tokens.input === 1_000_000 && state.tokens.output === 500_000
     && state.tokens.peak.input === 1_000_000 && state.tokens.idle.output === 500_000, JSON.stringify(state.tokens))
 }
@@ -353,7 +347,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 {
   // 无 request/header 的旧日志/测试桩：回退事件发生时 channel 模型。
   const state = {
-    ...createInitialChannelView({ model: 'deepseek-v4-flash', provider: 'deepseek', cwd: '/tmp' }, {
+    ...createInitialChannelView({ model: 'deepseek-flash', provider: 'deepseek', cwd: '/tmp' }, {
       agentId: 'agent', sessionId: 'session', mode: { id: 'default', name: 'Default' } as never, cwdDescription: '/tmp',
     }),
     emit: noop,
@@ -364,8 +358,8 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
     checkContextWarning: noop, notify: noop, attachments: noop,
   })
   projector.renderEvent(durableMessage(1, PEAK, { inputTokens: 200, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 }) as never)
-  check('AC-A4 无 header 回退 channel 模型', state.mainCost['deepseek-v4-flash']?.peak.input === 200
-    && state.mainCost['deepseek-v4-flash']?.peak.output === 100, JSON.stringify(state.mainCost))
+  check('AC-A4 无 header 回退 channel 模型', state.mainCost['deepseek-flash']?.peak.input === 200
+    && state.mainCost['deepseek-flash']?.peak.output === 100, JSON.stringify(state.mainCost))
   projector.renderEvent(durableMessage(2, IDLE, { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }) as never)
   check('AC-A4 零 usage 不建桶', Object.keys(state.mainCost).length === 1)
 }
@@ -399,7 +393,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const store = new SubagentActivityStore()
-  store.onSpawned('child-official', 'deepseek-official', 'deepseek-v4-flash')
+  store.onSpawned('child-official', 'deepseek-official', 'deepseek-flash')
   store.onSessionEvent('child-official', durableMessage(1, PEAK, { inputTokens: 1_000_000, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }))
   store.onSpawned('child-third-party', 'kimi-coding', 'kimi-k2')
   store.onSessionEvent('child-third-party', durableMessage(1, PEAK, { inputTokens: 500, outputTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 0 }))
@@ -434,7 +428,7 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
   addUsageToCostBuckets(mainBuckets, { input: 100_000 }, false)
   const withMain = collectSessionCostEntries({
     provider: 'deepseek',
-    main: { 'deepseek-v4-flash': mainBuckets },
+    main: { 'deepseek-flash': mainBuckets },
     subagents: [{ provider: 'deepseek-official', model: 'deepseek-flash', buckets: emptyCostBuckets() }],
     fallbackTokens: fallback,
     fallbackModel: 'deepseek-flash',
@@ -445,13 +439,13 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
 
 {
   const state = {
-    ...createInitialChannelView({ model: 'deepseek-v4-flash', provider: 'deepseek', cwd: '/tmp' }, {
+    ...createInitialChannelView({ model: 'deepseek-flash', provider: 'deepseek', cwd: '/tmp' }, {
       agentId: 'agent', sessionId: 'session', mode: { id: 'default', name: 'Default' } as never, cwdDescription: '/tmp',
     }),
   }
   const seed = emptyCostBuckets()
   addUsageToCostBuckets(seed, { input: 10 }, true)
-  state.mainCost = { 'deepseek-v4-flash': seed }
+  state.mainCost = { 'deepseek-flash': seed }
   state.subagentCost = [{ provider: 'deepseek-official', model: 'deepseek-flash', buckets: emptyCostBuckets() }]
   resetSessionProjection(state, { value: 3 }, noop, noop, noop)
   check('session-reset 清零 mainCost/subagentCost', Object.keys(state.mainCost).length === 0
@@ -467,12 +461,12 @@ function makeProjector(state: Record<string, unknown>): { renderEvent: (event: u
     lookupChild: () => undefined,
   })
   projection.onStart({ id: 'child-mirror', provider: 'deepseek-official' })
-  projection.store.patch('child-mirror', { model: 'deepseek-v4-flash' })
+  projection.store.patch('child-mirror', { model: 'deepseek-flash' })
   projection.store.onSessionEvent('child-mirror', durableMessage(1, PEAK, { inputTokens: 42, outputTokens: 7, cacheReadTokens: 0, cacheWriteTokens: 0 }))
   projection.syncNow()
   const mirror = state.subagentCost as Array<{ provider: string; model: string; buckets: { peak: { input: number; output: number } } }>
   check('subagent-projection.syncNow 镜像 store 费用快照', mirror.length === 1
-    && mirror[0]?.provider === 'deepseek-official' && mirror[0]?.model === 'deepseek-v4-flash'
+    && mirror[0]?.provider === 'deepseek-official' && mirror[0]?.model === 'deepseek-flash'
     && mirror[0]?.buckets.peak.input === 42 && mirror[0]?.buckets.peak.output === 7, JSON.stringify(mirror))
   projection.reset()
   check('subagent-projection.reset 清空镜像', (state.subagentCost as unknown[]).length === 0)

@@ -15,12 +15,8 @@ const collect = directory => readdirSync(directory, { withFileTypes: true }).fla
 })
 const rules = [
   ['private internal link', /anthropic\.slack\.com|slack\.com\/archives/],
-  // The Claude backend spawns the real CLI and must set or scrub its env
-  // (docs/agent-backend-design.md §4.3), so that backend, its maintainer
-  // probes, its own regressions/fixtures (which assert the scrubbing) and
-  // its design log may name those variables; everywhere else the rule keeps
-  // guarding #804.
-  ['foreign runtime environment variable', /CLAUDE_CODE_[A-Z_]+/, ['src/backends/claude/', 'scripts/probes/', 'scripts/verify-claude-', 'scripts/fixtures/claude/', 'docs/agent-backend-design.md']],
+  // Guards #804: no foreign runtime's environment variables in this tree.
+  ['foreign runtime environment variable', /CLAUDE_CODE_[A-Z_]+/],
   ['embedded source map in source', /sourceMappingURL=data:/],
   ['compiler-generated component input', /(?:from\s*|import\s*\()['"]react\/compiler-runtime['"]|react\.early_return_sentinel|react\.memo_cache_sentinel/],
   ['retired helper namespace', /(?:src\/|\.\.\/|types\/)cc\/|cc\.d\.ts/],

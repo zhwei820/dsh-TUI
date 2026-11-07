@@ -125,8 +125,8 @@ export function cardContentWidth(columns: number): number {
  *   1. 整名前缀（文件查询是路径前缀，`src/re` 命中 `src/render`）；
  *   2. 最后一个空格 token 的前缀（嵌套命令 `model deepseek/…` 的
  *      `deepseek/` 查询——补全名带 `model ` 路径前缀）；
- *   3. 最后一个 `/` 段的前缀（`/model deepseek-v` 命中段
- *      `deepseek-v4-flash` 的开头）。
+ *   3. 最后一个 `/` 段的前缀（`/model deepseek-f` 命中段
+ *      `deepseek-flash` 的开头）。
  * 查询为空、或都不命中（别名命中、过期候选）返回 null——渲染方整体 dim。
  */
 export function splitQueryMatch(

@@ -99,7 +99,13 @@ if (probeMode) {
   const { cmdlineArgsOf, initialPromptFromCmdlineArgs } = await import('../lib/types/dsh-adapter/startup-args.js')
   const { resumeTargetFromArgv, stripResumeArgs } = await import('../lib/types/sessionHistory.js')
   const { DSH_BACKEND_ID, KERNEL_SWITCH_HANDOFF_ENV, RESUME_BACKEND_ENV, RESUME_RETRY_ENV, parseBackendId, readKernelPrefs, resolveRememberedBackend, resolveResumeTarget } = await import('../lib/types/kernelPrefs.js')
-  const { backendLabel, isBackendIdSyntax, isRegisteredBackend, listBackends, parseBackendChoice } = await import('../lib/types/dsh-adapter/backend-registry.js')
+  const { backendLabel, isBackendIdSyntax, isRegisteredBackend, listBackends, parseBackendChoice, registerBackend } = await import('../lib/types/dsh-adapter/backend-registry.js')
+  // No backend besides DSH ships in-tree: register one plugin-shaped entry so the
+  // non-DSH paths (its own resume marker, refusals naming it) still run for real.
+  registerBackend({
+    manifest: { id: 'probe-agent', label: { kind: 'literal', text: 'Probe agent' }, shortLabel: 'Probe', inTree: false, capabilities: [], grants: [] },
+    load: async () => ({}),
+  })
   const { setLang, t } = await import('../lib/types/i18n.js')
   // Deterministic refusal text: the boot itself sets the language from config,
   // which is not part of the extracted startup statements.
@@ -298,9 +304,9 @@ try {
   writeFileSync(join(profilePackage, 'package.json'), JSON.stringify({ name, version, type: 'module' }))
   copyFileSync(bin, join(profilePackage, 'bin/dsh-tui.js'))
   writeFileSync(join(temp, '.dsh-tui/resume.txt'), 'remembered-session')
-  // The Claude backend's own last-session marker (never resume.txt).
-  mkdirSync(join(temp, '.dsh-tui/backends/claude'), { recursive: true })
-  writeFileSync(join(temp, '.dsh-tui/backends/claude/prefs.json'), JSON.stringify({ lastSession: 'claude-last' }))
+  // The probe backend's own last-session marker (never resume.txt).
+  mkdirSync(join(temp, '.dsh-tui/backends/probe-agent'), { recursive: true })
+  writeFileSync(join(temp, '.dsh-tui/backends/probe-agent/prefs.json'), JSON.stringify({ lastSession: 'probe-last' }))
   mkdirSync(join(temp, '.dsh-tui/backends/missing-agent'), { recursive: true })
   writeFileSync(join(temp, '.dsh-tui/backends/missing-agent/prefs.json'), JSON.stringify({ lastSession: 'foreign-session' }))
   writeFileSync(patch, '[]\n')
@@ -316,7 +322,7 @@ try {
     ...(isWin ? { SystemRoot: process.env.SystemRoot, ComSpec: process.env.ComSpec, PATHEXT: process.env.PATHEXT } : {}),
     HOME: temp, USERPROFILE: temp, DSH_HOME: dshHome,
     DSH_TUI_ARGV_PROBE: '1', DSH_TUI_ARGV_STARTUP: startupFile, NODE_OPTIONS: '--no-deprecation',
-    // A Claude launch would go to the entry; routing is off to keep these on `dsh --profile`.
+    // A non-DSH launch would go to the entry; routing is off to keep these on `dsh --profile`.
     DSH_TUI_HOST_ENTRY: '0',
   }
   const cases = [
@@ -355,12 +361,12 @@ try {
     { name: 'host prefix ends at a positional', hostArgs: [], argv: ['explain', '--dump-config'], prompt: 'explain' },
     { name: 'DSH prefix survives TUI resume interception', hostArgs: [], argv: ['--resume', 'real-session', '--patch', patch, '--', '--resume=literal'], patches: [patch], session: 'real-session', prompt: '--resume=literal', binOnly: true },
     { name: 'DSH prefix survives workspace interception', hostArgs: [], argv: [workspace, '--patch', patch, '--', '--resume=literal'], patches: [patch], workspace, prompt: '--resume=literal', binOnly: true },
-    // Phase 4b: a bare --resume of the Claude backend reopens ITS last session
+    // Phase 4b: a bare --resume of a non-DSH backend reopens ITS last session
     // (the backend may be named after the flag); explicit ids and DSH's
     // "each flag sets it, the last wins" are unchanged.
-    { name: 'Claude bare resume reads the Claude marker', hostArgs: [], argv: ['--backend', 'claude', '--resume'], backend: 'claude', session: 'claude-last', prompt: '', binOnly: true },
-    { name: 'Claude bare resume before --backend', hostArgs: [], argv: ['--resume', '--backend', 'claude'], backend: 'claude', session: 'claude-last', prompt: '', binOnly: true },
-    { name: 'Claude explicit resume', hostArgs: [], argv: ['--backend', 'claude', '--resume', 'claude-explicit'], backend: 'claude', session: 'claude-explicit', prompt: '', binOnly: true },
+    { name: 'Probe bare resume reads the probe marker', hostArgs: [], argv: ['--backend', 'probe-agent', '--resume'], backend: 'probe-agent', session: 'probe-last', prompt: '', binOnly: true },
+    { name: 'Probe bare resume before --backend', hostArgs: [], argv: ['--resume', '--backend', 'probe-agent'], backend: 'probe-agent', session: 'probe-last', prompt: '', binOnly: true },
+    { name: 'Probe explicit resume', hostArgs: [], argv: ['--backend', 'probe-agent', '--resume', 'probe-explicit'], backend: 'probe-agent', session: 'probe-explicit', prompt: '', binOnly: true },
     { name: 'DSH bare resume after an explicit one (last wins)', hostArgs: [], argv: ['--resume', 'explicit-first', '--resume'], session: 'remembered-session', prompt: '', binOnly: true },
     // B-2a: a resume request that cannot be honored is refused with a non-zero
     // exit instead of degrading into a cold start, a foreign session, or a new
@@ -377,8 +383,8 @@ try {
     { name: 'unknown flag: a bare resume it cannot derive is refused before literal input', argv: ['--backend', 'claud', '--resume', '--', '--resume=literal'], launcherError: 'claud', prompt: '--resume=literal', binOnly: true },
     { name: 'bare resume does not consume the following prompt, and is refused', argv: ['--resume', '--backend', 'claud', 'explain'], launcherError: 'claud', prompt: 'explain', binOnly: true },
     { name: 'an explicit final resume wins over a preceding bare one, and is refused on the missing backend', argv: ['--backend', 'missing-agent', '--resume', '--resume', 'explicit-last'], refusal: '"explicit-last"', prompt: '', binOnly: true },
-    { name: 'a bare resume derived from the DSH marker is refused when the remembered kernel is Claude, naming both ways back', argv: ['--resume'], memoryBackend: 'claude', refusal: '--backend dsh --resume.*--backend claude --resume', prompt: '', binOnly: true },
-    { name: 'a backend with no resume history is refused, not turned into a fresh launch', argv: ['--backend', 'claude', '--resume'], noClaudeMarker: true, launcherError: 'claude', prompt: '', binOnly: true },
+    { name: 'a bare resume derived from the DSH marker is refused when the remembered kernel is the probe, naming both ways back', argv: ['--resume'], memoryBackend: 'probe-agent', refusal: '--backend dsh --resume.*--backend probe-agent --resume', prompt: '', binOnly: true },
+    { name: 'a backend with no resume history is refused, not turned into a fresh launch', argv: ['--backend', 'probe-agent', '--resume'], noProbeMarker: true, launcherError: 'probe-agent', prompt: '', binOnly: true },
     // The safe-mode "retry normal startup" path is the one exception: its target
     // comes from last-run.json, and the recorded backend may be gone by now. That
     // retry is the user's last way back, so the refusal degrades to a warning plus
@@ -397,8 +403,8 @@ try {
       session: null, resumeEnv: 'foreign-session', warns: '"missing-agent"', prompt: 'explain', binOnly: true,
     },
     {
-      name: 'a safe-mode retry drops replayed continue instead of resuming the remembered Claude marker',
-      argv: ['--continue', 'explain'], memoryBackend: 'claude', backend: 'claude',
+      name: 'a safe-mode retry drops replayed continue instead of resuming the remembered probe marker',
+      argv: ['--continue', 'explain'], memoryBackend: 'probe-agent', backend: 'probe-agent',
       envExtra: { DSH_TUI_RESUME_RETRY: '1' },
       session: null, resumeEnv: 'remembered-session', warns: '"dsh"', prompt: 'explain', binOnly: true,
     },
@@ -408,15 +414,15 @@ try {
       config: { backend: 'dsh' }, session: 'dsh-explicit', prompt: '',
     },
     {
-      name: 'an explicit Claude config resumes despite an overridden unavailable env backend',
-      argv: ['--resume', 'claude-explicit'], envBackend: 'missing-agent',
-      config: { backend: 'claude' }, backend: 'claude', session: 'claude-explicit', prompt: '',
+      name: 'an explicit probe config resumes despite an overridden unavailable env backend',
+      argv: ['--resume', 'probe-explicit'], envBackend: 'missing-agent',
+      config: { backend: 'probe-agent' }, backend: 'probe-agent', session: 'probe-explicit', prompt: '',
     },
     {
       name: 'a valid handoff resumes despite an overridden unavailable env backend and DSH config',
-      argv: ['--resume', 'claude-explicit'], envBackend: 'missing-agent', config: { backend: 'dsh' },
-      envExtra: { DSH_TUI_BACKEND_HANDOFF: 'claude' },
-      backend: 'claude', session: 'claude-explicit', prompt: '',
+      argv: ['--resume', 'probe-explicit'], envBackend: 'missing-agent', config: { backend: 'dsh' },
+      envExtra: { DSH_TUI_BACKEND_HANDOFF: 'probe-agent' },
+      backend: 'probe-agent', session: 'probe-explicit', prompt: '',
     },
   ]
   // stripResumeArgs: the ONE grammar that decides what a respawned process
@@ -433,7 +439,7 @@ try {
     { name: 'bare flag eats the id behind it', argv: ['--resume', 'sid', '--fullscreen'], want: ['--fullscreen'] },
     { name: 'bare flag before another flag keeps it', argv: ['--resume', '--fullscreen'], want: ['--fullscreen'] },
     { name: 'separator ends option parsing', argv: ['--resume=sid', '--', '--resume=literal'], want: ['--', '--resume=literal'] },
-    { name: 'unrelated flags survive in place', argv: ['--fullscreen', '--backend', 'claude'], want: ['--fullscreen', '--backend', 'claude'] },
+    { name: 'unrelated flags survive in place', argv: ['--fullscreen', '--backend', 'probe-agent'], want: ['--fullscreen', '--backend', 'probe-agent'] },
   ]
   for (const test of stripCases) {
     checks += 1
@@ -465,8 +471,8 @@ try {
         const casePrefs = join(caseHome, '.dsh-tui')
         mkdirSync(casePrefs, { recursive: true })
         copyFileSync(join(temp, '.dsh-tui/resume.txt'), join(casePrefs, 'resume.txt'))
-        for (const backend of ['claude', 'missing-agent']) {
-          if (backend === 'claude' && test.noClaudeMarker) continue
+        for (const backend of ['probe-agent', 'missing-agent']) {
+          if (backend === 'probe-agent' && test.noProbeMarker) continue
           mkdirSync(join(casePrefs, 'backends', backend), { recursive: true })
           copyFileSync(join(temp, '.dsh-tui/backends', backend, 'prefs.json'), join(casePrefs, 'backends', backend, 'prefs.json'))
         }

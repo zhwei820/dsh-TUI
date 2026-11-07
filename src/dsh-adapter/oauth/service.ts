@@ -1,20 +1,16 @@
 /**
- * The `ctx.dshAuth` service: the programmatic surface over this module's
- * mounted OAuth routes. UIs (the dsh-tui /provider wizard, a web settings
- * page) enumerate providers with masked sign-in state and drive login/logout
- * without touching the credential file or the pi-ai flow objects; the `/auth`
- * command in `command.ts` is a thin textual veneer over the same api.
+ * The `ctx.dshAuth` service: the programmatic surface over the Host-owned
+ * DeepSeek account sign-in. UIs (the dsh-tui onboarding and sign-in panels, a
+ * web settings page) read the masked sign-in state and drive login/logout
+ * without touching the account grant; the `/auth` command in `command.ts` is
+ * a thin textual veneer over the same api.
  *
  * @module @deepseek-harness-tui/dsh-tui/oauth/service
  */
 
 import { Service } from '@deepseek-ai/cordis'
 import type { Context } from '@deepseek-ai/cordis'
-import type { ResolvedPiAiProviderProfile } from '@deepseek-ai/dsh-llm-pi-ai'
-import { asStoredCredential, CredentialFile } from './credentials.js'
-import { oauthOf } from './profiles.js'
-import { QuestionBridge, type AskFn } from './interaction.js'
-import { loginOAuth, type PiAiProvider } from './pi-ai.js'
+import type { AskFn } from './interaction.js'
 import {
   DEEPSEEK_ACCOUNT_PROVIDER,
   deepSeekClientMetadata,
@@ -23,26 +19,12 @@ import {
 } from './deepseek.js'
 import { WhaleCouponStore } from './bonus.js'
 
-/**
- * The constructed catalog provider one mounted route carries. 0.1.5 made
- * `ResolvedPiAiProviderProfile.piProvider` optional (a stored route that
- * cannot be constructed stays editable without one); this plugin mounts only
- * constructible routes, so an absent provider here is a mount defect —
- * surfaced loudly rather than as an `undefined` dereference mid-flow.
- */
-function mountedProvider(profile: ResolvedPiAiProviderProfile): PiAiProvider {
-  if (profile.piProvider === undefined) {
-    throw new Error(`dsh-auth: provider "${profile.provider}" mounted without a constructed catalog provider`)
-  }
-  return profile.piProvider
-}
-
 /** One provider's sign-in state; never carries token material. */
 export interface DshAuthSignInStatus {
   provider: string
   /** Route display name (selectors, pickers). */
   label: string
-  /** The OAuth flow's own name, e.g. "OpenAI (ChatGPT Plus/Pro)". */
+  /** The sign-in flow's own name, e.g. "DeepSeek". */
   oauthLabel: string
   /** The flow's login-call-to-action label, when it ships one. */
   loginLabel: string | undefined
@@ -56,7 +38,7 @@ export interface DshAuthSignInStatus {
 export interface DshAuthLoginResult {
   provider: string
   oauthLabel: string
-  /** pi-ai tokens expire; the Host-owned DeepSeek account grant has no expiry. */
+  /** The Host-owned DeepSeek account grant has no expiry. */
   expiresAt: number | undefined
 }
 
@@ -65,7 +47,7 @@ export interface DshAuthApi {
   /** Every mounted provider with masked sign-in state. */
   providers(): Promise<readonly DshAuthSignInStatus[]>
   /**
-   * Run one provider's OAuth login. `provider` omitted asks the interactive
+   * Run one provider's sign-in. `provider` omitted asks the interactive
    * surface to choose among providers not currently signed in.
    * @throws Error when no interactive surface is present, the provider is
    *   unknown, a login is already running, or the flow itself fails.
@@ -87,12 +69,10 @@ export class DshAuthService extends Service {
 
 /** Everything the api factory needs; all cordis surface is injected, so tests run without a host. */
 export interface DshAuthApiDeps {
-  profiles: ReadonlyMap<string, ResolvedPiAiProviderProfile>
-  store: CredentialFile
   /** The interactive ask surface, resolved per call so mounting order never matters. */
   resolveAsk: () => AskFn | undefined
-  /** Optional upstream account service; older hosts have only pi-ai routes. */
-  resolveDeepSeekAccount?: () => DeepSeekAccountAuth | undefined
+  /** The Host account service; absent on hosts without DeepSeek account sign-in. */
+  resolveDeepSeekAccount: () => DeepSeekAccountAuth | undefined
   /** The active Host callback listener's browser-accessible loopback origin. */
   resolveCallbackOrigin?: () => string | Promise<string>
   coupons?: WhaleCouponStore
@@ -117,34 +97,19 @@ async function chooseProvider(ask: AskFn, candidates: readonly DshAuthSignInStat
 }
 
 /**
- * The api implementation. One login runs per provider at a time (an in-flight
- * map, not a global lock: providers sign in independently); a second login
- * attempt for the same provider fails fast instead of stacking two flows.
+ * The api implementation. One login runs per provider at a time; a second
+ * login attempt for the same provider fails fast instead of stacking two
+ * flows.
  */
 export function createDshAuthApi(deps: DshAuthApiDeps): DshAuthApi {
   const inflight = new Map<string, AbortController>()
-  const mountedIds = (): string[] => [
-    ...deps.profiles.keys(),
-    ...(deps.resolveDeepSeekAccount?.() === undefined ? [] : [DEEPSEEK_ACCOUNT_PROVIDER]),
-  ]
+  const mountedIds = (): string[] => deps.resolveDeepSeekAccount() === undefined ? [] : [DEEPSEEK_ACCOUNT_PROVIDER]
+  const unknownProvider = (provider: string): Error =>
+    new Error(`dsh-auth: unknown provider "${provider}" (mounted: ${mountedIds().join(', ') || 'none'})`)
 
   const statusOf = async (): Promise<readonly DshAuthSignInStatus[]> => {
-    const described = new Map((await deps.store.describe()).map(row => [row.provider, row]))
-    const piAi = [...deps.profiles.entries()].map(([id, profile]) => {
-      const oauth = oauthOf(mountedProvider(profile))
-      const row = described.get(id)
-      return {
-        provider: id,
-        label: profile.displayName,
-        oauthLabel: oauth.name,
-        loginLabel: oauth.loginLabel,
-        signedIn: row !== undefined && !row.expired,
-        expiresAt: row?.expiresAt,
-        expired: row?.expired ?? false,
-      }
-    })
-    const account = deps.resolveDeepSeekAccount?.()
-    if (account === undefined) return piAi
+    const account = deps.resolveDeepSeekAccount()
+    if (account === undefined) return []
     const state = await account.getState()
     return [{
       provider: DEEPSEEK_ACCOUNT_PROVIDER,
@@ -154,43 +119,7 @@ export function createDshAuthApi(deps: DshAuthApiDeps): DshAuthApi {
       signedIn: state.status === 'credential-stored',
       expiresAt: undefined,
       expired: false,
-    }, ...piAi]
-  }
-
-  const loginOne = async (provider: string, ask: AskFn, signal: AbortSignal | undefined): Promise<DshAuthLoginResult> => {
-    const profile = deps.profiles.get(provider)
-    if (profile === undefined) {
-      throw new Error(`dsh-auth: unknown provider "${provider}" (mounted: ${mountedIds().join(', ')})`)
-    }
-    const oauth = oauthOf(mountedProvider(profile))
-    const runAbort = new AbortController()
-    const forwardAbort = () => runAbort.abort(signal?.reason)
-    if (signal !== undefined) {
-      if (signal.aborted) forwardAbort()
-      else signal.addEventListener('abort', forwardAbort, { once: true })
-    }
-    const bridge = new QuestionBridge(ask, runAbort)
-    try {
-      runAbort.signal.throwIfAborted()
-      const returned = await loginOAuth(oauth, bridge, {
-        // pi-ai 0.87.1's `openai` flow needs this on login. Older flows
-        // ignore the optional context, so the ID is created only on demand.
-        getDeviceId: () => deps.store.getOrCreateDeviceId(),
-      })
-      const normalized = asStoredCredential(returned)
-      if (normalized === undefined) {
-        throw new Error(`dsh-auth: the ${oauth.name} flow returned an unusable credential; nothing was stored`)
-      }
-      await deps.store.modify(provider, async () => {
-        // Logout may have cancelled the flow while this write waited for the file lock.
-        runAbort.signal.throwIfAborted()
-        return normalized
-      })
-      return { provider, oauthLabel: oauth.name, expiresAt: normalized.expires }
-    } finally {
-      signal?.removeEventListener('abort', forwardAbort)
-      await bridge.settle()
-    }
+    }]
   }
 
   return {
@@ -203,11 +132,12 @@ export function createDshAuthApi(deps: DshAuthApiDeps): DshAuthApi {
           throw new Error('dsh-auth: provider selection needs an interactive surface; name the provider: /auth login <provider>')
         }
         const statuses = await statusOf()
+        if (statuses.length === 0) throw new Error('dsh-auth: no sign-in provider is mounted on this host')
         const candidates = statuses.filter(row => !row.signedIn)
         if (candidates.length === 0) throw new Error('dsh-auth: every mounted provider is already signed in')
         target = await chooseProvider(ask, candidates, signal)
       } else if (!mountedIds().includes(target)) {
-        throw new Error(`dsh-auth: unknown provider "${target}" (mounted: ${mountedIds().join(', ')})`)
+        throw unknownProvider(target)
       }
       if (ask === undefined) {
         throw new Error(
@@ -218,52 +148,40 @@ export function createDshAuthApi(deps: DshAuthApiDeps): DshAuthApi {
       if (inflight.has(target)) {
         throw new Error(`dsh-auth: a login for "${target}" is already running`)
       }
-      const account = target === DEEPSEEK_ACCOUNT_PROVIDER ? deps.resolveDeepSeekAccount?.() : undefined
-      if (target === DEEPSEEK_ACCOUNT_PROVIDER && account === undefined) {
+      const account = deps.resolveDeepSeekAccount()
+      if (account === undefined) {
         throw new Error(`dsh-auth: provider "${target}" is no longer mounted`)
       }
       const cancellation = new AbortController()
       const runSignal = signal === undefined ? cancellation.signal : AbortSignal.any([signal, cancellation.signal])
       inflight.set(target, cancellation)
-      const run = (account === undefined
-        ? loginOne(target, ask, runSignal)
-        : (async (): Promise<DshAuthLoginResult> => {
-          runSignal.throwIfAborted()
-          const callbackOrigin = await deps.resolveCallbackOrigin?.()
-          runSignal.throwIfAborted()
-          if (callbackOrigin === undefined) {
-            throw new Error('DeepSeek sign-in needs an active Host webServer for the browser callback')
-          }
-          await loginDeepSeekAccount(account, callbackOrigin, ask, runSignal)
-          deps.coupons?.clear()
-          const getUnnotifiedBonuses = account.getUnnotifiedBonuses?.bind(account)
-          const ackBonusNotified = account.ackBonusNotified?.bind(account)
-          if (getUnnotifiedBonuses !== undefined && ackBonusNotified !== undefined) {
-            void deps.coupons?.refresh({ getUnnotifiedBonuses, ackBonusNotified })
-          }
-          return { provider: target, oauthLabel: 'DeepSeek', expiresAt: undefined }
-        })()
-      ).finally(() => { inflight.delete(target) })
-      return run
+      const loginTarget = target
+      return (async (): Promise<DshAuthLoginResult> => {
+        runSignal.throwIfAborted()
+        const callbackOrigin = await deps.resolveCallbackOrigin?.()
+        runSignal.throwIfAborted()
+        if (callbackOrigin === undefined) {
+          throw new Error('DeepSeek sign-in needs an active Host webServer for the browser callback')
+        }
+        await loginDeepSeekAccount(account, callbackOrigin, ask, runSignal)
+        deps.coupons?.clear()
+        const getUnnotifiedBonuses = account.getUnnotifiedBonuses?.bind(account)
+        const ackBonusNotified = account.ackBonusNotified?.bind(account)
+        if (getUnnotifiedBonuses !== undefined && ackBonusNotified !== undefined) {
+          void deps.coupons?.refresh({ getUnnotifiedBonuses, ackBonusNotified })
+        }
+        return { provider: loginTarget, oauthLabel: 'DeepSeek', expiresAt: undefined }
+      })().finally(() => { inflight.delete(loginTarget) })
     },
     logout: async provider => {
       // A DeepSeek login may still be awaiting its callback listener, before
       // the Host has an attempt to cancel. Abort it before Host sign-out.
       inflight.get(provider)?.abort(new Error('Login cancelled'))
-      if (provider === DEEPSEEK_ACCOUNT_PROVIDER) {
-        const account = deps.resolveDeepSeekAccount?.()
-        if (account !== undefined) {
-          const existed = (await account.getState()).status === 'credential-stored'
-          await account.signOut(deepSeekClientMetadata())
-          deps.coupons?.clear()
-          return existed
-        }
-      }
-      if (!deps.profiles.has(provider)) {
-        throw new Error(`dsh-auth: unknown provider "${provider}" (mounted: ${mountedIds().join(', ')})`)
-      }
-      const existed = (await deps.store.read(provider)) !== undefined
-      await deps.store.delete(provider)
+      const account = provider === DEEPSEEK_ACCOUNT_PROVIDER ? deps.resolveDeepSeekAccount() : undefined
+      if (account === undefined) throw unknownProvider(provider)
+      const existed = (await account.getState()).status === 'credential-stored'
+      await account.signOut(deepSeekClientMetadata())
+      deps.coupons?.clear()
       return existed
     },
   }

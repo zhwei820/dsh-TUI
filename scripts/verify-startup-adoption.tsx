@@ -15,7 +15,7 @@ process.env.FORCE_COLOR = '3'
 process.env.DSH_TUI_LANG = 'en'
 process.env.DSH_TUI_DISABLE_TERMINAL_IMAGES = '1'
 
-const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { createStartingSession }, { setLang, t }, { default: instances }, { settled, sleep, viewportLines }, { kernelEntriesOf }, { listBackends }] =
+const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { QuestionStore }, { ApprovalStore }, { createChannel }, { createStartingSession }, { setLang, t }, { default: instances }, { settled, sleep, viewportLines }, { kernelEntriesOf }, registry, { FIXTURE_SDK_ID, registerFixtureBackends }] =
   await Promise.all([
     import('node:stream'),
     import('react'),
@@ -31,7 +31,11 @@ const [{ Writable, PassThrough }, React, { Terminal: XTerm }, ui, { Chat }, { Qu
     import('./lib/term-test.mjs'),
     import('../src/components/kernelCatalog.js'),
     import('../src/dsh-adapter/backend-registry.js'),
+    import('./lib/fixture-backends.js'),
   ])
+const { listBackends } = registry
+// The starting session is a plugin-shaped kernel (DSH is the only in-tree one).
+registerFixtureBackends(registry)
 import type { AgentEvent, AgentEventMeta } from '../src/agent/events.js'
 import type { AgentInput, AgentSession, SubmitPlacement } from '../src/agent/session.js'
 import type { SessionCapabilities } from '../src/agent/capabilities.js'
@@ -55,7 +59,7 @@ interface FakeSession extends AgentSession {
 const fakeSession = (sessionId: string, cwd: string, capabilities: Omit<SessionCapabilities, 'native'> = {}): FakeSession => {
   const listeners = new Set<(batch: readonly AgentEvent[], meta: AgentEventMeta) => void>()
   const session: FakeSession = {
-    ref: { backendId: 'claude', sessionId },
+    ref: { backendId: FIXTURE_SDK_ID, sessionId },
     cwd,
     status: 'idle',
     capabilities: { ...capabilities, native: {} },
@@ -117,7 +121,7 @@ const ctx = {
 const LAUNCH = '/fixture/launch'
 const opened: FakeSession[] = []
 const launch = (startup: Startup): ChannelLaunchOptions => ({
-  model: 'Claude', provider: 'claude', cwd: LAUNCH, activity: false, backendLabel: 'Claude',
+  model: 'Claude', provider: FIXTURE_SDK_ID, cwd: LAUNCH, activity: false, backendLabel: 'FixtureSDK',
   startup,
   openSession: target => {
     const next = fakeSession(`33333333-3333-4333-8333-33333333333${opened.length}`, target.kind === 'create' ? target.cwd : LAUNCH, {
@@ -134,7 +138,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── staged image capabilities belong to the startup draft ────────────
 {
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), launch(open.promise))
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), launch(open.promise))
   const generation = channel.stagedImageGeneration()
   const handle = await channel.stageComposerImage({ data: png, mediaType: 'image/png', name: 'startup.png' }, generation)
   const view = channel.stagedImage(handle.stageId)
@@ -154,10 +158,10 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── adoption ──────────────────────────────────────────────────────────
 {
   const open = deferred()
-  const placeholder = createStartingSession('claude', LAUNCH)
+  const placeholder = createStartingSession(FIXTURE_SDK_ID, LAUNCH)
   const channel = createChannel(ctx, placeholder, launch(open.promise))
   check('not ready while the open runs', channel.ready === false)
-  check('the placeholder names no session', channel.agentId === '' && channel.sessionRef.sessionId === '' && channel.sessionRef.backendId === 'claude')
+  check('the placeholder names no session', channel.agentId === '' && channel.sessionRef.sessionId === '' && channel.sessionRef.backendId === FIXTURE_SDK_ID)
   check('the placeholder serves no subagent transcript', channel.subagentControl.history === undefined)
   channel.pushLocal('/help', ['local output while starting'])
   const real = fakeSession('11111111-1111-4111-8111-111111111111', '/fixture/recorded', {
@@ -184,8 +188,8 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── the opener's route and preset (the in-process DSH kernel) ─────────
 {
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), { ...launch(open.promise), agentPreset: 'boot-preset' })
-  check('before adoption the construction route stands', channel.model === 'Claude' && channel.provider === 'claude' && channel.agentPreset === 'boot-preset')
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), { ...launch(open.promise), agentPreset: 'boot-preset' })
+  check('before adoption the construction route stands', channel.model === 'Claude' && channel.provider === FIXTURE_SDK_ID && channel.agentPreset === 'boot-preset')
   open.resolve({ session: fakeSession('77777777-7777-4777-8777-777777777777', LAUNCH), history: [], route: { provider: 'deepseek-official', model: 'deepseek-v4-pro' }, agentPreset: 'standard' })
   check('the adoption takes the route the opener resolved', await settled(() => channel.ready) && channel.model === 'deepseek-v4-pro' && channel.provider === 'deepseek-official', `${channel.provider}/${channel.model}`)
   check('and its preset', channel.agentPreset === 'standard', String(channel.agentPreset))
@@ -195,7 +199,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── failed open, then /new ────────────────────────────────────────────
 {
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), launch(open.promise))
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), launch(open.promise))
   open.reject(new Error('handshake refused'))
   check('a failed open leaves a notice naming the error', await settled(() => notices(channel).some(text => text.includes('handshake refused'))), JSON.stringify(notices(channel)))
   check('and a notice of its own naming /new', notices(channel).some(text => text.startsWith('/new')), JSON.stringify(notices(channel)))
@@ -219,7 +223,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
   const onRejection = (reason: unknown): void => { rejections.push(reason) }
   process.on('unhandledRejection', onRejection)
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), launch(open.promise))
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), launch(open.promise))
   const boom = fakeSession('abababab-abab-4aba-8aba-abababababab', LAUNCH)
   // The adoption tail reads candidate.cwd into channel state; a getter
   // that throws fails the tail segment after the open succeeded.
@@ -238,7 +242,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── released mid-open ─────────────────────────────────────────────────
 {
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), launch(open.promise))
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), launch(open.promise))
   channel.releaseContributions()
   const late = fakeSession('55555555-5555-4555-8555-555555555555', LAUNCH)
   open.resolve({ session: late, history: [] })
@@ -249,7 +253,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── /new while the open is still going ────────────────────────────────
 {
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', LAUNCH), launch(open.promise))
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, LAUNCH), launch(open.promise))
   const generation = channel.stagedImageGeneration()
   const handle = await channel.stageComposerImage({ data: png, mediaType: 'image/png' }, generation)
   const before = opened.length
@@ -266,7 +270,7 @@ const notices = (channel: { rows: readonly { kind: string; text: string }[] }): 
 // ── the real Chat over a not-ready channel ────────────────────────────
 // Both the composer and landing page, inline/fullscreen and narrow/wide.
 // A covered composer also exercises the parked draft's ownership transfer.
-const notReady = t('startup-not-ready', { backend: 'Claude' })
+const notReady = t('startup-not-ready', { backend: 'FixtureSDK' })
 class FakeStdin extends PassThrough {
   isTTY = true
   setRawMode() { return this }
@@ -276,7 +280,7 @@ class FakeStdin extends PassThrough {
 async function screenCase(surface: 'composer' | 'launchpad' | 'launchpad-failed', sessionId: string, fullscreen = false, columns = 100, covered = false, outcome: 'adoption' | 'new' = 'adoption'): Promise<void> {
   const label = (text: string): string => `${surface}${covered ? ' covered' : ''}${outcome === 'new' ? ' /new' : ''} ${fullscreen ? 'fullscreen' : 'inline'} ${columns} cols: ${text}`
   const open = deferred()
-  const channel = createChannel(ctx, createStartingSession('claude', process.cwd()), { ...launch(open.promise), cwd: process.cwd() })
+  const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, process.cwd()), { ...launch(open.promise), cwd: process.cwd() })
   const COLS = columns
   const ROWS = 30
   const term = new XTerm({ cols: COLS, rows: ROWS, scrollback: 200, allowProposedApi: true })
@@ -299,7 +303,7 @@ async function screenCase(surface: 'composer' | 'launchpad' | 'launchpad-failed'
     trajectorySeen: true,
     promptControllerRef: controllerRef,
     // The composition root's kernel list: the notices name the kernel by its
-    // short label ("Claude"), not the backend id.
+    // short label ("FixtureSDK"), not the backend id.
     kernelEntries: kernelEntriesOf(listBackends()),
     ...(surface !== 'composer' ? { launchpadOnBoot: true } : {}),
   })
@@ -438,7 +442,7 @@ for (const fullscreen of [false, true]) {
     const cwd = process.cwd()
     const recorded = changedCwd ? `${cwd}/recorded` : cwd
     const summary = (id: string, directory: string, title: string): SessionSummary => ({
-      id, cwd: directory, backendId: 'claude', kind: { kind: 'root' },
+      id, cwd: directory, backendId: FIXTURE_SDK_ID, kind: { kind: 'root' },
       title: { text: title, source: 'prompt' }, createdAt: 1, updatedAt: 2,
       bytes: undefined, hasPrompt: true, childCount: 0, agentPreset: undefined,
     })
@@ -447,7 +451,7 @@ for (const fullscreen of [false, true]) {
     let finishLocal!: (rows: readonly SessionSummary[]) => void
     const local = new Promise<readonly SessionSummary[]>(resolve => { finishLocal = resolve })
     let reads = 0
-    const channel = createChannel(ctx, createStartingSession('claude', cwd), {
+    const channel = createChannel(ctx, createStartingSession(FIXTURE_SDK_ID, cwd), {
       ...launch(open.promise), cwd,
       sessionCatalog: {
         list: async (scope, onPartial) => {

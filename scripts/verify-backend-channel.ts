@@ -411,7 +411,8 @@ try {
     process.off('unhandledRejection', onUnhandled)
     guarded.releaseContributions()
   }
-  check('backend choice: case and blanks normalize', normalizeBackendChoice(' Claude ') === 'claude' && normalizeBackendChoice('DSH') === 'dsh')
+  check('backend choice: case and blanks normalize', normalizeBackendChoice(' DSH ') === 'dsh' && normalizeBackendChoice('DSH') === 'dsh')
+  check('backend choice: a retired built-in (claude, codex) is no longer a choice', normalizeBackendChoice('Claude') === undefined && normalizeBackendChoice('codex') === undefined)
   check('backend choice: empty or unknown → default', normalizeBackendChoice('') === undefined && normalizeBackendChoice('gpt') === undefined && normalizeBackendChoice(undefined) === undefined)
   const parse = (backend: unknown): unknown => (Config as unknown as (value: unknown) => { backend?: unknown })({ backend }).backend
   // R2 split: the Config schema keeps the syntax half, so a well-formed id
@@ -946,43 +947,13 @@ try {
     const before = bareChannel.notifications.length
     const host = bareChannel.backendModes()
     check('a backend without modes returns no host, silently', host === undefined && bareChannel.notifications.length === before)
-    check('the other native hosts are absent too', bareChannel.backendChannels() === undefined && bareChannel.backendMcp() === undefined)
+    check('the other native hosts are absent too', bareChannel.backendMcp() === undefined && !('backendChannels' in bareChannel))
     check('the old native actions are not installed', ['listModes', 'setMode', 'listChannels', 'setChannel', 'importChannel', 'saveChannel', 'removeChannel', 'peekChannelImport', 'mcpControl'].every(name => !(name in bareChannel)))
     check('a backend without modes keeps /permission out of the list', !bareChannel.commandList.some(command => command.name === 'permission') && !bareChannel.backendCapabilities.commands.includes('permission'))
     check('… and out of the completion', bareChannel.commandCompletions('/per').length === 0 && bareChannel.commandCompletions('/permission ').length === 0)
   } finally {
     bareChannel.releaseContributions()
   }
-}
-
-// A retained native channels host has the same binding scope as modes and
-// MCP: a later /new cannot lend the old host its current report or writes.
-{
-  const probe = (id: string) => {
-    const option = { id, name: id, models: [], tiers: [] }
-    const writes: string[] = []
-    const channels: NonNullable<SessionCapabilities['channels']> = {
-      list: () => [option], activeId: () => id,
-      setActive: () => { writes.push('activate') },
-      importFromSettings: () => { writes.push('import'); return option },
-      save: () => { writes.push('save'); return option },
-      remove: () => { writes.push('remove'); return true }, peekSettingsImport: () => undefined,
-    }
-    return { writes, channels }
-  }
-  const A = probe('channel-a')
-  const B = probe('channel-b')
-  const raw = createChannel(ctx, fakeSession('a4a4a4a4-a4a4-44a4-84a4-a4a4a4a4a4a4', { channels: A.channels }), {
-    model: 'm', provider: '', cwd: workdir, activity: false,
-    openSession: async () => fakeSession('b4b4b4b4-b4b4-44b4-84b4-b4b4b4b4b4b4', { channels: B.channels }),
-  })
-  try {
-    const old = raw.backendChannels()!
-    check('a channels accessor follows /new to the replacement capability', await raw.newSession() && raw.backendChannels()!.snapshot().activeId === 'channel-b')
-    const notices = raw.notifications.length
-    check('a stale channels host refuses all writes before either capability runs', !old.activate('channel-a').ok && old.save({ id: 'channel-a', name: 'A' }) === undefined && !old.remove('channel-a') && old.importFromSettings() === undefined && A.writes.length === 0 && B.writes.length === 0)
-    check('a stale channels host raises no replacement toast', raw.notifications.length === notices)
-  } finally { raw.releaseContributions() }
 }
 
 // ── a late interrupt receipt speaks only for its own request and session ──

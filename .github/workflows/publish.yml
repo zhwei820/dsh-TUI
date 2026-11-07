@@ -83,8 +83,7 @@ jobs:
 
       - run: node --import tsx/esm scripts/repro-toolcards.tsx
 
-      # /provider 向导与面板 hideCustomInput 回归（发版门禁同 CI）。
-      - run: node scripts/verify-provider-wizard.mjs
+      # 问卷面板 hideCustomInput 回归（发版门禁同 CI）。
       - run: node --import tsx/esm scripts/verify-askpanel-hide-custom-input.tsx
 
       # 用 npm 而非 pnpm 发布：@dsh-std/* 是 bundledDependencies（workspace

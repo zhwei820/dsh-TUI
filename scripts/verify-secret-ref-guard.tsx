@@ -8,8 +8,7 @@
  *      DEEPSEEK_/DSH_ 前缀）→ 拒绝该 field（其余 field 照常注册）+
  *      logger.warn；宿主自身（host 对象 / 本地 host，无 owner）不受限。
  *   b) 写入层：channel.settingsHost().writeCredential 对保留 ref 直接
- *      拒绝并抛 i18n 文案——防绕过注册层直写。宿主自己的主凭据写入走
- *      providerSetup().writeCredential，不经过这道口。
+ *      拒绝并抛 i18n 文案——防绕过注册层直写。
  *
  * Run: node --import tsx/esm scripts/verify-secret-ref-guard.tsx
  */

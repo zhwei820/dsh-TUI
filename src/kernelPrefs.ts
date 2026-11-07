@@ -1,6 +1,6 @@
 /**
  * The kernel last picked in the launchpad kernel selector, at
- * `~/.dsh-tui/kernel.json` (`{ "backend": "claude" }`). It is only the
+ * `~/.dsh-tui/kernel.json` (`{ "backend": "<id>" }`). It is only the
  * default for the next launch: `dsh-tui --backend`, the Config row and
  * DSH_TUI_BACKEND all win over it. Boot only reads it; the selector's accept
  * path is the only writer, so an explicit `--backend` launch does not change
@@ -23,7 +23,17 @@ import { DATA_DIR } from './utils/paths.js'
  * `src/dsh-adapter/backend-registry.ts` (which the launcher cannot import when
  * it runs without compiled modules, hence the mirrored copy in `bin/dsh-tui.js`).
  */
-export const BUILTIN_BACKEND_IDS = ['dsh', 'claude', 'codex'] as const
+export const BUILTIN_BACKEND_IDS = ['dsh'] as const
+
+/**
+ * Ids no plugin may wear: the built-ins plus the retired in-tree backends
+ * (`claude`, `codex`). Older releases wrote their session refs
+ * (`claude:<id>`) and data under `~/.dsh-tui/backends/<id>/`; a plugin wearing a
+ * retired id would inherit that state. Mirrors the contribution family's
+ * `BACKEND_RESERVED_IDS` (tui-profile/protocols/tui-contributions.js), compared
+ * by `scripts/verify-backend-contribution.ts`.
+ */
+export const RESERVED_BACKEND_IDS = [...BUILTIN_BACKEND_IDS, 'claude', 'codex'] as const
 
 /**
  * An id that passed the id-syntax gate (the rule and the brand live in
@@ -121,8 +131,8 @@ export function writeKernelPrefs(
  * The kernel this one boot must land on, set by a kernel switch (restartTui's
  * backend option) and by the launcher's crash retry. Boot deletes it from
  * process.env as soon as it reads it. Unlike DSH_TUI_BACKEND it ranks above
- * the Config row: with `backend: dsh` in the config, a switch to claude would
- * otherwise restart straight back onto dsh. Ordinary launches keep
+ * the Config row: with `backend: dsh` in the config, a switch to a plugin
+ * backend would otherwise restart straight back onto dsh. Ordinary launches keep
  * config > env > remembered choice.
  */
 export const KERNEL_SWITCH_HANDOFF_ENV = 'DSH_TUI_BACKEND_HANDOFF'

@@ -31,7 +31,7 @@ delete process.env.DSH_TUI_BRAND
 const [
   React,
   { PassThrough, Writable },
-  { brandOfBackend, resolveBrand, normalizeBrandSetting, BRAND_SPLASH_WORDS, BRAND_SETTING_VALUES, setActiveBrand, getActiveBrand },
+  { resolveBrand, normalizeBrandSetting, BRAND_SPLASH_WORDS, BRAND_SETTING_VALUES, setActiveBrand, getActiveBrand },
   { getTheme, isThemeAvailable, isLightThemeActive, THEME_NAMES },
   { render, ThemeProvider, useTheme },
   { LogoV2 },
@@ -70,21 +70,17 @@ const check = (name: string, ok: boolean, detail = ''): void => {
 }
 
 // ── ① 信号解析 ────────────────────────────────────────────────────────────
-check('backendId：claude → claude', brandOfBackend('claude') === 'claude')
-check('Codex auto resolves the codex brand', brandOfBackend('codex') === 'codex' && resolveBrand('auto', 'codex') === 'codex')
 check('Codex is an explicit brand setting (lavender tier)', normalizeBrandSetting('codex') === 'codex' && BRAND_SETTING_VALUES.includes('codex'))
-check('Explicit existing brands still override Codex', resolveBrand('deepseek', 'codex') === 'deepseek' && resolveBrand('claude', 'codex') === 'claude')
 check('Codex title words, without a new font', BRAND_SPLASH_WORDS.codex.top === 'CODEX' && BRAND_SPLASH_WORDS.codex.bottom === 'HARNESS' && BRAND_SPLASH_WORDS.codex.plain === 'Codex' && SPLASH_FONTS.every(font => font.glyphs.X.length === 5 && font.glyphs.X.every(row => row.length === font.glyphWidth)))
-check('backendId：dsh/空/acp:* → deepseek', ['dsh', undefined, '', 'acp:gemini', 'claude-code'].every(id => brandOfBackend(id) === 'deepseek'), 'claude-code 是 product 名，不是 backendId')
-check('resolveBrand：auto 跟后端', resolveBrand('auto', 'claude') === 'claude' && resolveBrand('auto', 'dsh') === 'deepseek' && resolveBrand(undefined, 'claude') === 'claude')
-check('resolveBrand：显式锁定压过后端', resolveBrand('deepseek', 'claude') === 'deepseek' && resolveBrand('claude', 'dsh') === 'claude')
+check('resolveBrand：auto / 未设置 = deepseek（不再随后端切换）', resolveBrand('auto') === 'deepseek' && resolveBrand(undefined) === 'deepseek')
+check('resolveBrand：显式锁定生效', resolveBrand('deepseek') === 'deepseek' && resolveBrand('claude') === 'claude' && resolveBrand('codex') === 'codex')
 check('normalizeBrandSetting：合法值透传、垃圾回落 auto',
   BRAND_SETTING_VALUES.every(v => normalizeBrandSetting(v) === v) && normalizeBrandSetting('junk') === 'auto' && normalizeBrandSetting(undefined) === 'auto' && normalizeBrandSetting(42) === 'auto')
 try {
   process.env.DSH_TUI_BRAND = 'claude'
-  check('DSH_TUI_BRAND=claude 强制生效（dsh 后端 + 显式 deepseek 也被覆盖）', resolveBrand('deepseek', 'dsh') === 'claude')
+  check('DSH_TUI_BRAND=claude 强制生效（显式 deepseek 也被覆盖）', resolveBrand('deepseek') === 'claude')
   process.env.DSH_TUI_BRAND = 'deepseek'
-  check('DSH_TUI_BRAND=deepseek 强制生效（claude 后端也被覆盖）', resolveBrand(undefined, 'claude') === 'deepseek')
+  check('DSH_TUI_BRAND=deepseek 强制生效（显式 claude 也被覆盖）', resolveBrand('claude') === 'deepseek')
 } finally {
   delete process.env.DSH_TUI_BRAND
 }

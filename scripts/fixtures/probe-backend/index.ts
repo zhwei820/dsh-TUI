@@ -1,7 +1,7 @@
 /**
  * The probe backend implementation (F-1 fixture, B-2).
  *
- * It implements the same `AgentBackend` surface claude and codex do — `detect`,
+ * It implements the same `AgentBackend` surface a real backend does — `detect`,
  * `open`, `catalog` — plus the module-level pool hook its manifest names as
  * `unloadExport`. What it does *not* do is import a vendor SDK, spawn anything, or
  * touch the network: the gate drives it against the real registry, the real ledger

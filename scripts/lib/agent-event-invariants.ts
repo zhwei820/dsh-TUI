@@ -11,8 +11,8 @@ import type { AgentEvent } from '../../src/agent/events.js'
 export interface AgentEventInvariantOptions {
   /** A fixture stopped mid-turn (including a replay's last in-progress turn). */
   readonly allowOpenLastTurn?: boolean
-  /** Local submissions need not emit a queue snapshot (Claude's previews are
-   * channel-owned). Record their admission before the next translated event. */
+  /** Local submissions need not emit a queue snapshot (a backend whose previews
+   * are channel-owned). Record their admission before the next translated event. */
   readonly enqueuedInputs?: readonly { readonly id: string; readonly beforeEvent: number }[]
 }
 

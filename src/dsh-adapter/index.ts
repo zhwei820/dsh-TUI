@@ -40,14 +40,11 @@ export interface Config {
   /** Existing session to attach; a fresh session is created when absent. */
   sessionId?: string
   /** Agent backend the session runs on: `dsh` (default), the DeepSeek
-   *  Harness agent; `claude`, the experimental Claude Agent backend driving
-   *  the local Claude CLI through the Claude Agent SDK (optional peer
-   *  `@anthropic-ai/claude-agent-sdk`); `codex`, the experimental Codex
-   *  backend driving the user's own `codex` CLI over `codex app-server`.
+   *  Harness agent, or an installed plugin backend's id (experimental).
    *  `dsh-tui --backend <id>` sets it through `DSH_TUI_BACKEND`.
    *
    *  A plain `string` on purpose: this is the **input** surface, so an embedder
-   *  writing `{ backend: 'codex' }` keeps compiling. The schema normalizes syntax;
+   *  writing `{ backend: 'my-backend' }` keeps compiling. The schema normalizes syntax;
    *  the boot checks registry membership after assembling installed bundles.
    *  The `BackendId` brand stays inside the package, where it guards session
    *  refs and `~/.dsh-tui/backends/<id>/` paths. Declaring the
@@ -92,8 +89,8 @@ export interface Config {
    *  face. An unknown value falls back to `daily`. */
   splashFont?: SplashFontSetting
   /** Brand look of the splash and theme (settings `dsh-tui.brand`): `auto`
-   *  (the default) follows the active backend — Claude boots orange;
-   *  `deepseek`/`claude` pin one look. Junk normalizes to `auto`. */
+   *  (the default) is the DeepSeek look; `deepseek`/`claude`/`codex` pin one
+   *  look. Junk normalizes to `auto`. */
   brand?: BrandSetting
   /** Swap the header's pixel whale for the static maid portrait. */
   whaleGirl?: boolean

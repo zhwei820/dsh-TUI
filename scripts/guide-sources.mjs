@@ -40,8 +40,6 @@ export const GUIDE_DOCS = [
   'user-guide',
   'interaction',
   'configuration',
-  'claude-backend',
-  'codex-backend',
   'themes',
   'migrate',
   'cli',

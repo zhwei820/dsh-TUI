@@ -3,12 +3,11 @@
  *
  * Before this module, "which backends exist" was a hand-written closed set
  * spread over `kernelPrefs.ts`, this adapter, the launcher copy and the boundary
- * gate: every new backend had to be copied into all of them (codex did exactly
- * that, #1352). Now the set is the built-in seed plus whatever the build-time
+ * gate: every new backend had to be copied into all of them (#1352). Now the set is the built-in seed plus whatever the build-time
  * index found under `src/backends/*​/manifest.ts` — adding a backend is a new
  * directory, nothing else.
  *
- * Three properties this file must keep (they are what a fourth backend would
+ * Three properties this file must keep (they are what a new backend would
  * otherwise break):
  *
  *  - **Lazy**: an entry that is never loaded is never imported. `probeKernels`
@@ -29,7 +28,7 @@ import { BACKEND_CAPABILITY_NAMES } from '../adapter/spec/backend-capabilities.j
 import { EXPECTED_PERMISSIONS } from '../adapter/spec/protocol-constants.js'
 import { assertBackendHandler, validateBackendSpec } from '../adapter/spec/tui-contributions.js'
 import { cleanRenderText } from '../channel/sanitize.js'
-import { BUILTIN_BACKEND_IDS, type KernelBackendId } from '../kernelPrefs.js'
+import { RESERVED_BACKEND_IDS, type KernelBackendId } from '../kernelPrefs.js'
 import { logForDebugging } from '../utils/debug.js'
 import { backendAdmission, type BackendAdmission } from './backend-admission.js'
 import { backendContributionOf } from './backend-contribution.js'
@@ -42,7 +41,7 @@ export { isBackendIdSyntax }
  * The DSH kernel. In-tree and always available, but **not** an `AgentBackend`:
  * its session is built by `createDshSession()` from the DSH agent, and P0 does
  * not force it into the backend contract just for symmetry (roadmap §7.3).
- * Seeded first, so the picker order stays `dsh, claude, codex, …`.
+ * Seeded first, so the picker order stays `dsh, …`.
  */
 const DSH_MANIFEST: BackendManifest = {
   id: 'dsh',
@@ -58,7 +57,7 @@ const DSH_MANIFEST: BackendManifest = {
 }
 
 /**
- * What replaced Stage A's `HOST_INSTALLABLE_BACKEND_ID = 'claude'`: a manifest
+ * What replaced Stage A's hard-coded installable backend id: a manifest
  * now *names an executor* (`BackendManifest.install.executor`) and the registry
  * looks the name up in the host's table (`src/dsh-adapter/install/`). An entry is
  * installable exactly when that lookup finds something, so the row that opens a
@@ -129,7 +128,7 @@ const loadedUnloads = new Map<string, () => Promise<void>>()
  * grant (D-3).
  */
 const HOST_ADMISSION_FACTS = {
-  reservedIds: new Set<string>(BUILTIN_BACKEND_IDS),
+  reservedIds: new Set<string>(RESERVED_BACKEND_IDS),
   capabilityNames: new Set<string>(BACKEND_CAPABILITY_NAMES),
   permissionNames: new Set<string>(EXPECTED_PERMISSIONS.map(permission => permission.name)),
   granted: new Set<string>(),
@@ -161,11 +160,11 @@ export function registerBackend(entry: BackendEntry): void {
   }
   // The reserved check comes first on purpose (D-1). Every built-in id is seeded
   // before any other caller can run, so an "is it taken?" test would answer for a
-  // plugin wearing `claude` too — and it would name the wrong reason: the id is
+  // plugin wearing `dsh` too — and it would name the wrong reason: the id is
   // not taken by a rival, it is one this host owns and no declaration may wear
   // (`BACKEND_ID_RESERVED` in the family's contract). Registration is the last
   // place that can still tell the two apart.
-  if (!manifest.inTree && (BUILTIN_BACKEND_IDS as readonly string[]).includes(manifest.id)) {
+  if (!manifest.inTree && (RESERVED_BACKEND_IDS as readonly string[]).includes(manifest.id)) {
     // `dsh` refs serialize without a prefix (`formatSessionRef`), so a plugin
     // wearing that id would collide with first-party references.
     throw new Error(`${where} is a reserved built-in id`)
@@ -226,7 +225,7 @@ export function registerBackend(entry: BackendEntry): void {
 }
 
 // The built-in seed: dsh first, then the generated index in directory-name
-// order (claude, codex, …).
+// order (empty when the tree ships no `src/backends/<id>/manifest.ts`).
 registerBackend({ manifest: DSH_MANIFEST })
 for (const entry of GENERATED_BACKENDS) registerBackend(entry)
 

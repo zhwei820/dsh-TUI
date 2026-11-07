@@ -3,8 +3,8 @@
  *
  *   vendor package            may only be imported from
  *   @deepseek-ai/*            src/dsh-adapter/**
- *   @anthropic-ai/*           src/backends/claude/**        (derived from its manifest)
  *   @agentclientprotocol/*    src/backends/acp/**
+ *   <manifest vendorPackages> src/backends/<that backend>/** (derived per manifest)
  *   @dsh-std/*                src/adapter/standard/**, src/dsh-adapter/**
  *
  *   native.dsh                src/dsh-adapter/**             (first-party kernel)
@@ -14,7 +14,7 @@
  * `vendorPackages` yields one rule per declared package prefix, `nativeKey` one
  * rule per backend that declares a native channel. Deriving must never *widen*
  * the gate, so the result is compared against the expected snapshot below: a
- * manifest that invents a rule (say `nativeKey: 'claude'` on a backend that never
+ * manifest that invents a rule (say `nativeKey: 'foo'` on a backend that never
  * had one) fails here and has to be approved in ADAPTER.md first.
  *
  *   src/agent/**, src/channel/**   no vendor package (rows above), no
@@ -44,8 +44,7 @@
  *                                  public surface is self-contained, types
  *                                  too). Another backend's directory is out
  *                                  too
- *   src/backends/shared/**         backend-neutral helpers (D15 of
- *                                  docs/codex-backend-design.md): no scoped
+ *   src/backends/shared/**         backend-neutral helpers (D15): no scoped
  *                                  (vendor) package, no concrete backend
  *                                  directory, no src/dsh-adapter/** — and the
  *                                  seam is the floor of the backend stack, so
@@ -120,7 +119,6 @@ const BUILTIN_VENDOR_RULES: readonly VendorRule[] = [
  *  to change this snapshot — and ADAPTER.md — on purpose. */
 const EXPECTED_VENDOR_RULES: readonly { readonly label: string; readonly allowedIn: readonly string[] }[] = [
   { label: '@deepseek-ai/*', allowedIn: ['dsh-adapter/'] },
-  { label: '@anthropic-ai/*', allowedIn: ['backends/claude/'] },
   { label: '@agentclientprotocol/*', allowedIn: ['backends/acp/'] },
   { label: '@dsh-std/*', allowedIn: ['adapter/standard/', 'dsh-adapter/'] },
 ]
@@ -128,13 +126,11 @@ const EXPECTED_NATIVE_RULES: readonly { readonly key: string; readonly allowedIn
   { key: 'dsh', allowedIn: 'dsh-adapter/' },
 ]
 
-/** The one allowlisted runtime import a manifest may have: claude's SDK pin
- *  (`VALIDATED_SDK_VERSION`, via contract.ts). Everything else in a manifest
- *  must be types, or the build-time index would pull backend code into every
- *  boot (P0 §4.4). */
-const MANIFEST_IMPORT_ALLOWLIST: readonly { readonly from: string; readonly to: string }[] = [
-  { from: 'backends/claude/manifest.ts', to: 'backends/claude/contract.ts' },
-]
+/** The allowlisted runtime imports a manifest may have (a backend's own
+ *  version-pin constant; none today). Everything else in a manifest must be
+ *  types, or the build-time index would pull backend code into every boot
+ *  (P0 §4.4). */
+const MANIFEST_IMPORT_ALLOWLIST: readonly { readonly from: string; readonly to: string }[] = []
 
 /** The host's own kernel channel: `native.dsh` is first-party by definition and
  *  has no manifest to declare it. */
@@ -358,8 +354,8 @@ function resolveInternal(file: string, specifier: string): string | undefined {
  *  - \`entries\`: UI value imports from \`src/dsh-adapter/\` that predate the
  *    layer rules;
  *  - \`backendEntries\`: imports a concrete backend makes into host internals.
- *    B-3 introduced the island rule with claude, B-5 finished codex, and the
- *    list is empty now: the rule holds for every backend with no exemption
+ *    B-3 introduced the island rule and B-5 finished it; the list is empty
+ *    now: the rule holds for every backend with no exemption
  *    left. The shape stays, and so does its warning, so a future debt has to
  *    be written down by hand instead of appearing silently.
  */

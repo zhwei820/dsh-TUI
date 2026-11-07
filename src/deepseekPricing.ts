@@ -33,21 +33,10 @@ export interface DeepSeekModelPrice {
  * token 用量），不会给出错误数字。
  */
 export const DEEPSEEK_MODEL_PRICES: Readonly<Record<string, DeepSeekModelPrice>> = {
-  // DeepSeek-V41-Flash（2026-09-10 发布并取代 V4-Pro 后的下调价目）。
+  // DeepSeek-V4.1-Flash：唯一在售模型（2026-09-10 发布并取代 V4-Pro 后的下调价目）。
+  // 其余模型 id（含 V4-Flash / vision 实验 id）不再收录 → priceForModel 返回
+  // undefined，界面只展示 token、不给金额。
   'deepseek-flash': {
-    inputMiss: [1.0, 2.0],
-    inputHit: [0.02, 0.04],
-    output: [4.0, 8.0],
-  },
-  // issue #857：官方已按 Flash 价计费 V4.1-Flash 的正式 id 与 vision 实验 id；
-  // V4-Pro 已下线，不再保留价目行（未收录 → priceForModel 返回 undefined，
-  // 界面只展示 token、不给金额）。
-  'deepseek-v4-flash': {
-    inputMiss: [1.0, 2.0],
-    inputHit: [0.02, 0.04],
-    output: [4.0, 8.0],
-  },
-  'deepseek-v4-flash-vision-exp': {
     inputMiss: [1.0, 2.0],
     inputHit: [0.02, 0.04],
     output: [4.0, 8.0],

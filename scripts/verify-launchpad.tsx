@@ -95,10 +95,14 @@ applyCompanionSkin('whale')
 
 /** 内核目录由 buildKernelCatalog 生成，与 Chat 使用同一构造函数。 */
 const { buildKernelCatalog, kernelEntriesOf } = await import('../src/components/kernelCatalog.js')
-const { listBackends } = await import('../src/dsh-adapter/backend-registry.js')
+const backendRegistry = await import('../src/dsh-adapter/backend-registry.js')
+const { listBackends } = backendRegistry
+const { FIXTURE_CLI_ID, FIXTURE_SDK_ID, registerFixtureBackends } = await import('./lib/fixture-backends.js')
+// DSH 是唯一的仓内内核：两条插件形态的 fixture 行（可安装 / 无安装面）充当其余内核。
+registerFixtureBackends(backendRegistry)
 
 /** P0：目录由宿主投影后传进来（Chat 拿到的就是 `kernelEntriesOf(listBackends())`），
- *  行的静态半边来自 manifest；回归直接用真实 registry 目录（dsh / claude / codex）。 */
+ *  行的静态半边来自 manifest；回归直接用真实 registry 目录（dsh / fixture-sdk / fixture-cli）。 */
 const KERNEL_ENTRIES = kernelEntriesOf(listBackends())
 /** 与 Chat 同一条构造路径：目录注入 + 本夹具的探测状态。 */
 const catalog = (input: Omit<Parameters<typeof buildKernelCatalog>[0], 'entries'>) =>
@@ -1295,39 +1299,39 @@ for (const columns of [120, 48]) {
   const { tmpdir } = await import('node:os')
   const { join } = await import('node:path')
 
-  // 目录：DSH 恒在恒可选（默认内核）；claude 依探测结果定可选性。版本一律是
+  // 目录：DSH 恒在恒可选（默认内核）；fixture-sdk 依探测结果定可选性。版本一律是
   // **显示串**（产品前缀 + 版本号），不再是裸版本号。
   // 每一项都**按 ID** 取，不按下标（P0 §1.2：新增一个后端目录不该让这些标签变
   // 红）；行序与成员完整性由 verify-backend-registry 的目录 parity 断言负责。
   const rowOf = (options: ReturnType<typeof catalog>, id: string) => options.find(option => option.id === id)
   const dshOnly = catalog({ current: 'dsh', dshVersion: '0.2.6' })
-  check('K1 目录：DSH 恒可选并带版本显示串；claude / codex 未探测=置灰为「检测中…」（不是未安装）',
+  check('K1 目录：DSH 恒可选并带版本显示串；fixture-sdk / fixture-cli 未探测=置灰为「检测中…」（不是未安装）',
     rowOf(dshOnly, 'dsh')?.current === true && rowOf(dshOnly, 'dsh')?.selectable === true && rowOf(dshOnly, 'dsh')?.version === 'dsh-core v0.2.6'
-      && rowOf(dshOnly, 'claude')?.current === false && rowOf(dshOnly, 'claude')?.selectable === false && rowOf(dshOnly, 'claude')?.reasonKey === 'kernel-probing'
-      && rowOf(dshOnly, 'codex')?.selectable === false && rowOf(dshOnly, 'codex')?.reasonKey === 'kernel-probing',
+      && rowOf(dshOnly, FIXTURE_SDK_ID)?.current === false && rowOf(dshOnly, FIXTURE_SDK_ID)?.selectable === false && rowOf(dshOnly, FIXTURE_SDK_ID)?.reasonKey === 'kernel-probing'
+      && rowOf(dshOnly, FIXTURE_CLI_ID)?.selectable === false && rowOf(dshOnly, FIXTURE_CLI_ID)?.reasonKey === 'kernel-probing',
     JSON.stringify(dshOnly))
-  const ok = catalog({ current: 'claude', dshVersion: '0.2.6', statuses: { claude: { installed: true, auth: 'ok', version: '2.1.287' } } })
-  check('K2 目录：installed+auth=ok 的 claude 可选、版本显示串、current 标记在 claude',
-    rowOf(ok, 'dsh')?.current === false && rowOf(ok, 'claude')?.selectable === true && rowOf(ok, 'claude')?.current === true
-      && rowOf(ok, 'claude')?.version === 'claude-code v2.1.287' && rowOf(ok, 'claude')?.reasonKey === undefined,
+  const ok = catalog({ current: FIXTURE_SDK_ID, dshVersion: '0.2.6', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'ok', version: '2.1.287' } } })
+  check('K2 目录：installed+auth=ok 的 fixture-sdk 可选、版本显示串、current 标记在 fixture-sdk',
+    rowOf(ok, 'dsh')?.current === false && rowOf(ok, FIXTURE_SDK_ID)?.selectable === true && rowOf(ok, FIXTURE_SDK_ID)?.current === true
+      && rowOf(ok, FIXTURE_SDK_ID)?.version === 'fixture-sdk-cli v2.1.287' && rowOf(ok, FIXTURE_SDK_ID)?.reasonKey === undefined,
     JSON.stringify(ok))
   check('K3 目录：auth=missing/unknown 均可选（凭据可能在检测看不到的地方）；loginInSession 行带登录注记；installed=false → 未安装',
-    rowOf(catalog({ current: 'dsh', statuses: { claude: { installed: true, auth: 'missing', version: '1.2.3' } } }), 'claude')?.selectable === true
-      && rowOf(catalog({ current: 'dsh', statuses: { claude: { installed: true, auth: 'missing' } } }), 'claude')?.reasonKey === undefined
-      && rowOf(catalog({ current: 'dsh', statuses: { claude: { installed: true, auth: 'missing', loginInSession: true } } }), 'claude')?.noteKey === 'kernel-login-in-session'
-      && rowOf(catalog({ current: 'dsh', statuses: { claude: { installed: true, auth: 'unknown' } } }), 'claude')?.selectable === true
-      && rowOf(catalog({ current: 'dsh', statuses: { claude: { installed: false, version: '1.2.3' } } }), 'claude')?.reasonKey === 'kernel-unavailable-not-installed')
+    rowOf(catalog({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'missing', version: '1.2.3' } } }), FIXTURE_SDK_ID)?.selectable === true
+      && rowOf(catalog({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'missing' } } }), FIXTURE_SDK_ID)?.reasonKey === undefined
+      && rowOf(catalog({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'missing', loginInSession: true } } }), FIXTURE_SDK_ID)?.noteKey === 'kernel-login-in-session'
+      && rowOf(catalog({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'unknown' } } }), FIXTURE_SDK_ID)?.selectable === true
+      && rowOf(catalog({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: false, version: '1.2.3' } } }), FIXTURE_SDK_ID)?.reasonKey === 'kernel-unavailable-not-installed')
   // 短品牌名不再是宿主里的 id→名字表：它来自 manifest，经宿主投影（P0 D2）。
   const entryOf = (id: string) => KERNEL_ENTRIES.find(entry => entry.id === id)
-  check('K4 短品牌名：来自 manifest（dsh→DSH、claude→Claude、codex→Codex），落地页与重启通知共用',
-    entryOf('dsh')?.shortLabel === 'DSH' && entryOf('claude')?.shortLabel === 'Claude' && entryOf('codex')?.shortLabel === 'Codex'
-      && entryOf('dsh')?.label.kind === 'key' && entryOf('claude')?.label.kind === 'key',
+  check('K4 短品牌名：来自 manifest（dsh→DSH、fixture-sdk→FixtureSDK、fixture-cli→FixtureCLI），落地页与重启通知共用',
+    entryOf('dsh')?.shortLabel === 'DSH' && entryOf(FIXTURE_SDK_ID)?.shortLabel === 'FixtureSDK' && entryOf(FIXTURE_CLI_ID)?.shortLabel === 'FixtureCLI'
+      && entryOf('dsh')?.label.kind === 'key' && entryOf(FIXTURE_SDK_ID)?.label.kind === 'literal',
     JSON.stringify(KERNEL_ENTRIES.map(entry => [entry.id, entry.shortLabel])))
-  // 版本显示串：产品名来自 manifest 的 product（dsh-core / claude-code）；空/缺省
+  // 版本显示串：产品名来自 manifest 的 product（dsh-core / fixture-sdk-cli）；空/缺省
   // = undefined（调用方整段省掉，绝不画一个空壳的 v）；没有 product 的条目裸版本。
   check('K4b kernelVersionLabel：产品名 + 空格 + v + 版本号；空串/缺省 undefined；无产品名裸版本',
     kernelVersionLabel('dsh-core', '0.2.0-rc.2') === 'dsh-core v0.2.0-rc.2'
-      && kernelVersionLabel('claude-code', '2.0.1') === 'claude-code v2.0.1'
+      && kernelVersionLabel('fixture-sdk-cli', '2.0.1') === 'fixture-sdk-cli v2.0.1'
       && kernelVersionLabel('dsh-core', '') === undefined && kernelVersionLabel('dsh-core') === undefined
       && kernelVersionLabel(undefined, '9.9.9') === '9.9.9',
     JSON.stringify([kernelVersionLabel('dsh-core', '0.2.0-rc.2'), kernelVersionLabel('dsh-core', ''), kernelVersionLabel(undefined, '9.9.9')]))
@@ -1337,12 +1341,12 @@ for (const columns of [120, 48]) {
     return option === undefined ? undefined : kernelSubtitle(option, key => 'R:' + key)
   }
   check('K4c kernelSubtitle：版本·原因 / 只有版本 / 只有原因 / 都没有=undefined',
-    subtitleOf({ current: 'dsh', dshVersion: '0.2.6' }, 'claude') === 'R:kernel-probing'
-      && subtitleOf({ current: 'dsh', dshVersion: '0.2.6', statuses: { claude: { installed: false } } }, 'claude') === 'R:kernel-unavailable-not-installed'
+    subtitleOf({ current: 'dsh', dshVersion: '0.2.6' }, FIXTURE_SDK_ID) === 'R:kernel-probing'
+      && subtitleOf({ current: 'dsh', dshVersion: '0.2.6', statuses: { [FIXTURE_SDK_ID]: { installed: false } } }, FIXTURE_SDK_ID) === 'R:kernel-unavailable-not-installed'
       && subtitleOf({ current: 'dsh', dshVersion: '0.2.6' }, 'dsh') === 'dsh-core v0.2.6'
       && subtitleOf({ current: 'dsh' }, 'dsh') === undefined
-      && subtitleOf({ current: 'dsh', statuses: { claude: { installed: true, auth: 'missing', version: '1.2.3' } } }, 'claude') === 'claude-code v1.2.3'
-      && subtitleOf({ current: 'dsh', statuses: { claude: { installed: true, auth: 'missing', version: '1.2.3', loginInSession: true } } }, 'claude') === 'claude-code v1.2.3 · R:kernel-login-in-session',
+      && subtitleOf({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'missing', version: '1.2.3' } } }, FIXTURE_SDK_ID) === 'fixture-sdk-cli v1.2.3'
+      && subtitleOf({ current: 'dsh', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'missing', version: '1.2.3', loginInSession: true } } }, FIXTURE_SDK_ID) === 'fixture-sdk-cli v1.2.3 · R:kernel-login-in-session',
     JSON.stringify(catalog({ current: 'dsh', dshVersion: '0.2.6' }).map(option => [option.id, kernelSubtitle(option, key => 'R:' + key)])))
 
   // kernel.json 记忆：原子写（tmp+rename，claude prefs.ts 同款）往返。
@@ -2712,10 +2716,10 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
 // 用户原话：「在这里显示可以选择的内核 并且有箭头或者高亮 表明目前记忆中启动
 // 的内核」——目录由 kernelCatalog 的真实派生函数造（夹具不手写形状）。
 {
-  // 底栏用**短品牌名**（manifest 的 shortLabel：DSH / Claude，与「内核 · DSH」那个 chip
+  // 底栏用**短品牌名**（manifest 的 shortLabel：DSH / FixtureSDK，与「内核 · DSH」那个 chip
   // 同源）——全名 40 列会把左下角的目录铭牌挤掉；全名留给选择器那一屏。
   const DSH_LABEL = 'DSH'
-  const CLAUDE_LABEL = 'Claude'
+  const SDK_LABEL = 'FixtureSDK'
   /** 当前内核的前缀（两格宽，与「不多不少两个空格」的其余行对齐）。 */
   const MARK = '\u25b8 '
   /** Launchpad 的 KERNEL_CORNER_FOCUS（内核区在焦点环里的编码）。 */
@@ -2731,8 +2735,8 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
   const tuiCell = cellAtText(s.term, lines, tuiRow, 'dsh-tui v' + VERSION)
   /** 铭牌行号：按模型的顺序推导，不写死位置（P0 §1.2：新增后端不得让这里变红）。
    *  名字只在**推导出的那一行**上校验：manifest 并不要求短名互不为子串，全局
-   *  findIndex 找子串会被排在 Claude 之前、短名又含 "Claude" 的新后端抢先命中，
-   *  S1/S2/S3 便拿它的行当 Claude 的行而假红（PR #1380 review）。 */
+   *  findIndex 找子串会被排在 fixture-sdk 之前、短名又含其短名的新后端抢先命中，
+   *  S1/S2/S3 便拿它的行当 fixture-sdk 的行而假红（PR #1380 review）。 */
   const plateRows = probing.map((option, index) => (
     tuiRow >= 0 && lines[tuiRow + 1 + index]?.includes(option.shortLabel) ? tuiRow + 1 + index : -1
   ))
@@ -2748,7 +2752,7 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
     return at < 0 ? null : { col: stringWidth(line.slice(0, at)) + 1, row: row + 1 }
   }
   const dshRow = plateRowOf('dsh')
-  const claudeRow = plateRowOf('claude')
+  const sdkRow = plateRowOf(FIXTURE_SDK_ID)
   check('S1 内核区排在 TUI 版本之下，一行一个内核：当前行打 ▸ 且带版本串',
     tuiRow >= 0 && plateRows.every((row, index) => row === tuiRow + 1 + index)
       && lines[tuiRow + 1]!.includes('dsh-core v0.2.0-rc.2')
@@ -2757,41 +2761,41 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
       && !probing.some(option => (lines[tuiRow + 1 + probing.length] ?? '').includes(option.shortLabel)),
     `tui=${tuiRow} plate=${JSON.stringify(plateRows)} ${JSON.stringify(lines[tuiRow + 1]?.trimEnd())}`)
   const dshFg = fgKeyOf(firstGlyph(dshRow))
-  const claudeFg = fgKeyOf(firstGlyph(claudeRow))
+  const sdkFg = fgKeyOf(firstGlyph(sdkRow))
   check('S2 当前内核行正常亮度（与 dim 行不同色），其余行与 TUI 版本行同色（dim）且右端贴齐',
-    dshFg !== claudeFg && claudeFg === fgKeyOf(tuiCell) && claudeFg !== 'default'
-      && !lines[claudeRow]!.includes(MARK)
+    dshFg !== sdkFg && sdkFg === fgKeyOf(tuiCell) && sdkFg !== 'default'
+      && !lines[sdkRow]!.includes(MARK)
       // 右缘对齐：每行右端都贴 TUI 版本行那条右边界（左端随内容长短参差）。
-      && Math.abs(rightGap(lines[dshRow]!, COLS) - rightGap(lines[claudeRow]!, COLS)) <= 1,
-    `dsh=${dshFg} claude=${claudeFg} tui=${fgKeyOf(tuiCell)} claude=${JSON.stringify(lines[claudeRow]?.trimEnd())}`)
-  check('S2b 底栏画短品牌名（DSH / Claude），全名一个都不画（全名只进选择器）',
-    lines[dshRow]!.includes(MARK + DSH_LABEL + ' \u00b7 ') && lines[claudeRow]!.trim().startsWith(CLAUDE_LABEL + ' \u00b7 ')
-      && !lines.some(l => l.includes('DeepSeek Harness') || l.includes('Claude Agent')),
-    `dsh=${JSON.stringify(lines[dshRow]?.trimEnd())} claude=${JSON.stringify(lines[claudeRow]?.trimEnd())}`)
-  check('S3 探测未回来：claude 行显示「检测中…」——置灰但**不是**「未安装」',
-    claudeRow >= 0 && lines[claudeRow]!.includes('检测中…') && !lines[claudeRow]!.includes('未安装'),
-    JSON.stringify(lines[claudeRow]?.trimEnd()))
+      && Math.abs(rightGap(lines[dshRow]!, COLS) - rightGap(lines[sdkRow]!, COLS)) <= 1,
+    `dsh=${dshFg} sdk=${sdkFg} tui=${fgKeyOf(tuiCell)} sdk=${JSON.stringify(lines[sdkRow]?.trimEnd())}`)
+  check('S2b 底栏画短品牌名（DSH / FixtureSDK），全名一个都不画（全名只进选择器）',
+    lines[dshRow]!.includes(MARK + DSH_LABEL + ' \u00b7 ') && lines[sdkRow]!.trim().startsWith(SDK_LABEL + ' \u00b7 ')
+      && !lines.some(l => l.includes('DeepSeek Harness') || l.includes('Fixture SDK Agent')),
+    `dsh=${JSON.stringify(lines[dshRow]?.trimEnd())} sdk=${JSON.stringify(lines[sdkRow]?.trimEnd())}`)
+  check('S3 探测未回来：fixture-sdk 行显示「检测中…」——置灰但**不是**「未安装」',
+    sdkRow >= 0 && lines[sdkRow]!.includes('检测中…') && !lines[sdkRow]!.includes('未安装'),
+    JSON.stringify(lines[sdkRow]?.trimEnd()))
   // 未登录行的铭牌形态：**登录状态不进铭牌**（要切内核时在选择器里看），铭牌只有
   // 名字与版号；各行右端都贴 TUI 版本行那条右边界——参差全留在左边。
   {
     const signedOut = catalog({
       current: 'dsh', dshVersion: '0.2.0-rc.2',
       statuses: {
-        claude: { installed: true, auth: 'missing', version: '2.1.295', loginInSession: true },
-        codex: { installed: true, auth: 'ok', version: '0.160.1' },
+        [FIXTURE_SDK_ID]: { installed: true, auth: 'missing', version: '2.1.295', loginInSession: true },
+        [FIXTURE_CLI_ID]: { installed: true, auth: 'ok', version: '0.160.1' },
       },
     })
     const s3 = await openLaunchpad([], { kernels: signedOut })
-    await settled(() => s3.screen().includes('claude-code v2.1.295'))
+    await settled(() => s3.screen().includes('fixture-sdk-cli v2.1.295'))
     const lines3 = viewportLines(s3.term)
     const tuiRow3 = lines3.findIndex(l => l.includes(`dsh-tui v${VERSION}`))
-    const outRow = lines3.findIndex(l => l.includes('claude-code v2.1.295'))
-    const okRow = lines3.findIndex(l => l.includes('codex-cli v0.160.1'))
+    const outRow = lines3.findIndex(l => l.includes('fixture-sdk-cli v2.1.295'))
+    const okRow = lines3.findIndex(l => l.includes('fixture-cli v0.160.1'))
     check('S3b 未登录不进铭牌：行只有名字与版号（状态留给选择器）',
       outRow >= 0 && tuiRow3 >= 0 && outRow === tuiRow3 + 2
         && !lines3[outRow]!.includes('未登录')
-        && lines3[outRow]!.includes('Claude · claude-code v2.1.295')
-        && (lines3[okRow] ?? '').trim().startsWith('Codex · '),
+        && lines3[outRow]!.includes('FixtureSDK · fixture-sdk-cli v2.1.295')
+        && (lines3[okRow] ?? '').trim().startsWith('FixtureCLI · '),
       JSON.stringify({ out: lines3[outRow]?.trimEnd(), ok: lines3[okRow]?.trimEnd() }))
     check('S3c 各行右端贴齐同一条右边界（TUI 行与全部内核行，差 ≤1 列）',
       [tuiRow3 + 1, outRow, okRow].every(row => row >= 0)
@@ -2810,13 +2814,13 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
   // 悬停将焦点移到内核区；非当前项从 dim 切换为高亮，
   // 行**亮起来**（加粗）——这就是「可以点」的鼠标反馈。
   const beforeHover = ev.length
-  const hoverAt = cellInRow(claudeRow, CLAUDE_LABEL)!
+  const hoverAt = cellInRow(sdkRow, SDK_LABEL)!
   s.input.write('\u001b[<35;' + hoverAt.col + ';' + hoverAt.row + 'M')
   check('S5 悬停内核区 → 焦点落到 KERNEL_CORNER_FOCUS(-8)（鼠标与键盘同一格）',
     await settled(() => last(ev, 'focus')?.value === KERNEL_FOCUS), JSON.stringify(ev.slice(beforeHover)))
   check('S5b 悬停高亮：非当前行不再是 dim 色且加粗（悬停前的对照见 S2）',
-    await settled(() => fgKeyOf(firstGlyph(claudeRow)) !== fgKeyOf(tuiCell) && (firstGlyph(claudeRow)?.isBold() ?? 0) > 0),
-    `fg=${fgKeyOf(firstGlyph(claudeRow))} tui=${fgKeyOf(tuiCell)} bold=${firstGlyph(claudeRow)?.isBold()}`)
+    await settled(() => fgKeyOf(firstGlyph(sdkRow)) !== fgKeyOf(tuiCell) && (firstGlyph(sdkRow)?.isBold() ?? 0) > 0),
+    `fg=${fgKeyOf(firstGlyph(sdkRow))} tui=${fgKeyOf(tuiCell)} bold=${firstGlyph(sdkRow)?.isBold()}`)
   s.close()
   // 键盘路径（仓库硬规矩：每个可点目标都要有不含鼠标的等价操作）：焦点环末格
   // 是内核区，Enter 与点击同一条回调。环 = 输入框(-1) → 参数4 → 入口5 →
@@ -2836,27 +2840,27 @@ await checkPaletteCardGeometry(60, '窄终端（cardWidth = columns - 4）')
   s2.close()
   {
     // 已探测「未安装」：置灰原因是未安装（与「检测中…」分得清）。
-    const s3 = await openLaunchpad([], { kernels: catalog({ current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { claude: { installed: false } } }) })
-    check('S7 已探测未安装：claude 行显示「未安装」',
-      await settled(() => s3.screen().includes(CLAUDE_LABEL + ' · 未安装')), s3.screen().slice(-160))
+    const s3 = await openLaunchpad([], { kernels: catalog({ current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { [FIXTURE_SDK_ID]: { installed: false } } }) })
+    check('S7 已探测未安装：fixture-sdk 行显示「未安装」',
+      await settled(() => s3.screen().includes(SDK_LABEL + ' · 未安装')), s3.screen().slice(-160))
     s3.close()
   }
   {
     // 已探测可用：版本串是**产品前缀 + 版本号**，且这一行不变暗（可选）。
-    const ready = catalog({ current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { claude: { installed: true, auth: 'ok', version: '2.0.1' } } })
+    const ready = catalog({ current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'ok', version: '2.0.1' } } })
     const s4 = await openLaunchpad([], { kernels: ready })
-    check('S8 可选内核显示版本串：claude-code v2.0.1（不是裸版本号）',
-      await settled(() => s4.screen().includes(CLAUDE_LABEL + ' · claude-code v2.0.1')), s4.screen().slice(-160))
+    check('S8 可选内核显示版本串：fixture-sdk-cli v2.0.1（不是裸版本号）',
+      await settled(() => s4.screen().includes(SDK_LABEL + ' · fixture-sdk-cli v2.0.1')), s4.screen().slice(-160))
     const lines4 = viewportLines(s4.term)
     const tui4 = lines4.findIndex(l => l.includes('dsh-tui v' + VERSION))
-    // 按 ID 定位 Claude 那一行，不用全屏找 "Claude" 子串（理由见 S1）。
-    const claude4 = tui4 + 1 + ready.findIndex(option => option.id === 'claude')
-    const claude4Fg = fgKeyOf(firstGlyphCell(s4.term, claude4, COLS))
+    // 按 ID 定位 fixture-sdk 那一行，不用全屏找短名子串（理由见 S1）。
+    const sdk4 = tui4 + 1 + ready.findIndex(option => option.id === FIXTURE_SDK_ID)
+    const sdk4Fg = fgKeyOf(firstGlyphCell(s4.term, sdk4, COLS))
     // 底栏只管「现在跑的是它」：可选择的内核行**照样** dim（可选性由选择器那一行
     // 表达——picker 里只有不可选行才变暗，两条不同的口径各测各的）。
     check('S8b 可选但非当前的内核行在底栏仍 dim（可不可选归选择器表达）',
-      claude4Fg === fgKeyOf(cellAtText(s4.term, lines4, tui4, 'dsh-tui v' + VERSION)),
-      'claude=' + claude4Fg + ' tui=' + fgKeyOf(cellAtText(s4.term, lines4, tui4, 'dsh-tui v' + VERSION)))
+      sdk4Fg === fgKeyOf(cellAtText(s4.term, lines4, tui4, 'dsh-tui v' + VERSION)),
+      'sdk=' + sdk4Fg + ' tui=' + fgKeyOf(cellAtText(s4.term, lines4, tui4, 'dsh-tui v' + VERSION)))
     s4.close()
   }
 }

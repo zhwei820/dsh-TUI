@@ -143,11 +143,6 @@ export function createChannelUi(channel: ChannelUi, mode: AdapterMode, lease: Ch
         return release
       }
       if (observation) return lease.own(result)
-      if (key === 'backendChannels' && result !== undefined) {
-        return methods(result as NonNullable<ReturnType<ChannelUi['backendChannels']>>, {
-          snapshot: 'read-only', peekImport: 'read-only', activate: 'mutate', importFromSettings: 'mutate', save: 'mutate', remove: 'mutate',
-        })
-      }
       if (key === 'backendAuth' && result !== undefined) {
         const host = result as NonNullable<ReturnType<ChannelUi['backendAuth']>>
         const login = methods<Pick<typeof host, 'login'>>({ login: present => host.login((oauth, provider) => settle(present(query(oauth), provider))) }, { login: 'mutate' })
@@ -168,18 +163,8 @@ export function createChannelUi(channel: ChannelUi, mode: AdapterMode, lease: Ch
           listNamespaces: 'read-only', credentialConfigured: 'read-only', write: 'mutate', writeCredential: 'mutate',
         })
       }
-      if (key === 'providerSetup' && result !== undefined) {
-        const host = result as NonNullable<ReturnType<ChannelUi['providerSetup']>>
-        const { oauth, ...base } = host
-        return Object.freeze({
-          ...methods(base, {
-            listCatalogProviders: 'read-only', listConfiguredProviders: 'read-only', listRefUsers: 'read-only',
-            routeExists: 'read-only', envShadows: 'read-only', envValue: 'mutate', readCredential: 'mutate',
-            discoverModels: 'mutate', writeCredential: 'mutate', removeCredential: 'mutate',
-            writeProfile: 'mutate', mutateProfile: 'mutate', removeProfile: 'mutate',
-          }),
-          ...(oauth === undefined ? {} : { oauth: methods(oauth, { providers: 'read-only', login: 'mutate', logout: 'mutate' }) }),
-        })
+      if (key === 'oauthSetup' && result !== undefined) {
+        return methods(result as NonNullable<ReturnType<ChannelUi['oauthSetup']>>, { providers: 'read-only', login: 'mutate', logout: 'mutate' })
       }
       // The session event log is an append-only, JSON-safe read whose snapshot
       // array is replaced by the session on every append. Running it through

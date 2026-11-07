@@ -1,5 +1,11 @@
 # 首次引导的账号与模型接入（Onboarding v2 设计）
 
+> **现状说明**：dsh-TUI 现在只支持 DeepSeek 模型。本文描述的 `/provider` 向导（含"添加模型
+> 提供方"动作、模型能力编辑）与 `dsh-auth` 的第三方订阅登录（ChatGPT/Codex、Claude、Grok 等
+> pi-ai 路由）均已移除。引导第一步只剩 DeepSeek 账号登录（`runAccountSignIn`，
+> `src/channel/account-sign-in.ts`）、重新检查与跳过；0/1/N 默认模型决策
+> （`components/onboardingProviderPlan`）仍按本文工作。下文作为设计记录保留。
+
 关联：#1646（本设计）、引导首版 #1255、`/provider` 向导、`dsh-auth` 订阅登录、`/settings` 凭据写入。
 
 本文回答一个问题：**首次启动的引导应该怎样把"这台机器能用哪个模型"这件事配置好**，

@@ -1,7 +1,7 @@
 /**
  * Ask-user-question store, the UI-side half of every structured ask: the
  * DSH user-interaction seam (`ctx.userQuestions`, the model-facing
- * `ask_user_question` tool), local wizards (`/provider`, `/login`) and a
+ * `ask_user_question` tool), local wizards (account sign-in, `/login`) and a
  * non-DSH session's `question.request` events (Claude `AskUserQuestion`,
  * `ExitPlanMode`) all park here. The store surfaces one question at a time to
  * the TUI questionnaire and settles the asker's promise when the user
@@ -286,7 +286,7 @@ export class QuestionStore implements QuestionStoreLike {
 
   /**
    * Asker entry point for the DSH `ask_user_question` provider, local wizards
-   * (e.g. `/provider`) and the channel's backend question bridge.
+   * (e.g. account sign-in) and the channel's backend question bridge.
    * @param request - The ask request: questions plus optional abort signal.
    * @param options - `redact` hides answer text from the answered-questionnaire
    *   transcript record (use for batches that collect secrets such as API keys).

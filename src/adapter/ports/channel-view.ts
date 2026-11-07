@@ -1056,44 +1056,6 @@ export interface BackendModeOption {
   readonly description?: string
 }
 
-/**
- * One relay channel profile (the typed `channels` capability a Claude
- * session declares; the store is backends/claude/channels.json). The port
- * restates the capability's own view so the UI layer never imports the
- * agent domain. The picker's rows and the mapping view both render from
- * these entries.
- */
-export interface BackendChannelOption {
-  readonly id: string
-  readonly name: string
-  /** Exact requested-id → actual model entries, in file order. */
-  readonly models: readonly { readonly from: string; readonly to: string }[]
-  /** Tier keyword → actual model entries, in file order (`default` = the
-   *  any-model rule). */
-  readonly tiers: readonly { readonly tier: string; readonly to: string }[]
-  /** The connection fields (never a token literal); absent on
-   *  mapping-only channels. Equal fingerprints = the same connection, so
-   *  the backend host can decide restart-vs-refresh without the secret. */
-  readonly connection?: {
-    readonly baseUrl?: string
-    readonly hasToken: boolean
-    readonly envKeys: readonly string[]
-    readonly fingerprint: string
-  }
-}
-
-/** A relay profile write; omitted fields keep their stored values. */
-export interface BackendChannelInput {
-  readonly id: string
-  readonly name: string
-  readonly baseUrl?: string
-  /** Undefined = keep; '' removes the stored token and its ref. */
-  readonly token?: string
-  readonly env?: Readonly<Record<string, string>>
-  readonly models?: Readonly<Record<string, string>>
-  readonly tiers?: Readonly<Record<string, string>>
-}
-
 /** @internal */
 /** One roster entry in the `/preset` picker (see {@link Channel.listPresets}). */
 export interface PresetOption {
@@ -1211,10 +1173,6 @@ export interface ChannelCapabilities {
   readonly rename: boolean
   /** `/color` keeps a per-session accent. */
   readonly color: boolean
-  /** `/channel` manages the backend's relay channel profiles (Claude's
-   *  channels.json). False on every other backend, DSH included: the only
-   *  flag a DSH session does not get by default. */
-  readonly channels: boolean
   /** `/goal` is served: DSH through its command registry row, another
    *  backend through its typed `goals` capability. False = `/goal` is
    *  refused as unavailable on this backend. */
@@ -1247,7 +1205,6 @@ export interface ChannelCostReport {
 export type AgentStatus = 'idle' | 'running'
 export interface LlmModelInfo { provider: string; id: string; name: string; description?: string; inputModalities?: readonly string[] }
 export interface LlmProviderInfo { id: string; name: string }
-export interface LlmDiscoveredModel { id: string; name?: string; contextWindow?: number; maxTokens?: number; inputModalities?: readonly string[] }
 export type ChannelImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
 export interface ChannelSceneMetadata { readonly id: string; readonly title?: string }
 export interface RawTrajEvent { readonly type: string; readonly seq: number; readonly time: number; readonly data: unknown }

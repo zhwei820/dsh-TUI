@@ -3,7 +3,7 @@
  *   1. 视觉照 ModePicker：Pane + 标题（kernel-picker-title）+ 行列表 + Enter/Esc
  *      提示行（hint-confirm-exit）；
  *   2. 一行一个内核：标签走 i18n（kernel-label-*），副标题是 kernelSubtitle 的
- *      「版本 · 置灰原因」（版本串带产品前缀：dsh-core / claude-code）；
+ *      「版本 · 置灰原因」（版本串带产品前缀：dsh-core / fixture-sdk-cli）；
  *   3. 当前内核行打勾（✓ 跟着 current 走，不是固定在第一行）；
  *   4. 不可选行变暗（主题 inactive 色，与该行副标题同色），但焦点落在
  *      它上面时 ❯ 指针照样看得见——这正是不能用 ListItem 的 disabled 的原因
@@ -29,19 +29,24 @@ const [
   { render, AlternateScreen, useInput },
   { KernelPicker },
   { buildKernelCatalog, kernelEntriesOf },
-  { listBackends },
+  registry,
   { t, setLang },
+  { FIXTURE_SDK_ID, fixtureSdkManifest, registerFixtureBackends },
 ] = await Promise.all([
   import('../src/ui.js'),
   import('../src/components/KernelPicker.js'),
   import('../src/components/kernelCatalog.js'),
   import('../src/dsh-adapter/backend-registry.js'),
   import('../src/i18n.js'),
+  import('./lib/fixture-backends.js'),
 ])
+// DSH 是唯一的仓内内核：用插件形态的 fixture 行充当「另一个内核」。
+registerFixtureBackends(registry)
+const { listBackends } = registry
 
 /** P0：选择器的目录由宿主投影后传进来（Chat 收到的是同一份
  *  `kernelEntriesOf(listBackends())`）——回归直接用真实 registry 目录，
- *  行序仍是 dsh / claude / codex。 */
+ *  行序是 dsh / fixture-sdk / fixture-cli。 */
 const KERNEL_ENTRIES = kernelEntriesOf(listBackends())
 
 let failures = 0
@@ -185,13 +190,13 @@ async function mountPicker(options: {
 }
 
 const PROBING = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'dsh', dshVersion: '0.2.0-rc.2' })
-const READY = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { claude: { installed: true, auth: 'ok', version: '2.1.0' } } })
-const NOT_INSTALLED = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { claude: { installed: false } } })
-/** 当前内核 = claude：勾要跟着挪到第二行（不是钉死在第一行）。 */
-const CLAUDE_CURRENT = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'claude', dshVersion: '0.2.0-rc.2', statuses: { claude: { installed: true, auth: 'ok', version: '2.1.0' } } })
+const READY = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'ok', version: '2.1.0' } } })
+const NOT_INSTALLED = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: 'dsh', dshVersion: '0.2.0-rc.2', statuses: { [FIXTURE_SDK_ID]: { installed: false } } })
+/** 当前内核 = fixture-sdk：勾要跟着挪到第二行（不是钉死在第一行）。 */
+const SDK_CURRENT = buildKernelCatalog({ entries: KERNEL_ENTRIES, current: FIXTURE_SDK_ID, dshVersion: '0.2.0-rc.2', statuses: { [FIXTURE_SDK_ID]: { installed: true, auth: 'ok', version: '2.1.0' } } })
 
 const DSH_LABEL = t('kernel-label-dsh')
-const CLAUDE_LABEL = t('kernel-label-claude')
+const SDK_LABEL = fixtureSdkManifest.label.kind === 'literal' ? fixtureSdkManifest.label.text : ''
 const TICK = '\u2713'
 const POINTER = '\u276f'
 
@@ -200,11 +205,11 @@ const POINTER = '\u276f'
   const picker = await mountPicker({ options: PROBING, focusIndex: 0, pick: true })
   const screen = picker.lines().join('\n')
   check('1 标题 = kernel-picker-title（选择内核）', screen.includes(t('kernel-picker-title')), screen.slice(0, 200))
-  check('2 两行标签 = kernel-label-dsh / kernel-label-claude',
-    screen.includes(DSH_LABEL) && screen.includes(CLAUDE_LABEL), screen)
+  check('2 两行标签 = kernel-label-dsh / fixture-sdk 的字面标签',
+    screen.includes(DSH_LABEL) && screen.includes(SDK_LABEL), screen)
   check('3a 副标题：dsh 行是版本显示串（dsh-core v0.2.0-rc.2）',
     screen.includes('dsh-core v0.2.0-rc.2'), screen)
-  check('3b 副标题：探测未回来的 claude 行是「检测中…」（不是「未安装」）',
+  check('3b 副标题：探测未回来的 fixture-sdk 行是「检测中…」（不是「未安装」）',
     screen.includes(t('kernel-probing')) && !screen.includes(t('kernel-unavailable-not-installed')), screen)
   check('4 提示行 = hint-confirm-exit（Enter 确认 · Esc 退出）', screen.includes('Enter 确认 · Esc 退出'), screen)
   check('5 pinned 缺席时不画 kernel-pinned-hint',
@@ -215,64 +220,64 @@ const POINTER = '\u276f'
 // ── 2. 当前标记 / 焦点指针 / 不可选行变暗（焦点压上去也不亮）─────────────────
 {
   // 焦点行按 ID 从模型推导（P0 §1.2）：写死下标会在新增后端插到前面时落到别的行。
-  const claudeIndex = NOT_INSTALLED.findIndex(option => option.id === 'claude')
+  const sdkIndex = NOT_INSTALLED.findIndex(option => option.id === FIXTURE_SDK_ID)
   const dshIndex = NOT_INSTALLED.findIndex(option => option.id === 'dsh')
-  const picker = await mountPicker({ options: NOT_INSTALLED, focusIndex: claudeIndex, pick: true })
+  const picker = await mountPicker({ options: NOT_INSTALLED, focusIndex: sdkIndex, pick: true })
   const lines = picker.lines()
   const dshRow = picker.rowOf(DSH_LABEL)
-  const claudeRow = picker.rowOf(CLAUDE_LABEL)
+  const sdkRow = picker.rowOf(SDK_LABEL)
   const tickRow = picker.rowOf(TICK)
   check('6 当前内核行打勾：✓ 与 dsh 标签在**同一行**',
-    tickRow >= 0 && tickRow === dshRow && dshRow !== claudeRow,
-    `tick=${tickRow} dsh=${dshRow} claude=${claudeRow}`)
+    tickRow >= 0 && tickRow === dshRow && dshRow !== sdkRow,
+    `tick=${tickRow} dsh=${dshRow} sdk=${sdkRow}`)
   check('7 焦点落在**不可选**行上时 ❯ 指针照样在（disabled 会把它吞掉）',
-    picker.rowOf(POINTER) === claudeRow && dshRow >= 0 && lines[claudeRow]!.includes(CLAUDE_LABEL),
-    `pointer=${picker.rowOf(POINTER)} claude=${claudeRow} : ${JSON.stringify(lines[claudeRow]?.trim())}`)
+    picker.rowOf(POINTER) === sdkRow && dshRow >= 0 && lines[sdkRow]!.includes(SDK_LABEL),
+    `pointer=${picker.rowOf(POINTER)} sdk=${sdkRow} : ${JSON.stringify(lines[sdkRow]?.trim())}`)
   // 标签格要按**文字**取，不能取该行第一个字形——不可选行聚焦时第一个字形是
   // ❯ 指针（suggestion 色），它本来就是亮的。副标题是 ListItem 的 description，
   // 落在标签行的**下一行**（同色是「变暗 = 主题 inactive」的直接证据）。
-  const claudeFg = fgKeyOf(cellAtText(picker.term, lines, claudeRow, CLAUDE_LABEL))
+  const sdkFg = fgKeyOf(cellAtText(picker.term, lines, sdkRow, SDK_LABEL))
   const dshFg = fgKeyOf(cellAtText(picker.term, lines, dshRow, DSH_LABEL))
   const subtitleFg = fgKeyOf(firstGlyphCell(picker.term, picker.rowOf(t('kernel-unavailable-not-installed')), COLS))
   check('8 不可选行变暗用主题 inactive 色（与该行副标题同色），当前行是 success 色',
-    claudeFg === subtitleFg && claudeFg !== 'default' && dshFg !== claudeFg,
-    `claude=${claudeFg} subtitle=${subtitleFg} dsh=${dshFg}`)
+    sdkFg === subtitleFg && sdkFg !== 'default' && dshFg !== sdkFg,
+    `sdk=${sdkFg} subtitle=${subtitleFg} dsh=${dshFg}`)
   // 鼠标：点行回行号——不可选行也照样回（宿主决定提示还是重启，组件不替它决定）。
-  await picker.click(CLAUDE_LABEL)
+  await picker.click(SDK_LABEL)
   await picker.click(DSH_LABEL)
-  check('9 鼠标点行回行号（claude / dsh 各回自己在目录里的行号）',
-    picker.picked.length === 2 && picker.picked[0] === claudeIndex && picker.picked[1] === dshIndex,
+  check('9 鼠标点行回行号（fixture-sdk / dsh 各回自己在目录里的行号）',
+    picker.picked.length === 2 && picker.picked[0] === sdkIndex && picker.picked[1] === dshIndex,
     JSON.stringify(picker.picked))
   picker.close()
 }
 
-// ── 3. 勾跟着当前内核挪位（current=claude）─────────────────────────────────
+// ── 3. 勾跟着当前内核挪位（current=fixture-sdk）────────────────────────────
 {
-  const picker = await mountPicker({ options: CLAUDE_CURRENT, focusIndex: 1 })
+  const picker = await mountPicker({ options: SDK_CURRENT, focusIndex: 1 })
   const tickRow = picker.rowOf(TICK)
-  check('10 current=claude：✓ 落在 claude 行上，dsh 行没有勾',
-    tickRow === picker.rowOf(CLAUDE_LABEL) && tickRow !== picker.rowOf(DSH_LABEL),
-    `tick=${tickRow} claude=${picker.rowOf(CLAUDE_LABEL)} dsh=${picker.rowOf(DSH_LABEL)}`)
+  check('10 current=fixture-sdk：✓ 落在 fixture-sdk 行上，dsh 行没有勾',
+    tickRow === picker.rowOf(SDK_LABEL) && tickRow !== picker.rowOf(DSH_LABEL),
+    `tick=${tickRow} sdk=${picker.rowOf(SDK_LABEL)} dsh=${picker.rowOf(DSH_LABEL)}`)
   picker.close()
 }
 
 // ── 4. 未安装 / 可用两档的副标题与变暗范围 ──────────────────────────────────
 {
   const notInstalled = await mountPicker({ options: NOT_INSTALLED, focusIndex: 0 })
-  check('11 未安装的 claude 行副标题是「未安装」',
+  check('11 未安装的 fixture-sdk 行副标题是「未安装」',
     notInstalled.lines().join('\n').includes(t('kernel-unavailable-not-installed')),
     notInstalled.lines().join('\n'))
   notInstalled.close()
   const ready = await mountPicker({ options: READY, focusIndex: 0 })
   const readyScreen = ready.lines().join('\n')
-  check('12 可用的 claude 行副标题是探测到的版本串（claude-code v2.1.0）',
-    readyScreen.includes('claude-code v2.1.0'), readyScreen)
-  const claudeRow = ready.rowOf(CLAUDE_LABEL)
+  check('12 可用的 fixture-sdk 行副标题是探测到的版本串（fixture-sdk-cli v2.1.0）',
+    readyScreen.includes('fixture-sdk-cli v2.1.0'), readyScreen)
+  const sdkRow = ready.rowOf(SDK_LABEL)
   const dshRow = ready.rowOf(DSH_LABEL)
-  const claudeFg = fgKeyOf(firstGlyphCell(ready.term, claudeRow, COLS))
+  const sdkFg = fgKeyOf(firstGlyphCell(ready.term, sdkRow, COLS))
   const dshFg = fgKeyOf(firstGlyphCell(ready.term, dshRow, COLS))
-  check('13 dim 只落在不可选行上：可用的 claude 行是默认前景，当前行是 success 色',
-    claudeFg === 'default' && dshFg !== claudeFg, `claude=${claudeFg} dsh=${dshFg}`)
+  check('13 dim 只落在不可选行上：可用的 fixture-sdk 行是默认前景，当前行是 success 色',
+    sdkFg === 'default' && dshFg !== sdkFg, `sdk=${sdkFg} dsh=${dshFg}`)
   ready.close()
 }
 
@@ -307,9 +312,9 @@ const POINTER = '\u276f'
 // ── 6. 没接 onPick：行不可点、也没有 hover 反馈 ──────────────────────────────
 {
   const inert = await mountPicker({ options: READY, focusIndex: 0 })
-  const claudeRow = inert.rowOf(CLAUDE_LABEL)
+  const sdkRow = inert.rowOf(SDK_LABEL)
   const bgDefault = (): boolean => {
-    const line = inert.term.buffer.active.getLine(claudeRow)
+    const line = inert.term.buffer.active.getLine(sdkRow)
     for (let col = 0; col < COLS; col++) {
       const cell = line?.getCell(col)
       if (cell === undefined) continue
@@ -318,8 +323,8 @@ const POINTER = '\u276f'
     return true
   }
   const before = bgDefault()
-  await inert.hover(CLAUDE_LABEL)
-  await inert.click(CLAUDE_LABEL, false)
+  await inert.hover(SDK_LABEL)
+  await inert.click(SDK_LABEL, false)
   check('17 onPick 缺席：悬停不给背景反馈（挂得上 onClick 才给 hover）', before && bgDefault(),
     'before=' + before + ' after=' + bgDefault())
   check('18 onPick 缺席：点击不产生任何回调', inert.picked.length === 0, JSON.stringify(inert.picked))

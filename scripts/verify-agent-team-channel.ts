@@ -1,8 +1,7 @@
 /**
  * Agent-team channel layer regression: the unified agent-message domain and
- * both backends' message capabilities, over pure helpers, the DSH subagent
- * projection, the Claude translator and the channel core. No UI components,
- * no live backend.
+ * the message capabilities, over pure helpers, the DSH subagent projection
+ * and the channel core. No UI components, no live backend.
  *
  *  A. the neutral fold and vocabulary helpers (agent/messages.ts): state
  *     monotonicity, the DSH relay source shape (a plain user text is never
@@ -12,17 +11,10 @@
  *     continuable prompt submit (receipt → queued; RemoteError codes →
  *     stable reasons; one-shot fail-closed; service absent = no capability),
  *     listChildren roster filtering (continuable only), reset clears;
- *  C. the Claude SendMessage observation: input parsing (no recipient or no
- *     body = no message), a call is only ever issued, result states
- *     (explicit error → refused, structured field → its state, bare success
- *     / unknown shape → unknown), main lane and subagent lane through the
- *     real translator;
  *  D. the channel core over bare sessions: the parent-mediated control is
  *     composed only when the session declares the capability (absence = no
  *     member, no UI), the submit envelope rides the ordinary FIFO as a
- *     fixed followup and reports issued, listTargets mirrors the roster;
- *  E. the Claude session end to end over the fake SDK: SendMessage tool
- *     traffic folds into the session's own message capability.
+ *     fixed followup and reports issued, listTargets mirrors the roster.
  *
  * Run: node --import tsx/esm scripts/verify-agent-team-channel.ts
  */
@@ -40,20 +32,12 @@ const [
   { setLang },
   { foldAgentMessage, agentRelaySourceOf, agentMessageTextOf, agentMessageFailureOf, MAX_AGENT_MESSAGES },
   { createSubagentProjection },
-  { parseSendMessageInput, sendMessageCallView, sendMessageResultState },
-  { createClaudeTranslator },
-  { openClaudeSession },
   { createChannel },
-  fakes,
 ] = await Promise.all([
   import('../src/i18n.js'),
   import('../src/agent/messages.js'),
   import('../src/dsh-adapter/channel/subagent-projection.js'),
-  import('../src/backends/claude/send-message.js'),
-  import('../src/backends/claude/translate.js'),
-  import('../src/backends/claude/session.js'),
   import('../src/dsh-adapter/channel.js'),
-  import('./lib/claude-fake-sdk.js'),
 ])
 
 setLang('en')
@@ -208,36 +192,6 @@ const flush = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
   check('B14 reset clears the observed messages', control.message!.messages().length === 0)
 }
 
-// ── Section C: the Claude SendMessage observation ─────────────────────────
-{
-  check('C1 the tool input parses with either body field', parseSendMessageInput({ to: 'helper', message: 'hi' })?.text === 'hi' && parseSendMessageInput({ to: 'helper', text: 'ho' })?.text === 'ho')
-  check('C2 an unaddressable or empty input is not a fact', parseSendMessageInput({ message: 'hi' }) === undefined && parseSendMessageInput({ to: 'helper', message: '' }) === undefined && parseSendMessageInput('nope') === undefined)
-
-  const callMain = sendMessageCallView({ callId: 'call-9', observedAt: 5, input: { to: 'helper', text: 'hi' } })
-  check('C3 a parent-lane call observes as issued with no sender id', callMain.messageId === 'call-9' && callMain.from === undefined && callMain.to === 'helper' && callMain.state === 'issued' && callMain.sourceRef === 'call-9' && callMain.via === 'parent-mediated')
-  const callLane = sendMessageCallView({ callId: 'call-10', lane: 'toolu_parent', observedAt: 6, input: { to: 'peer', text: 'yo' } })
-  check('C4 a subagent-lane call names the lane as sender', callLane.from === 'toolu_parent' && callLane.to === 'peer')
-
-  check('C5 an explicit error result is a refusal', sendMessageResultState({ isError: true, structured: undefined }) === 'refused')
-  check('C6 a structured delivery field marks exactly its state', sendMessageResultState({ isError: false, structured: { delivery: 'delivered' } }) === 'delivered' && sendMessageResultState({ isError: false, structured: { status: 'held' } }) === 'held')
-  check('C7 a bare success or unknown shape is unknown — never a guessed delivery',
-    sendMessageResultState({ isError: false, structured: undefined }) === 'unknown'
-    && sendMessageResultState({ isError: false, structured: { ok: true } }) === 'unknown'
-    && sendMessageResultState({ isError: false, structured: { delivery: 'queued' } }) === 'unknown')
-
-  const translator = createClaudeTranslator({ cwd: '/fixture', userRows: 'lifecycle', debug: () => undefined })
-  const callEvents = translator.translate({ type: 'assistant', message: { id: 'msg_a', model: 'claude', content: [{ type: 'tool_use', id: 'call-77', name: 'SendMessage', input: { to: 'helper', message: 'relay me' } }] } })
-  const observed = callEvents.filter(event => event.type === 'agent.message')
-  check('C8 the real translator observes the parent SendMessage call as issued', observed.length === 1 && observed[0]!.message.state === 'issued' && observed[0]!.message.messageId === 'call-77', callEvents.map(e => e.type))
-  const resultEvents = translator.translate({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-77', content: 'sent' }] } })
-  const settledView = resultEvents.filter(event => event.type === 'agent.message')
-  check('C9 the bare-success result settles unknown', settledView.length === 1 && settledView[0]!.message.state === 'unknown', resultEvents.map(e => e.type))
-
-  const laneTranslator = createClaudeTranslator({ cwd: '/fixture', userRows: 'lifecycle', debug: () => undefined })
-  const laneCall = laneTranslator.translate({ type: 'assistant', parent_tool_use_id: 'toolu_parent', message: { id: 'msg_l', content: [{ type: 'tool_use', id: 'call-88', name: 'SendMessage', input: { to: 'peer', message: 'child to child' } }] } })
-  check('C10 a subagent lane observes with the lane as sender', laneCall.some(event => event.type === 'agent.message' && event.message.messageId === 'call-88' && event.message.from === 'toolu_parent' && event.message.to === 'peer'), laneCall.map(e => e.type))
-}
-
 // ── Section D: the channel core over bare sessions ────────────────────────
 {
   const ctx = { on: () => () => undefined, get: () => undefined, logger: { warn: () => undefined } } as never
@@ -245,7 +199,7 @@ const flush = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
   const makeSession = (withCapability: boolean) => {
     const state = { submits: [] as { text: string; placement: string }[], listeners: new Set<(batch: readonly unknown[], meta: unknown) => void>() }
     const session = {
-      ref: { backendId: 'claude', sessionId: 'cs1' },
+      ref: { backendId: 'fixture', sessionId: 'cs1' },
       cwd: '/tmp',
       status: 'running' as const,
       capabilities: {
@@ -299,41 +253,6 @@ const flush = (): Promise<void> => new Promise(resolve => setImmediate(resolve))
   const empty = await message!.submit({ targetId: 'toolu_1', text: '  ', delivery: 'queue' })
   check('D8 empty text refuses without dispatching', empty.ok === false && empty.reason === 'failed' && med.state.submits.length === 2)
   void bareChannel
-}
-
-// ── Section E: the Claude session end to end over the fake SDK ────────────
-{
-  const { fakeClaudeSdk, claudeDeps, tick } = fakes
-  const fake = fakeClaudeSdk(() => ({ capabilities: ['msg_lifecycle_v1'] }), { stopTask: () => undefined })
-  const session = await openClaudeSession(claudeDeps(fake.sdk) as never)
-  const ctx = { on: () => () => undefined, get: () => undefined, logger: { warn: () => undefined } } as never
-  const channel = createChannel(ctx, session, { model: 'Claude Agent', provider: 'claude', cwd: '/fixture/project', activity: false, backendLabel: 'Claude Agent' })
-  const query = fake.queries[0]!
-  const message = channel.subagentControl.message
-  check('E0 the claude channel serves the parent-mediated capability', message !== undefined && message!.via === 'parent-mediated' && message!.steer === false)
-  check('E1 the channel activity fold starts empty', message!.messages().length === 0)
-
-  query.emit({ type: 'assistant', message: { id: 'msg_e1', model: 'claude', content: [{ type: 'tool_use', id: 'call-e1', name: 'SendMessage', input: { to: 'helper', message: 'please scan' } }] } })
-  await tick()
-  await tick()
-  let views = message!.messages()
-  check('E2 the live SendMessage call folds into channel activity', views.length === 1 && views[0]!.messageId === 'call-e1' && views[0]!.state === 'issued' && views[0]!.to === 'helper' && views[0]!.via === 'parent-mediated', views)
-
-  query.emit({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-e1', is_error: true, content: 'agent not found' }] } })
-  await tick()
-  await tick()
-  views = message!.messages()
-  check('E3 the errored result settles refused, same row', views.length === 1 && views[0]!.state === 'refused', views)
-
-  query.emit({ type: 'assistant', message: { id: 'msg_e2', model: 'claude', content: [{ type: 'tool_use', id: 'call-e2', name: 'SendMessage', input: { to: 'other', message: 'second' } }] } })
-  await tick()
-  query.emit({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'call-e2', content: 'ok' }] }, tool_use_result: { delivery: 'delivered' } })
-  await tick()
-  await tick()
-  views = message!.messages()
-  check('E4 a structured delivery fact marks delivered (only then)', views.length === 2 && views[1]!.state === 'delivered', views)
-  await session.dispose()
-  void channel
 }
 
 await flush()

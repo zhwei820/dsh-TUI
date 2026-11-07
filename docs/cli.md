@@ -76,7 +76,7 @@ bin/dsh-tui.js（只做惰性分发）
 
 global 启动器优先使用已更新 profile 中的 CLI，缺席才使用自己随包的 CLI；半安装缺模块时退出，不自动安装。普通 help/version/safe 仍不依赖 CLI。npm 包和安装器随包分发现成 ESM，无需 tsx 或 TUI 编译产物。standalone 也从解压运行时调用同一 CLI；自动化子进程需要系统 Node `^22.19 || >=24`（可用 `DSH_TUI_CLI_NODE` 指定），不把 pkg 自身当普通 node 递归启动。
 
-暂未实现：任意 TUI preset 会话接续、设置/凭据写操作、OAuth 非交互登录、MCP 重连、常驻后台 daemon、Claude/Codex 自动化 adapter、Claude 云端/Remote Control。已有 slash 命令不因此自动变成 Shell 子命令；这些不属于二期当前验收清单，仍由总目标后续讨论。
+暂未实现：任意 TUI preset 会话接续、设置/凭据写操作、OAuth 非交互登录、MCP 重连、常驻后台 daemon、Claude 云端/Remote Control。已有 slash 命令不因此自动变成 Shell 子命令；这些不属于二期当前验收清单，仍由总目标后续讨论。
 
 ## 程序调用示例
 

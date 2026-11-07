@@ -70,7 +70,7 @@ TUI bundle 继承已安装 DSH 官方组合的上报配置；上游未提供的�
 
 前两项是模型输入之外的请求元数据，不增加模型输入 token。两项都会发送到
 适配器配置的 `baseURL`，包括第三方网关。它们只随对应的 DeepSeek 请求发送，
-不能据此统计 Claude/Codex 后端的全部 TUI 使用。
+不能据此统计其他后端或路由下的全部 TUI 使用。
 
 反馈遥测支持上游环境变量：
 
@@ -97,12 +97,12 @@ TUI bundle 继承已安装 DSH 官方组合的上报配置；上游未提供的�
 ## TUI 配置
 
 `/settings` 的 `dsh-tui` 分区存放在 TUI 自己的 `~/.dsh-tui/settings.json`，所有内核
-（DSH、Claude、Codex）共用这一份。第一次启动时，若该文件不存在，会从当前 profile 的
+共用这一份。第一次启动时，若该文件不存在，会从当前 profile 的
 `cordis.patch.yml` 里 `dsh-tui` 行的 `config` 一次性导入可编辑字段（只读，不改 profile；
 `!!js` 表达式不导入），之后不再重复导入。旧版 host 存在 `~/.dsh/settings.yaml` 里的
 `dsh-tui` 分区同时导入：尚未被 DSH 迁走的文件优先于补丁行；DSH 已迁入补丁、改名为
 `settings.yaml.imported` 的，补丁行优先。导入后 profile 补丁里残留的这些字段只在 DSH
-内核下作为静态部署层生效（用户层未设置时兜底），建议从补丁里删掉，避免两个内核看到
+内核下作为静态部署层生效（用户层未设置时兜底），建议从补丁里删掉，避免不同内核看到
 不同的默认值。其他插件的分区仍由 DSH 的设置服务读写（写入当前 profile 的
 `cordis.patch.yml`；旧版是 `~/.dsh/settings.yaml`）。
 语言、布局等偏好实时更新；全屏和图片预览需 `/restart`。
@@ -135,10 +135,10 @@ TUI bundle 继承已安装 DSH 官方组合的上报配置；上游未提供的�
 | `cwd` | 启动目录所在的 git worktree 根（不在任何 worktree 内时为 `process.cwd()`；家目录的 dotfiles 仓不算） | TUI 会话侧工作区：agent meta、`@` 补全/提及展开、/resume 过滤、状态栏；恢复已有会话时以该会话持久化的 cwd 为准。注意 bash/fs-policy/sandbox 的根仍由组合层 cordis 配置决定（默认启动目录，归 dsh-base 管），与这里的会话侧 cwd 可能不同 |
 | `workspace` | 未设置 | 启动工作区目标；可用本地路径、`file://` URI 或插件提供的 URI，设置后优先于 `cwd` |
 | `effort` | 配置层通常为 `max` | 每个请求实际生效的推理等级（按运行时模型档位校验，不支持的偏好向下回落到可用档位，否则回到模型默认，并给出提示；兼作顶栏启动显示）。优先级：/settings 的 `effortDefault`（`auto` 时让位）> `/effort` 持久化选择（`~/.dsh-tui/effort.json`，上次实际运行的档位）> 本字段（部署默认值）> 模型默认 |
-| `effortDefault` | 未设置 | 默认推理强度（`/settings` 用户层）。DSH 显式值优先于持久化 `/effort`；`auto` 让位给持久化选择与 `effort`。Claude/Codex 通过自身控制接口和后端偏好应用修改；启动采用自动模式或恢复会话时保留后端偏好，在设置中主动选择自动会重置为模型默认。`/settings` 使用当前后端/模型的实际档位目录，包括自定义 ID；未支持的已存值仍显示并保留，加载中或失败时仅可选自动。明确修改作用于下一请求；恢复会话保留会话自己的强度 |
+| `effortDefault` | 未设置 | 默认推理强度（`/settings` 用户层）。DSH 显式值优先于持久化 `/effort`；`auto` 让位给持久化选择与 `effort`。非 DSH 后端通过自身控制接口和后端偏好应用修改；启动采用自动模式或恢复会话时保留后端偏好，在设置中主动选择自动会重置为模型默认。`/settings` 使用当前后端/模型的实际档位目录，包括自定义 ID；未支持的已存值仍显示并保留，加载中或失败时仅可选自动。明确修改作用于下一请求；恢复会话保留会话自己的强度 |
 | `whale` / `whaleIdle` | `true` / `true` | 标题鲸鱼与欢迎页鲸鱼闲置动画 |
 | `splashFont` | `daily` | 开屏大字字体：`daily` 按本地日期轮换（默认），其余取字体 id（`bold` / `square` / `bevel` / `wide` / `dot` / `stencil` / `classic` / `slab`）pin 住那一款；非法值回落 `daily`。也可经 `/settings` 修改 |
-| `whaleGirl` | `false` | 女仆娘立绘开关：DeepSeek 品牌下，宠物皮肤 deepy 或 whaleGirl 会占据开屏艺术槽；选 whale 并开启「女仆娘立绘」才会显示女仆娘。Claude 使用自己的图案，Codex 使用自己的真图或女仆娘字符画回退；这两个品牌的开屏图案不受宠物皮肤和女仆娘开关影响。这里「宠物皮肤」即 `companion.skin`；立绘生效时优先走终端图像协议（Kitty/Sixel）的真图，终端不支持则回落字符画版女仆娘。见下方的优先级小表 |
+| `whaleGirl` | `false` | 女仆娘立绘开关：DeepSeek 品牌下，宠物皮肤 deepy 或 whaleGirl 会占据开屏艺术槽；选 whale 并开启「女仆娘立绘」才会显示女仆娘。手动选择的 Claude 品牌外观使用自己的图案，Codex 品牌外观使用自己的真图或女仆娘字符画回退；这两个品牌的开屏图案不受宠物皮肤和女仆娘开关影响。这里「宠物皮肤」即 `companion.skin`；立绘生效时优先走终端图像协议（Kitty/Sixel）的真图，终端不支持则回落字符画版女仆娘。见下方的优先级小表 |
 | `minimal` | `false` | 极简界面（Minimal UI）：精简标题装饰与配色。**这是界面显示开关**，与下面 `preset` 里的内核「极简模式」预设完全是两件事（那个才决定模型能用哪些工具） |
 | `sidePanel.splitEnabled` | `true`（布尔） | 分栏总开关：开启时 `Ctrl+B` 与 `/panel` 在聊天右侧展开侧栏；关闭时两者都不再分栏，`/jobs` 等仍走整屏面板。立即生效 |
 | `sidePanel.open` | `false`（布尔） | 启动时侧栏是否已展开；默认关闭，升级后布局与原来一致。会话内的 `Ctrl+B` / `/panel toggle` 不写回这里。立即生效 |
@@ -158,7 +158,7 @@ TUI bundle 继承已安装 DSH 官方组合的上报配置；上游未提供的�
 | `terminalImages` | `true` | 允许在支持的终端预览图片；`false` 保留文字信息，跳过图片探测与预览解码。修改后重启生效 |
 | `preset` | 名册默认 `standard` | 新会话 Agent preset；优先级：`DSH_TUI_PRESET`（本次运行）> `/preset` 持久化选择 > 本字段（部署默认值）> 名册默认 |
 | `sessionId` | 未设置 | 要恢复的会话 ID，通常由 Windows `--resume` 启动器注入 |
-| `backend` | 未设置（`/kernel` 记住的选择，否则 `dsh`） | 会话后端：内置 `dsh`，或已装的后端（实验性的 `claude` / `codex`，以及插件后端；不区分大小写）。**未安装或未知的取值一律按 `dsh` 启动并告警**，不会崩。profile 行读取 `DSH_TUI_BACKEND`，`dsh-tui --backend <id>` 会设置它。profile 自己的补丁里若把它写成 `!!js` 表达式（只转发 `DSH_TUI_BACKEND` 的写法除外，例如随包行的 `process.env.DSH_TUI_BACKEND \|\| undefined`），本次启动改走 `dsh --profile`（只有 profile 的 Loader 能求值），`/kernel` 切换除外。见 [Claude 后端](claude-backend.md) |
+| `backend` | 未设置（`/kernel` 记住的选择，否则 `dsh`） | 会话后端：内置 `dsh`，或已装的插件后端（不区分大小写）。**未安装或未知的取值（包括已移除的旧内置后端 `claude` / `codex`）一律按 `dsh` 启动并告警**，不会崩。profile 行读取 `DSH_TUI_BACKEND`，`dsh-tui --backend <id>` 会设置它。profile 自己的补丁里若把它写成 `!!js` 表达式（只转发 `DSH_TUI_BACKEND` 的写法除外，例如随包行的 `process.env.DSH_TUI_BACKEND \|\| undefined`），本次启动改走 `dsh --profile`（只有 profile 的 Loader 能求值），`/kernel` 切换除外 |
 
 DeepSeek 品牌下，开启标题图形（`whale`）时，`companion.skin` 与「女仆娘立绘」（`whaleGirl`）按下表决定开屏艺术槽：
 
@@ -168,7 +168,7 @@ DeepSeek 品牌下，开启标题图形（`whale`）时，`companion.skin` 与�
 | `whaleGirl` | 鲸娘吉祥物（图像协议真图；无协议回落字母格） | **不生效** |
 | `whale` | 原路径：像素鲸鱼；打开女仆娘立绘后为立绘（真图优先，回落字符画） | **生效** |
 
-上表适用于「品牌外观」（`brand`）解析为 `deepseek` 时（包括 DSH 后端的 `auto`）。Claude 使用自己的真图或字符画；Codex 使用自己的真图，真图不可用或加载失败时回落女仆娘字符画。两者都不受 `companion.skin` 和 `whaleGirl` 影响；要使用表中的皮肤或女仆娘，先选 DeepSeek 品牌外观。关闭标题图形会隐藏所有品牌的图形。
+上表适用于「品牌外观」（`brand`）解析为 `deepseek` 时（包括 `auto`，它固定解析为 `deepseek`）。手动选择的 Claude 品牌外观使用自己的真图或字符画；Codex 品牌外观使用自己的真图，真图不可用或加载失败时回落女仆娘字符画。两者都不受 `companion.skin` 和 `whaleGirl` 影响；要使用表中的皮肤或女仆娘，先选 DeepSeek 品牌外观。关闭标题图形会隐藏所有品牌的图形。
 
 ### 优先级与强制关闭
 
@@ -365,12 +365,11 @@ Profile 模式不再使用旧的 `DSH_TUI_COMPACT_RATIO`、`DSH_TUI_COMPACT_RETA
 | `DSH_TUI_RESUME_BACKEND` | `DSH_TUI_RESUME_SESSION` 的来源后端，只在启动器**派生**恢复目标时（裸 `--resume` 读该后端的上次会话、安全模式重试按最后运行记录）设置；boot 若落在别的后端（未装的 id 回落 `dsh`、没给 `DSH_TUI_BACKEND` 时跟随记住的内核），该目标一律**明确报错并非零退出**——不跨后端恢复、不静默冷启动、不新建会话（安全模式重试是唯一例外，降级为告警 + 冷启动）。用户显式给出的 id 不带此标记、原样透传 |
 | `DSH_TUI_RESUME_RETRY` | 一次性标记：本次启动是安全模式的「重试正常启动」。重试的目标派生自最后运行记录，记录里的内核可能已经不在注册表里，所以带此标记的那次启动在恢复目标被撤销时降级为告警 + 冷启动，而不是报错退出。boot 读到即从 `process.env` 删除 |
 | `DSH_TUI_HELD_INPUTS` | `/restart` 交给替身进程的排队消息文件（`~/.dsh-tui/held-inputs-<pid>-<random>.json`），替身启动时把其中的文字和图片作为暂存消息放回、启动时从 `process.env` 移除，放回为暂存消息后删除文件（就绪前退出则文件保留）；重启卡住或启动失败时会出现在打印的恢复命令里（Windows 上是 PowerShell 形式 `$env:DSH_TUI_HELD_INPUTS='…'; …`），超过 7 天没人恢复的文件会在之后某次启动时清理 |
-| `DSH_TUI_BACKEND` | 会话后端（内置 `dsh` / `claude` / `codex`，或已装的插件后端），通常由 `dsh-tui --backend` 设置；未安装或写错的 id 按 `dsh` 启动并告警（若同时带了 `--resume` 请求则改为报错退出，见上） |
-| `DSH_TUI_HOST_ENTRY` | 设为 `0` 时两个内核都经 `dsh --profile` 启动（默认两个内核都从本包入口启动）。入口用不了已安装的 dsh（`PATH` 上的 `dsh` 不是 `@deepseek-ai/dsh`、启动脚本跟不进去、所需模块或导出缺失）时，DSH 启动自动回退到 `dsh --profile`，并在终端与界面里说明原因 |
+| `DSH_TUI_BACKEND` | 会话后端（内置 `dsh`，或已装的插件后端），通常由 `dsh-tui --backend` 设置；未安装或写错的 id（包括已移除的 `claude` / `codex`）按 `dsh` 启动并告警（若同时带了 `--resume` 请求则改为报错退出，见上） |
+| `DSH_TUI_HOST_ENTRY` | 设为 `0` 时经 `dsh --profile` 启动（默认从本包入口启动）。入口用不了已安装的 dsh（`PATH` 上的 `dsh` 不是 `@deepseek-ai/dsh`、启动脚本跟不进去、所需模块或导出缺失）时，DSH 启动自动回退到 `dsh --profile`，并在终端与界面里说明原因 |
 | `DSH_TUI_UPDATE_LAUNCHER` | 设为 `0` 时 `/update` 与 `dsh-tui update` 跳过全局启动器对齐（钉住启动器、或排查对齐失败时用）；默认开启 |
 | `DSH_TUI_UPDATE_ENGINE` | 设为 `0` 时 `/update` 与 `dsh-tui update` 跳过全局 dsh 引擎的自动安装与升级（钉住引擎时用）；若新 TUI 的 peer 范围不支持当前引擎，升级仍会被拒绝：当前引擎**低于**范围且安装可自动执行时附引擎升级命令（安装不可自动执行时给修复指引），**高于**范围时只提示等声明支持该引擎的 dsh-tui 发布（不降级、不打印安装命令） |
 | `DSH_TUI_DSH_PM` | `npm` 或 `pnpm`，覆盖 dsh 全局安装形态的判定（异常前缀、诊断时用）；无法识别的布局仍不会被猜着写入。pnpm 布局还要求能证明所属安装组只含 `dsh`，否则只给 `pnpm list -g --depth 0` 检查指引，不用单包命令替换整组 |
-| `DSH_TUI_CLAUDE_PERMISSION_MODE` | Claude 后端的起始权限模式（`default`/`acceptEdits`/`plan`/`dontAsk`/`bypassPermissions`），优先于 `/permission` 记住的选择 |
 | `DSH_TUI_WORKSPACE_TARGET` | 启动时解析的工作区路径或 URI，通常由 `dsh-tui <目标>` 设置 |
 | `DSH_TUI_SESSION_ROOT` | 覆盖 JSONL 会话根目录；profile 默认 `$DSH_HOME/sessions`，裸 `cordis.yml` 默认 `~/.dsh-tui/sessions` |
 | `DSH_PERMISSION_MODE` | 非 Windows 平台覆盖 sandbox policy，例如 `workspace-write` 或 `danger-full-access`；作为本次启动的初始权限面，优先于 `/permission` 记住的选择 |

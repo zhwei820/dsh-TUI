@@ -14,7 +14,7 @@
 
 ## Declaration fields
 
-- `id`：`^[a-z0-9][a-z0-9-]{0,31}$`（小写字母、数字与 `-`，最长 32 字符）。`dsh`、`claude`、`codex` 是宿主自己的 id（`BACKEND_RESERVED_IDS`，与注册表的 `BUILTIN_BACKEND_IDS` 双向比对）：贡献声明其中之一会在准入处被拒（`BACKEND_ID_RESERVED`）——`dsh` 的 session ref 序列化时不带前缀，插件戴这个 id 会和首方引用撞车；`claude` / `codex` 的行是宿主自己的词表。这是**词表**不是形状规则——宿主自己的 seed 合法地戴着它们，所以 `validateBackendSpec()` 放行，拒绝发生在准入处。
+- `id`：`^[a-z0-9][a-z0-9-]{0,31}$`（小写字母、数字与 `-`，最长 32 字符）。`dsh`、`claude`、`codex` 是宿主保留的 id（`BACKEND_RESERVED_IDS`，与注册表的 `RESERVED_BACKEND_IDS` 双向比对）：贡献声明其中之一会在准入处被拒（`BACKEND_ID_RESERVED`）——`dsh` 的 session ref 序列化时不带前缀，插件戴这个 id 会和首方引用撞车；`claude` / `codex` 是已移除的旧内建后端，旧版本写下的 `claude:<id>` 引用与 `~/.dsh-tui/backends/<id>/` 数据不能被插件继承，所以继续保留防冒用。这是**词表**不是形状规则——宿主自己的 seed 合法地戴着 `dsh`，所以 `validateBackendSpec()` 放行，拒绝发生在准入处。
 - `label`：`{ text }`，**只收字面量**。`label` 只允许 `text` 一个键，`{ kind: 'key' }` 作为未知字段被拒：宿主 i18n 键会让贡献借宿主的词说话。in-tree manifest 自己的 `{ kind: 'key' }` 标签由宿主在投影时展开成字面量，见下。
 - `shortLabel`：非空字符串，picker 行使用。
 - `product?`：可选的非空字符串，标识这个后端驱动的产品。
@@ -50,7 +50,7 @@ contract 的 `errors` 只发布**有产出者**的码，今天正好是上面两
 
 ## Install surface
 
-`install` 是 `{ executor, specifier, version }`，三个字段都必须是非空字符串，缺一个即 validation 失败。执行器是**宿主实现的表**（首版只有 `pnpm-profile-add`）：宿主不认识的执行器读作「无安装面」（`installable: false`，那一行退回检测自己的 hint），不是拒绝注册。`install` 缺省也是一等公民——用户自己装的二进制就是依赖（codex 形态），声明「装什么、哪个版本、交给宿主哪个执行器」这件事只有真的能装的后端才做。
+`install` 是 `{ executor, specifier, version }`，三个字段都必须是非空字符串，缺一个即 validation 失败。执行器是**宿主实现的表**（首版只有 `pnpm-profile-add`）：宿主不认识的执行器读作「无安装面」（`installable: false`，那一行退回检测自己的 hint），不是拒绝注册。`install` 缺省也是一等公民——用户自己装的二进制就是依赖（驱动系统 CLI 的形态），声明「装什么、哪个版本、交给宿主哪个执行器」这件事只有真的能装的后端才做。
 
 **D-2（2026-10-17）：暂不加第二个执行器。** 执行器只服务**后端自己的** SDK 安装——**不是**插件 bundle 的发行方式：bundle 走 `/plugin install` / `dsh plugin add`，那条路本来就收包名 / 路径 / git URL（生态里十多个收录包确实不在 npm 上，靠 tarball、git 或本地目录分发，但那是**插件管理器**的活，与本表无关）。而生态侧 42 条收录里第三方 `Backend` 声明为 **0**、也没有一条声明任何 `install` 配方——没有真消费者，也没有可观察的需求形状（目录 / Git spec / tarball URL 是三道不同的程序），此时冻形状等于给没人跑过的路定契约。将来出现**第一个真第三方 `Backend` bundle、且它需要宿主代装非 npm 来源的 SDK** 时再加取值：只增不删、不改坐标，加它不是 breaking（承诺 6）。
 
@@ -69,7 +69,7 @@ contract 的 `errors` 只发布**有产出者**的码，今天正好是上面两
 
 ## Lifecycle and failure
 
-`unloadExport` 只用于**模块级/进程级**资源池（codex 的 app-server hub 那种跨会话复用的池）；会话级资源归 `session.dispose()`，MUST NOT 塞进 `unloadExport`。
+`unloadExport` 只用于**模块级/进程级**资源池（按设置指纹跨会话复用的子进程/连接池那种）；会话级资源归 `session.dispose()`，MUST NOT 塞进 `unloadExport`。
 
 宿主只对**真的加载过**的条目记账并调用它的 `unloadExport`：「未加载即不关池」是宿主的不变量——没加载过的后端不会被 import，也不会被关池；第二次 unload 是 no-op。注册、加载、调用或 cleanup 失败必须响亮且**归属于具体的条目**（component、facet 与 contribution identity），MUST NOT 静默吞掉，也 MUST NOT 让别的贡献或基础 TUI 跟着倒。
 

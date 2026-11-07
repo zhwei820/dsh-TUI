@@ -5,8 +5,7 @@
  * install dir whose `node_modules` a backend's dynamic import resolves through.
  * The *what* — which package, at which pin — is the backend's own business and
  * lives in its manifest (`BackendManifest.install`); this file is the
- * parameterized *how*. It used to sit in `src/backends/claude/install.ts`, where
- * the only Claude-specific part was the specifier it passed.
+ * parameterized *how*.
  *
  * Everything the child prints is piped and captured, never inherited: an
  * inherit-stdio child may only run after the Ink frame is unmounted (the

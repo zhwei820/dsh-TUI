@@ -7,20 +7,20 @@
 dsh-TUI 从「DSH 的一个 Cordis 插件」变成「自己拥有入口与组装根的终端应用」：先挂界面与
 后端中立的 channel 核心，再把后端打开。**DSH 仍是首要适配目标与首方后端**——`native.dsh`
 与 DSH specialist 能力保持首方特权不变（第 7 节第 1 条）——但它不再是把 TUI 装进去的那层
-宿主：它像 claude / codex 一样作为后端之一按需在进程内加载。Claude 内核不组合 dsh-base；它仍
-组合一个只装本包行与第三方插件的轻量 profile，第三方插件扩展在两个内核下都保持可用（4.6）。
+宿主：它作为后端之一按需在进程内加载。非 DSH 内核（经第三方 bundle 装配的后端）不组合 dsh-base；
+它仍组合一个只装本包行与第三方插件的轻量 profile，第三方插件扩展在任何内核下都保持可用（4.6）。
 
 ## 1. 背景
 
 旧链路里界面要等整份 profile（约 94 行 dsh-base + 本包行）组合完、后端打开后才出现（约 2 秒），
-Claude 内核也要白等 dsh-base；`DSH_TUI_HOST_ENTRY=0` 仍可退回该链（4.7）。被否的两条路：
+非 DSH 内核也要白等 dsh-base；`DSH_TUI_HOST_ENTRY=0` 仍可退回该链（4.7）。被否的两条路：
 
 - **预载**（`--import` 先画一棵树再换上 live channel）：要逐 `ChannelUi` 端口手写启动态 channel
   镜像并交接。
 - **父进程 + IPC 交接 / worker 隔离**：启动屏必须是同一棵已挂载的树、零可见切换，跨进程桥接把
   每个 `ChannelUi` 端口都变成 IPC 协议，维护成本比手写镜像更高（预载方案中做过并回滚）。
 
-方案 B 的前提是多后端重构（#1312、#1313、#1322、#1323）之后：`src/agent/`、`src/backends/claude/`
+方案 B 的前提是多后端重构（#1312、#1313、#1322、#1323）之后：`src/agent/` 与后端目录
 不 import Cordis，channel 核心后端中立（DSH 专属部分由 `channel/extensions.ts` 按 `native.dsh`
 挂载），`tui*` 服务全由本包自己的行提供，`@deepseek-ai/dsh/profile-boot` 提供稳定的嵌入入口。
 
@@ -29,8 +29,8 @@ Claude 内核也要白等 dsh-base；`DSH_TUI_HOST_ENTRY=0` 仍可退回该链�
 目标：
 
 - 首帧不依赖任何后端：界面在进程启动后立即以**真实** channel 核心挂载。
-- Claude 内核启动时不加载 dsh-base（DSH 的核心行）；第三方 Cordis 插件现有的 `tui*` 扩展
-  能力在两个内核下都保持可用（4.6）。
+- 非 DSH 内核启动时不加载 dsh-base（DSH 的核心行）；第三方 Cordis 插件现有的 `tui*` 扩展
+  能力在任何内核下都保持可用（4.6）。
 - 启动期没有第二套 channel：「启动中」是一个尚未就绪的会话，就绪时走 channel 现有的接管路径。
 
 非目标：
@@ -53,7 +53,7 @@ bin/dsh-tui.js（启动器：对齐、安全模式、Windows 解析）
               └─ createCoreChannel(cordisChannelHost(ctx), pendingSession, …) ──► render(Chat)
                                                                                   ← 首帧
        内核判定（hostEntryRoute.entryKernel）：
-         ├─ claude / codex：首帧后组合轻量 profile（4.6）
+         ├─ 非 DSH（第三方后端）：首帧后组合轻量 profile（4.6）
          │     └─ 运行时自己打开后端（SDK、转录、CLI 握手）
          │          └─ channel.adoptStartup(session, history)                 可发送
          └─ dsh：设好 DSH_TUI_* 环境变量，把 dsh-tui profile 组合进**同一个根**
@@ -115,8 +115,7 @@ Loader 能求值（只转发 `DSH_TUI_BACKEND` 的写法与入口已排的环境
   `effort` / `modes` / `upstreamRetry` 由扩展在接管时从该行读取；首帧即呈现的显示项（`activity`、
   `activityFrames`、`contextBar`、`lang`）保持入口值。
 - **启动失败**：界面落一条提示行（原因 + `/new` 重试 · `/kernel` 切换 · `/quit` 退出），占位会话
-  保持绑定、`ready` 为 false。Claude 的 `open` 没有中止入口，进程在打开返回前退出时 CLI 子进程靠
-  stdin 关闭自行退出。后端模块本身加载失败（包损坏）时入口报错
+  保持绑定、`ready` 为 false。后端模块本身加载失败（包损坏）时入口报错
   退出；有 dsh CLI 时由启动器的安全模式接住（4.7）。
 
 ### 4.3 DSH 后端：进程内加载
@@ -151,14 +150,14 @@ DSH 的 Web 设置页改的是 Config，不再影响 TUI。`src/settings/definit
 继续是唯一定义来源。
 
 依据：`dsh-tui.*` 原本住在 profile 的 Config 行里、经 DSH 带版本围栏的 `settings.mutate` 写回；
-Claude 内核不组合 dsh-base 时**写**没有去处。被否的「继续住 Config」会让 Claude 内核下设置只读，
+非 DSH 内核不组合 dsh-base 时**写**没有去处。被否的「继续住 Config」会让非 DSH 内核下设置只读，
 或绕过版本围栏直接写 profile 文件。
 
 ### 4.6 插件生态桥接
 
 - **插件代码不需要改**：第三方插件从 `@deepseek-harness-tui/dsh-tui/extensions` 等子路径拿类型、
   `inject: [tuiPanels, …]` 拿服务；单根下注册表就是那个 Cordis 根的同名服务。
-- **轻量 profile**：Claude / Codex 内核也要一个能装插件的组合，否则第三方扩展消失。入口在首帧之后
+- **轻量 profile**：非 DSH 内核也要一个能装插件的组合，否则第三方扩展消失。入口在首帧之后
   用 `mountRootInclude` 把一份轻量组合挂到同一个根（裁剪表在 `lite-profile.ts`，组合在 `host-dsh.ts`）：
   裁掉 `dsh-base` 层，只由它提供服务的行按表禁用（依据是行的 `inject` 缺哪些服务）。`dsh-tui` 行
   **始终禁用**——入口自己替代它；清单里没有可裁的层时（`trimmed=false`）其余层整份组合。另建一根
@@ -194,7 +193,7 @@ Claude 内核不组合 dsh-base 时**写**没有去处。被否的「继续住 C
 - **DSH 加载的同步阻塞**：DSH 的模块加载与组合在进程内有约 1 秒的同步段，期间界面不刷新，只能
   「先画后冻」；不走进程隔离（第 1 节）。首帧侧的缓解（启动器注入 `NODE_COMPILE_CACHE`、首帧模块
   图瘦身）只作用于本包入口路径。
-- **Claude / Codex 内核不读 `dsh-tui` 行**：轻量 profile 禁用该行，会话在组合前就开始打开，所以行上
+- **非 DSH 内核不读 `dsh-tui` 行**：轻量 profile 禁用该行，会话在组合前就开始打开，所以行上
   的部署字段（`cwd`、`workspace`、`modes`、`upstreamRetry` 等）不生效；DSH 内核下首帧显示项同样
   取入口值（4.2）。
 - 内核在一次进程里只接管一次；运行中切换内核仍要重启（`/kernel`）。
@@ -208,7 +207,7 @@ Claude 内核不组合 dsh-base 时**写**没有去处。被否的「继续住 C
 | 宿主模块身份解析错误（加载了第二份 Cordis） | 插件服务注册到错误的根 | 只从宿主 realpath 解析；回归里断言单实例 |
 | 设置迁移出错 | 用户设置丢失或回到默认 | 迁移只读不删原值；失败时继续读旧层 |
 | 轻量组合判「有没有可裁的层」看的是 `lite-profile.ts` 里**写死的 bundle 名** | dsh-base 的行改经别的 bundle 名进清单时被判成无可裁，整份组合（`dsh-tui` 行仍禁用） | 版本线移动时复核 bundle 名 |
-| Claude / Codex 内核下第三方插件缺失或注册表归属与上游冲突 | 插件扩展退化 | 轻量 profile（4.6）；注册表归属待与上游插件契约（#1247）对齐 |
+| 非 DSH 内核下第三方插件缺失或注册表归属与上游冲突 | 插件扩展退化 | 轻量 profile（4.6）；注册表归属待与上游插件契约（#1247）对齐 |
 
 ## 7. 已定结论
 
@@ -221,8 +220,8 @@ Claude 内核不组合 dsh-base 时**写**没有去处。被否的「继续住 C
 
 ## 8. 未完成项
 
-- **验收**：Claude 内核已用隔离 profile + 测试插件（主题、面板、决策拦截）在真实终端验收；Codex 内核
-  走同一条组合路径但未验收。`/theme` 的交互路径（选主题到上屏）在轻量与 DSH 内核上都没有验收覆盖。
-- **成本**：轻量 profile 自身的组合成本要计入 Claude 内核的首帧对比基线。
+- **验收**：轻量组合路径曾在已移除的实验性 Claude 内核上用隔离 profile + 测试插件（主题、面板、
+  决策拦截）在真实终端验收；第三方后端走同一条组合路径，尚无独立验收。`/theme` 的交互路径（选主题到上屏）在轻量与 DSH 内核上都没有验收覆盖。
+- **成本**：轻量 profile 自身的组合成本要计入非 DSH 内核的首帧对比基线。
 - **上游插件契约**：本包的注册表归属、grants 与 `apiVersion` 要与上游 issue #1247 的插件契约对齐，
   不要先冻在「注册表住在 Cordis 树里」上。

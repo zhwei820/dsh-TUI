@@ -41,13 +41,13 @@ export const manifest: BackendManifest = {
 }
 
 /**
- * The same declaration with **no install recipe** — codex's shape ("the user's own
+ * The same declaration with **no install recipe** — a system-CLI shape ("the user's own
  * binary is the dependency"). Declaring it is how a backend says "there is nothing
  * for the host to add"; the picker then shows a hint instead of a button (§6 item
  * 12), and `installable` is false.
  *
- * It keeps `unloadExport` on purpose: codex's real combination is "no install recipe
- * **and** a process-level pool" (its manifest names `closeAllCodexHubs`), so the
+ * It keeps `unloadExport` on purpose: a system-CLI backend's real combination is
+ * "no install recipe **and** a process-level pool", so the
  * fixture has to carry both or that combination is never exercised — and "nothing to
  * install" must not be read as "nothing to close".
  */

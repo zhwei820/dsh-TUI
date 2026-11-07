@@ -1,19 +1,7 @@
-import type { BackendChannelsHost, BackendModesHost } from '../../adapter/ports/channel-ui.js'
+import type { BackendModesHost } from '../../adapter/ports/channel-ui.js'
 import type { BackendModeOption } from '../../adapter/ports/channel-view.js'
 import { t } from '../../i18n.js'
 import type { ChatOverlay } from '../chatOverlay.js'
-
-export function channelMapLines(snapshot: ReturnType<BackendChannelsHost['snapshot']>): string[] {
-  const active = snapshot.channels.find(option => option.id === snapshot.activeId)
-  if (active === undefined) return [t('channel-map-none')]
-  const lines = [t('channel-map-heading', { name: active.name })]
-  lines.push(active.models.length > 0 ? t('channel-map-models-heading') : t('channel-map-models-none'))
-  for (const entry of active.models) lines.push(t('channel-map-row', { from: entry.from, to: entry.to }))
-  lines.push(active.tiers.length > 0 ? t('channel-map-tiers-heading') : t('channel-map-tiers-none'))
-  for (const rule of active.tiers) lines.push(t('channel-map-row', { from: rule.tier, to: rule.to }))
-  lines.push(t('channel-map-file-hint'))
-  return lines
-}
 
 export function parseMcpCommand(rawInput: string):
   | { kind: 'status' }

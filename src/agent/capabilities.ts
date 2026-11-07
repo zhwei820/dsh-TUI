@@ -64,28 +64,6 @@ export interface ModeOption {
   readonly description?: string
 }
 
-/** Read-only mapping and connection details for a backend channel. */
-export interface ChannelProfileView {
-  readonly id: string
-  readonly name: string
-  /** Exact requested-id → actual model, in file order. */
-  readonly models: readonly { readonly from: string; readonly to: string }[]
-  /** Tier keyword → actual model, in file order (`default` = any-model rule). */
-  readonly tiers: readonly { readonly tier: string; readonly to: string }[]
-  /** The connection: endpoint, whether a token is stored, and the
-   *  channel-private env keys (never a token literal); absent on
-   *  mapping-only channels. `fingerprint` names the whole connection
-   *  (endpoint + token + env) without exposing any secret: equal
-   *  fingerprints are the same connection, so switching between them needs
-   *  no restart. */
-  readonly connection?: {
-    readonly baseUrl?: string
-    readonly hasToken: boolean
-    readonly envKeys: readonly string[]
-    readonly fingerprint: string
-  }
-}
-
 /**
  * The limits a backend takes images under (the composer's limit model:
  * the media types it accepts, per-image and per-message bytes, images per
@@ -218,44 +196,6 @@ export interface SessionCapabilities {
     cycle?(): readonly ModeOption[]
     current(): string
     set(id: string): Promise<void>
-  }
-  /**
-   * The backend's relay channel profiles (the Claude backend's channels.json):
-   * the /channel picker's roster, the active pick (whose mapping the model
-   * display resolves through), and the settings import. Synchronous: the
-   * store is a small best-effort file, like prefs.ts.
-   */
-  readonly channels?: {
-    list(): readonly ChannelProfileView[]
-    /** The active channel's id; undefined when none is active. */
-    activeId(): string | undefined
-    /** Switch the active channel (persists; a no-op for an unknown id). */
-    setActive(id: string): void
-    /** Import/refresh the channel profile implied by the CLI settings env;
-     *  undefined when the env holds nothing importable. The connection
-     *  (base URL + auth token) is imported too: the token moves into the
-     *  credential store and the profile keeps only its ref. */
-    importFromSettings(): ChannelProfileView | undefined
-    /** Upsert one profile with connection fields (the /channel wizard): a
-     *  given token goes to the credential seam, the profile keeps only its
-     *  ref. */
-    save(input: {
-      readonly id: string
-      readonly name: string
-      /** Undefined = keep the stored field; '' clears it. */
-      readonly baseUrl?: string
-      /** Undefined = keep the stored token; '' removes it (and its ref). */
-      readonly token?: string
-      /** Undefined = keep; a provided record replaces the whole map. */
-      readonly env?: Readonly<Record<string, string>>
-      readonly models?: Readonly<Record<string, string>>
-      readonly tiers?: Readonly<Record<string, string>>
-    }): ChannelProfileView
-    /** Drop one profile (and its stored token); false for an unknown id. */
-    remove(id: string): boolean
-    /** What the CLI settings env holds for an import (the wizard's offer): the
-     *  base URL and the absorbable tier rules, without creating anything. */
-    peekSettingsImport(): { readonly baseUrl?: string; readonly tiers: Readonly<Record<string, string>> } | undefined
   }
   readonly compact?: { run(): Promise<void> }
   /** Run the backend's own project-instructions initialization. */

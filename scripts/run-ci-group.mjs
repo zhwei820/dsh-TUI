@@ -573,7 +573,7 @@ const GROUPS = {
     ["verify-backend-contribution", ['node', '--import', 'tsx/esm', 'scripts/verify-backend-contribution.ts']],
 // 后端注册表回归（P0 Stage A + B-1）：注册闸门（重复 id / 保留 id / 非 inTree 用宿主
 // 词表 / native 越权 / 安装配方缺字段）、**安装面按声明不按 id**（非 inTree 条目声明
-// 宿主执行器即可装、装的是它自己的 specifier；codex 式"没有安装面"是缺省配方；
+// 宿主执行器即可装、装的是它自己的 specifier；"没有安装面"是缺省配方；
 // 宿主不认识的执行器＝不抛错、不可装、无向导）、五条来源的两段式解析
 // （语法合法但未装的 id → dsh + 告警，绝不打死 boot）、D4 的池记账（未加载即
 // 不 import、不关池；已加载的按序关、幂等、单条失败不阻断也不抛）、生成索引的
@@ -582,7 +582,7 @@ const GROUPS = {
     ["verify-backend-registry", ['node', '--import', 'tsx/esm', 'scripts/verify-backend-registry.ts']],
 // 包入口配置面（review R1）：`Config.backend` 必须继续接受普通字符串——它经
 // `src/index.ts` 的 `export *` 就在已发布入口上，声明成 branded 的 id 会让消费者
-// 原先合法的 `{ backend: 'codex' }` 变成 TS2322。用仓库自己的 tsc 编译一份真实
+// 原先合法的 `{ backend: 'my-backend' }` 变成 TS2322。用仓库自己的 tsc 编译一份真实
 // 消费者写法（`lib/types/index.d.ts`，故须在 build 之后跑），判据是零诊断：
 // 品牌回归报 TS2322，松成 any 则 `@ts-expect-error` 变 unused directive。
     ["verify-public-config-types", ['node', 'scripts/verify-public-config-types.mjs']],
@@ -806,7 +806,7 @@ const GROUPS = {
 // 解码吞吐（真 channel + 会话事件）：多步回合剔除工具间隙、字符估算按脚本
 // 类加权（CJK ~1.4 字符/token）、真实 usage 结算覆盖估算、回放不复活 tps。
     ["verify-tps", ['node', 'scripts/verify-tps.mjs']],
-// 迟到 usage 回填（投影层直测）：codex 在回复结算后才计量——真实 output
+// 迟到 usage 回填（投影层直测）：后端在回复结算后才计量——真实 output
 // tokens 原地替换该步的字符估算（live 读数与回合末采样都读真值）；同步
 // 第二次不再叠加、异步他步不污染。
     ["verify-tps-backfill", ['node', '--import', 'tsx/esm', 'scripts/verify-tps-backfill.ts']],
@@ -1028,52 +1028,14 @@ const GROUPS = {
 // 只有 token 数没有正文的思考行：流式「思考中 · ~N tokens」、落定「已思考 · ~N tokens」，
 // 正文到达后显示正文；中英双语。
     ["verify-thinking-tokens", ['node', '--import', 'tsx/esm', 'scripts/verify-thinking-tokens.tsx']],
-// Claude 翻译器：scripts/fixtures/claude/ 下脱敏的 SDK 消息序列经翻译器 + 共享投影器
-// 与 golden 逐字段比较；另有定点断言（terminal_reason 优先、诊断行不上屏、中断回显、
-// 前台 Bash 不建任务卡、attempt.start 先于 delta）。
-    ["verify-claude-translate", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-translate.ts']],
-// Claude 会话生命周期（假 Query，无网络）：开关 50 次无残留、取消与 30s 强制收敛
-// （注入时钟）、取消回执三种结果、权限回调必定落定、进程死亡、握手失败。
-// 真实 CLI 的 verify-claude-live / verify-claude-headless 只在 DSH_TUI_CLAUDE_LIVE=1
-// 时跑，不进 CI（花真实用量、需要凭证）。
-    ["verify-claude-session-lifecycle", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-session-lifecycle.ts']],
-// Claude 会话恢复回放：fixtures/claude/transcripts/ 的脱敏转录经 replay + 共享投影器与
-// golden 比较；turn 切分、行锚点、排队提问、中断/通知/压缩摘要、工具结果配对、子代理
-// 不进主转录、回放与 live 一致、resume 后编号接续。
-    ["verify-claude-replay", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-replay.ts']],
-// Claude 会话目录（假 SDK + 临时 HOME）：列表/标题/预览/改名/删除、resume 先读转录、
-// /fork 与 rewind 三种模式、/resume 历史先于 live 绘制、claude:<id> 挂载账本（真实对端
-// 进程占用即拒绝）、当前或被占用的会话不可删。
-    ["verify-claude-catalog", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-catalog.ts']],
-// Claude 子代理（假 SDK + 录制 fixture）：Agent 调用建卡并按任务 id 补全、子代理文本/
-// 工具进卡片与面板而不进主转录、进度与终态、stopTask、后台子代理、resume 回放，
-// 以及 /agents、仪表盘与详情的无头渲染。
-    ["verify-claude-subagents", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-subagents.ts']],
 // agent-team 通道层：代理消息模型（via/state 词表、单调合并，普通 user 文本不当 relay）、
-// DSH 子代理 relay 与直发回执及错误映射、Claude SendMessage 观察、父会话中转提交。
+// DSH 子代理 relay 与直发回执及错误映射、父会话中转提交。
     ["verify-agent-team-channel", ['node', '--import', 'tsx/esm', 'scripts/verify-agent-team-channel.ts']],
 // DSH 子会话转录页：只经公开的 sessionPersistence.open + handle.read 读子会话日志；
 // 活跃子会话先 flush（失败时退回已落盘部分 + live 尾巴）、seeded 子会话从继承切点起页、
 // 没有 eventCount 时有界探尾（5 万事件日志的预算）、代际栅栏、每路 close 恰好一次；
 // 没有 persistence 时不出历史页签。
     ["verify-dsh-child-transcript", ['node', '--import', 'tsx/esm', 'scripts/verify-dsh-child-transcript.ts']],
-// Claude 后台任务（假 SDK + 录制 fixture）：后台 Bash 的任务卡、输出文件、状态栏 chip
-// 与一次性落定提示；前台 Bash 只有工具卡；kill → stopTask，用户中断不停任务；输出尾部
-// 只读 CLI 目录内普通文件的最后 64 KiB、每秒至多一次。
-    ["verify-claude-tasks", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-tasks.ts']],
-// Claude Task* 工具（TaskCreate/Update/List/Get，取代 TodoWrite）→ 待办面板：合成帧经
-// 翻译器 + 共享投影器；角色映射、状态机、每次变化发完整 todo.write 快照、TodoWrite
-// 原路径不变、allowedTools 追加并预批准。
-    ["verify-claude-task-tools", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-task-tools.ts']],
-// Claude 会话工作行（与 DSH 同一 ActivityView 形状）：首回合前不发布、回合内思考/叙述/
-// 工具/权限等待、回合结束 done、下回合恢复；detail 提取与截断；迟到订阅者立即拿到最新值。
-    ["verify-claude-activity", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-activity.ts']],
-// Claude SDK 启动警告过滤：子进程里 import 编译产物，放行的警告保持 node 原样输出，
-// 被过滤的不出现（需先构建 lib/）。
-    ["verify-claude-sdk-warnings", ['node', 'scripts/verify-claude-sdk-warnings.mjs']],
-// Claude「加载更早消息」：按会话 id 定位原生 JSONL（坏行容忍、超限拒读）、多次压缩的
-// 转录按 parentUuid 链分段回溯、分片不重叠、用尽后幂等；channel 前插更早的行并恢复折叠行。
-    ["verify-claude-load-older", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-load-older.ts']],
 // 共享权限面板 store：FIFO、选项与呈现规则、四种结局（含拒绝理由）、撤回/会话释放/
 // 拆除时不重复作答；channel 把会话的 permission/question 事件接到 store 与问卷。
     ["verify-permission-store", ['node', '--import', 'tsx/esm', 'scripts/verify-permission-store.ts']],
@@ -1081,118 +1043,21 @@ const GROUPS = {
 // 不学习（含进行中的外部 /permission 切换）、picker/手打路径的目标登记、
 // catalog-changed 后的名册刷新，以及 traceable 服务下快照缓存必须命中。
     ["verify-permission-prefs", ['node', 'scripts/verify-permission-prefs.mjs']],
-// Claude 权限桥（假 Query）：允许一次/始终允许/拒绝、选项生成与抑制、死锁规则、
-// AskUserQuestion、ExitPlanMode、permission_denied 记录；同一 requestId 重投后任一处
-// 取消都只结算一次。
-    ["verify-claude-permissions", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-permissions.ts']],
 // 审批面板选项（中英）：DSH 无选项时与原来一致、后端三选项、defaultToNo 时拒绝在首位
 // 且无单键批准、allow-always 抑制、输入拒绝理由。
     ["verify-approval-panel-options", ['node', '--import', 'tsx/esm', 'scripts/verify-approval-panel-options.tsx']],
 // 面板溢出（#1664）：真 Chat + 100x40 备用屏下，300 行命令与 40 行问题折叠并标注剩余行数，
 // 决策问题、选项行与键位提示始终上屏；24 行终端缩预览而不是挤掉尾部。
     ["verify-panel-overflow", ['node', '--import', 'tsx/esm', 'scripts/verify-panel-overflow.tsx']],
-// Claude 凭证：dsh-auth 登录 > 环境变量 > 本机 claude login 的优先级与 env 清洗、到期前
-// 刷新（文件锁内落盘）、认证失败刷新后同会话 resume 一次、再失败引导 /login；事件、
-// 提示和日志里都不出现令牌。
-    ["verify-claude-auth", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-auth.ts']],
-// Claude 内核检测：未装凭证也返回 loginInSession（选择器不拦切换，行带「启动后用
-// /login 登录」注记）；环境变量凭据照常判 ok，检测本身不变。
-    ["verify-claude-detect", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-detect.ts']],
-// Claude 控制面（假 Query）：model/effort/mode/compact/commands/mcp/context/account 的委托
-// 与持久化、channel 侧模式标签与命令合并、/mcp、/context、订阅用量、/login 及其无头渲染；
-// effort 在 open/resume、init 帧与 message_start 变化时都按后端声明的档位收敛。
-    ["verify-claude-controls", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-controls.tsx']],
-// Claude 权限模式名册（/permission）：bypassPermissions 在名册里且能切进去
-// （allowDangerouslySkipPermissions 始终随 query options 下发，起始 mode 仍按
-// env/settings/default 解析）；每行有不同于 label 的 description；settings 里的
-// defaultMode=bypassPermissions 仍降级为 default，并提示可在 /permission 选择。
-    ["verify-claude-mode-roster", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-mode-roster.ts']],
-// 渠道档案（/channel）：channels.json 读写容错与原子提交、模型名解析优先级（渠道
-// models > tiers > model-names.json > settings env > 原始 id；未激活渠道时不变）、
-// settings 导入、/channel 只在支持的后端出现、切换后刷新模型显示。
-    ["verify-claude-channels", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-channels.ts']],
-// Claude 可执行文件解析：PATH 候选要能真正 spawn（--version 探针）才采用；Windows 上
-// npm 的无扩展名转发脚本跟随到真实二进制，都不可用才用 SDK 自带的；挂死的候选被
-// 超时切断；显式环境变量原样优先。
-    ["verify-claude-executable", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-executable.ts']],
-// Claude MCP elicitation 与对话框（假 Query）：表单字段 → 问卷（各类型校验、无效项重问、
-// 可选项跳过）→ accept/decline/cancel；URL 模式、elicitation_complete、不支持的模式、
-// refusal_fallback_prompt；中断与释放收回面板；经 channel 与真实 QuestionStore 端到端。
-    ["verify-claude-dialogs", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-dialogs.ts']],
-// 后端中立的 MCP elicitation ↔ 问卷纯函数（src/backends/shared/elicitation.ts）：schema → 字段、
-// 逐类型校验、表单流程（拒绝 / 只重问无效项 / 类型化 content / 标签在首问时固定）、
-// URL 模式问题与提示文案、中英文都能解析；模块不 import 厂商包。
-    ["verify-elicitation", ['node', '--import', 'tsx/esm', 'scripts/verify-elicitation.ts']],
-// Claude 提示：fixtures/claude/notices 下逐类断言（api_retry、模型拒绝回退、
-// informational、notification 优先级、限流只报一次、permission_denied、auth_status、
-// memory_recall、conversation_reset、elicitation_complete），投影器按 key 去重。
-    ["verify-claude-notices", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-notices.ts']],
-// Claude 对话重置（假 Query）：conversation_reset 清空行、名册、用量、费用与标题并加
-// 提示行，之后按新会话 id 工作（ref、/fork、重连、resume 标记）；TUI 的 /clear 仍只清视图。
-    ["verify-claude-reset", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-reset.ts']],
-// Claude 会话命令（假 Query）：/btw、/recap 的一次性 fork 侧问、/rename、/color
-// （按会话保存，上限 200）、/mcp reconnect|toggle 与补全；DSH 命令集不变。
-    ["verify-claude-session-commands", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-session-commands.ts']],
-// Claude 图片输入（假 Query）：核心内存暂存（不经 DSH attachments，有限额与淘汰）、
-// 文本后发 base64 块、类型/大小/数量限额、回放成惰性 facade；无该能力的会话不变。
-    ["verify-claude-images", ['node', '--import', 'tsx/esm', 'scripts/verify-claude-images.ts']],
-// Codex 录制 fixture 的脱敏检查：凭据形状（sk-/Bearer/JWT）、白名单外的 URL 主机
-// （中转站主机名必须已换成 relay.invalid）、临时目录与 home 路径、机器标识。
-    ["verify-codex-fixtures", ['node', 'scripts/lib/codex-fixture-sanitize.mjs', '--check']],
-// 假 Codex app-server 自测（不起进程、不走网络）：脚本化应答/错误/延后应答、服务端
-// 请求等待客户端作答、崩溃、录制回放的 id 映射与 thread 改写、两路回放交错各自保序。
-    ["verify-codex-fake-app-server", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-fake-app-server.ts']],
-// Codex JSON-RPC：请求/应答配对、超时（注入时钟）、服务端请求挂起/应答/未知方法、
-// close 拒绝挂起、行分帧与超长行；真子进程传输的 EOF 退出与超时终止。
-    ["verify-codex-rpc", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-rpc.ts']],
-    ["verify-codex-proxy-transport", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-proxy-transport.ts']],
-// CodexHub（假 app-server）：握手参数与 optOut、按 thread 路由（子 thread 归父）、
-// 按连接代数的服务端请求与重投、引用计数与空闲关闭、崩溃重启与 connectionRestored、
-// 重启预算耗尽即永久失败、指纹多实例。
-    ["verify-codex-hub", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-hub.ts']],
-// Codex 翻译器：每个 wire fixture 的每个 thread → 事件 → 共享投影器，与 goldens
-// 逐字段比较；§7.3 attempt 算法边界、§7.4 item 表、§7.5 通知表与 §8 卡片形状。
-    ["verify-codex-translate", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-translate.ts']],
-// Codex TPS：隐藏推理从 output item 开始计时，无 delta/延迟用量仍可结算，
-// 多步回合剔除工具间隙，首 token 等待与历史回放不进入生成速率。
-    ["verify-codex-tps", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-tps.ts']],
-// Codex live≡replay（§10.4）：同一 thread 的 live 通知与录制历史投影逐行一致，
-// 只允许登记的差异（中断卡、用量行、live 通知行），且断言差异确实出现。
-    ["verify-codex-live-replay", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-live-replay.ts']],
-// Codex 输入（假 app-server）：四种 placement、客户端队列 FIFO、steer 降级、now、
-// clientId 认领、turn/start 失败回滚、取消回执（V6）、强制收敛、断线与恢复、resume 续号。
-    ["verify-codex-input", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-input.ts']],
-// Codex 审批与问卷（假 app-server）：按 availableDecisions 生成选项与官方文案、
-// 每种决策映射、拒绝+理由（cancel+followup）、外部结算、重投只显示一次、
-// 问卷与取消（V7）、dispose 撤回、录制的 s1b 审批端到端。
-    ["verify-codex-approvals", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-approvals.ts']],
-// Codex 非阻塞问卷：异步消息继续运行，答案按原生信封插话/排队，真源回放与生命周期清理。
-    ["verify-codex-async-questions", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-async-questions.ts']],
-// 真实 Chat 挂在 Codex 会话（假 app-server）上：审批面板文案、命令卡输出、
-// 流式回复、diff 卡、问卷、Esc 中断；80/40 列 × inline/fullscreen。
-    ["verify-codex-chat", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-chat.tsx']],
     ["verify-usage-event", ['node', '--import', 'tsx/esm', 'scripts/verify-usage-event.ts']],
     ["verify-init-capability", ['node', '--import', 'tsx/esm', 'scripts/verify-init-capability.ts']],
     ["verify-agent-event-invariants", ['node', '--import', 'tsx/esm', 'scripts/verify-agent-event-invariants.ts']],
-    ["verify-codex-auth", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-auth.ts']],
-    ["verify-codex-daemon-resume", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-daemon-resume.ts']],
-    ["verify-codex-live-guard", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-live-guard.ts']],
-    ["verify-codex-controls", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-controls.ts']],
-    ["verify-codex-plans", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-plans.ts']],
-    ["verify-codex-advanced", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-advanced.ts']],
-    ["verify-codex-catalog-history", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-catalog-history.ts']],
     ["verify-backend-list-snapshot", ['node', '--import', 'tsx/esm', 'scripts/verify-backend-list-snapshot.ts']],
-    ["verify-codex-lifecycle", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-lifecycle.ts']],
-    ["verify-codex-side-query", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-side-query.ts']],
-    ["verify-codex-reconnect", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-reconnect.ts']],
-    ["verify-codex-images", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-images.ts']],
-    ["verify-codex-subagents", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-subagents.ts']],
-    ["verify-codex-child-output", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-child-output.ts']],
     ["verify-backend-logout", ['node', '--import', 'tsx/esm', 'scripts/verify-backend-logout.ts']],
-    ["verify-codex-chat-controls", ['node', '--import', 'tsx/esm', 'scripts/verify-codex-chat-controls.tsx']],
     ["verify-session-archive", ['node', '--import', 'tsx/esm', 'scripts/verify-session-archive.tsx']],
-// 内核目录（N7）：三内核、未探测/未安装置灰（登录态不再置灰）、loginInSession 可选并提示、
-// 只有可一键安装的内核给安装向导、版本产品前缀、--backend 接受 codex。
+// 内核目录（N7）：DSH 为唯一内置、插件形态的两行（可装 / 无安装面）未探测/未安装置灰
+// （登录态不再置灰）、loginInSession 可选并提示、只有可一键安装的内核给安装向导、
+// 版本产品前缀、已移除的 claude/codex 不再是可选值。
     ["verify-kernel-catalog", ['node', '--import', 'tsx/esm', 'scripts/verify-kernel-catalog.ts']],
 // IDE 选区通道回归（PR #562）：纯函数（env 直连/lock 扫描与 workspace
 // 匹配过滤/hello_ack 解析/selection_changed 校验）、无 IDE 静默降级、
@@ -1376,7 +1241,7 @@ const GROUPS = {
 // 往返不变、无 history 时回退 tail 并注明范围、queue/steer 与失败保草稿、降级路径、
 // 28/40 列不溢出、Detail Messages 页与 Dashboard 摘要行。
     ["verify-agent-view-ui", ['node', '--import', 'tsx/esm', 'scripts/verify-agent-view-ui.tsx']],
-// agent-team 工作台：父/兄弟关系纯函数、replay 的 parentAgentId、Agent View 右侧工作台与
+// agent-team 工作台：父/兄弟关系纯函数、投影折叠的 parentAgentId、Agent View 右侧工作台与
 // 兄弟切换不串消息、Dashboard 的 children/peers 分区与跨会话降级。
     ["verify-agent-workbench", ['node', '--import', 'tsx/esm', 'scripts/verify-agent-workbench.tsx']],
 // 子进程 stderr 接管回归（issue #17）：inherit 的 MCP 子进程 stderr
@@ -1474,15 +1339,6 @@ const GROUPS = {
 // 全新渲染——不留旧帧、表头不出现两次。shrink-frame 家族（#38/#39/#19/
 // #10）里步长最大的一档，不经 Chat，直接对渲染器。
     ["repro-collapse-shrink", ['node', '--import', 'tsx/esm', 'scripts/repro-collapse-shrink.tsx']],
-// /provider 向导回归：catalog/custom 两分支的 profile 形状、凭据回滚
-// （覆盖时恢复旧 key 而非误删）、env shadow 跳过、rc.6 兼容守卫、
-// hideCustomInput 逐题标记；模型列表编辑的双通道发现（内置目录 + 无
-// provider 字段的端点实拉）合并、线上新增标记、目录外 id 容量写入、
-// 实拉失败降级与匿名探测请求形状。
-    ["verify-provider-wizard", ['node', 'scripts/verify-provider-wizard.mjs']],
-// /provider 的 Tab 模型能力编辑：真实 Chat 下的键盘隔离、草稿/取消、
-// 窄 inline/fullscreen 布局与上游能力解析；普通问卷 Tab 行为不变。
-    ["verify-provider-model-editor", ['node', '--import', 'tsx/esm', 'scripts/verify-provider-model-editor.tsx']],
 // /login 凭据状态回归（issue #213）：只通过 credentials.describe()
 // 展示 configured/source/writable，managed key 不得误报或泄露值。
     ["verify-login-credentials", ['node', '--import', 'tsx/esm', 'scripts/verify-login-credentials.tsx']],

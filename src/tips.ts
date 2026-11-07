@@ -397,12 +397,6 @@ export const TIPS: readonly Tip[] = [
     en: '/init creates AGENTS.md project rules',
   },
   {
-    id: 'cmd-provider',
-    group: 'commands',
-    zh: '/provider 交互式管理模型提供方：添加、编辑、删除',
-    en: '/provider adds, edits or deletes model providers interactively',
-  },
-  {
     id: 'cmd-login',
     group: 'commands',
     zh: '/login 查看凭证状态；/logout 登出',

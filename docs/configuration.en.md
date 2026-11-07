@@ -59,9 +59,7 @@ The user profile patch can also select both providers:
 
 The TUI uses DSH's tools, authentication, cancellation and persisted results;
 it does not make an additional model request. Older hosts and compositions
-without the API plugin omit these new settings. The official `deepseek-official`
-and `deepseek-account` routes show a `1017` marker for `DeepSeek-V4.1-Flash` in
-the model list, retaining the original route IDs.
+without the API plugin omit these new settings.
 
 ## Official request metadata and feedback reporting
 
@@ -79,7 +77,7 @@ to override them:
 The first two fields are request metadata outside model input and add no model
 input tokens. Both go to the adapter's configured `baseURL`, including third-party
 gateways. They accompany the corresponding DeepSeek requests and do not measure
-all TUI usage through the Claude/Codex backends.
+all TUI usage through other backends or routes.
 
 Feedback telemetry supports the upstream environment variables:
 
@@ -108,7 +106,7 @@ defaults does not remove existing user patches.
 ## TUI configuration
 
 The `dsh-tui` section of `/settings` lives in the TUI's own
-`~/.dsh-tui/settings.json`, shared by every kernel (DSH, Claude, Codex). When that file
+`~/.dsh-tui/settings.json`, shared by every kernel. When that file
 does not exist yet, the first launch imports the editable fields of the `dsh-tui`
 row's `config` from the active profile's `cordis.patch.yml` once (read only; the
 profile is not changed and `!!js` expressions are not imported), and never again.
@@ -117,7 +115,7 @@ a file DSH has not moved yet wins over the patch row; one DSH already moved into
 patch (renamed `settings.yaml.imported`) sits beneath it.
 After the import, those fields left in the profile patch only act as a static
 deployment layer under the DSH kernel (a fallback while the user layer is unset);
-remove them from the patch so both kernels see the same defaults. Other plugins'
+remove them from the patch so every kernel sees the same defaults. Other plugins'
 sections still go through DSH's settings service (written to the active profile's
 `cordis.patch.yml`; older hosts use `~/.dsh/settings.yaml`).
 Language and layout preferences update live; fullscreen and image previews
@@ -152,10 +150,10 @@ A complete common override looks like this:
 | `cwd` | git worktree root containing the launch directory (`process.cwd()` when outside any worktree; a dotfiles repo at `$HOME` does not count) | TUI-side session workspace: agent meta, `@` completion/mention expansion, /resume filtering, statusline; resuming an existing session adopts that session's persisted cwd. Note the bash/fs-policy/sandbox roots are still owned by the composition layer's cordis config (default: the launch directory, governed by dsh-base) and may differ from this session-side cwd |
 | `workspace` | unset | Startup workspace target: a local path, `file://` URL, or plugin-provided URI; takes precedence over `cwd` |
 | `effort` | normally `max` in the bundle | Reasoning effort applied to every request (validated against the runtime model's levels; unsupported preferences fall back to a lower offered tier or the model default, with a notice), also shown in the header at startup. Precedence: /settings `effortDefault` (`auto` defers) > the persisted `/effort` choice (`~/.dsh-tui/effort.json`, the level the last session ran on) > this field (deployment default) > the model default |
-| `effortDefault` | unset | Default reasoning effort (`/settings` user layer). On DSH, an explicit value outranks persisted `/effort`; `auto` defers to that choice and `effort`. Claude/Codex apply changes through their own controls and backend preferences; Auto at startup and resumed sessions retain those preferences, and explicitly choosing Auto resets the model default. `/settings` offers the current backend/model's actual effort catalog, including custom IDs. An unsupported saved value remains readable and stored; during loading/failure only Auto is selectable. Explicit changes reach the next request; resuming a session preserves its own effort |
+| `effortDefault` | unset | Default reasoning effort (`/settings` user layer). On DSH, an explicit value outranks persisted `/effort`; `auto` defers to that choice and `effort`. Non-DSH backends apply changes through their own controls and backend preferences; Auto at startup and resumed sessions retain those preferences, and explicitly choosing Auto resets the model default. `/settings` offers the current backend/model's actual effort catalog, including custom IDs. An unsupported saved value remains readable and stored; during loading/failure only Auto is selectable. Explicit changes reach the next request; resuming a session preserves its own effort |
 | `whale` / `whaleIdle` | `true` / `true` | Header whale and welcome-page idle animation |
 | `splashFont` | `daily` | Big-text face on the header splash: `daily` rotates by local date (the default), any other value is a face id (`bold` / `square` / `bevel` / `wide` / `dot` / `stencil` / `classic` / `slab`) pinning that one; an unknown value falls back to `daily`. Also editable through `/settings` |
-| `whaleGirl` | `false` | Maid-portrait toggle: For the DeepSeek brand, Companion skins deepy and whaleGirl take the splash art slot; choose whale and enable Maid portrait to show the maid. Claude uses its own artwork; Codex uses its own raster portrait or the maid character-art fallback. Both brands ignore these settings for splash artwork. "Companion skin" is `companion.skin`; when the toggle does apply, the portrait renders the real raster through the terminal image protocols (Kitty/Sixel) and falls back to the character-art maid without them. See the precedence table below |
+| `whaleGirl` | `false` | Maid-portrait toggle: For the DeepSeek brand, Companion skins deepy and whaleGirl take the splash art slot; choose whale and enable Maid portrait to show the maid. A manually chosen Claude brand look uses its own artwork; the Codex brand look uses its own raster portrait or the maid character-art fallback. Both brands ignore these settings for splash artwork. "Companion skin" is `companion.skin`; when the toggle does apply, the portrait renders the real raster through the terminal image protocols (Kitty/Sixel) and falls back to the character-art maid without them. See the precedence table below |
 | `minimal` | `false` | Minimal UI (极简界面): reduce header decoration and colors. **A display switch only** — a different thing from the kernel's `minimal` agent preset under `preset` below (that one decides which tools the model can use) |
 | `sidePanel.splitEnabled` | `true` (boolean) | Master switch of the split layout: on, `Ctrl+B` and `/panel` open the side column next to the chat; off, neither splits and `/jobs` & co. keep their full-screen panels. Applies immediately |
 | `sidePanel.open` | `false` (boolean) | Whether a session opens with the sidebar already expanded; off by default, so the upgrade leaves the layout as it was. An in-session `Ctrl+B` / `/panel toggle` is not written back here. Applies immediately |
@@ -175,7 +173,7 @@ A complete common override looks like this:
 | `terminalImages` | `true` | Allow previews in supported terminals; `false` keeps text metadata and skips image probing and preview decoding. Restart to apply changes |
 | `preset` | roster default `standard` | Agent preset for new sessions; precedence: `DSH_TUI_PRESET` (this run) > the persisted `/preset` choice > this field (deployment default) > the roster default |
 | `sessionId` | unset | Session to resume, normally injected by the Windows `--resume` launcher |
-| `backend` | unset (the backend `/kernel` remembers, else `dsh`) | Session backend: the built-in `dsh`, or an installed backend (the experimental `claude` / `codex`, plus plugin backends; case-insensitive). **An unknown or uninstalled value starts on `dsh` with a warning**, never a crash. The profile row reads `DSH_TUI_BACKEND`, which `dsh-tui --backend <id>` sets. When the profile's own patch writes it as a `!!js` expression (other than one that only forwards `DSH_TUI_BACKEND`, such as the bundled row's `process.env.DSH_TUI_BACKEND \|\| undefined`), the launch goes through `dsh --profile` (only the profile's Loader evaluates it), except for a `/kernel` switch. See [Claude backend](claude-backend.en.md) |
+| `backend` | unset (the backend `/kernel` remembers, else `dsh`) | Session backend: the built-in `dsh`, or an installed plugin backend (case-insensitive). **An unknown or uninstalled value (including the removed former built-ins `claude` / `codex`) starts on `dsh` with a warning**, never a crash. The profile row reads `DSH_TUI_BACKEND`, which `dsh-tui --backend <id>` sets. When the profile's own patch writes it as a `!!js` expression (other than one that only forwards `DSH_TUI_BACKEND`, such as the bundled row's `process.env.DSH_TUI_BACKEND \|\| undefined`), the launch goes through `dsh --profile` (only the profile's Loader evaluates it), except for a `/kernel` switch |
 
 For the DeepSeek brand, when header art (`whale`) is enabled, `companion.skin` and the Maid-portrait toggle (`whaleGirl`) choose the splash art with this precedence:
 
@@ -185,7 +183,7 @@ For the DeepSeek brand, when header art (`whale`) is enabled, `companion.skin` a
 | `whaleGirl` | Whale-girl mascot (real image through the image protocol; letter-grid fallback without it) | **No effect** |
 | `whale` | Original path: the pixel whale; the maid portrait once the Maid-portrait toggle is on (real image preferred, character-art fallback) | **Applies** |
 
-The table applies when Brand look (`brand`) resolves to `deepseek` (including `auto` on the DSH backend). Claude uses its own raster or character artwork. Codex uses its own raster portrait, falling back to the maid character art when raster images are unavailable or fail to load. Neither brand uses `companion.skin` or `whaleGirl`; choose the DeepSeek brand look to use the skins or maid portrait above. Turning header art off hides the art for every brand.
+The table applies when Brand look (`brand`) resolves to `deepseek` (including `auto`, which always resolves to `deepseek`). A manually chosen Claude brand look uses its own raster or character artwork. The Codex brand look uses its own raster portrait, falling back to the maid character art when raster images are unavailable or fail to load. Neither brand uses `companion.skin` or `whaleGirl`; choose the DeepSeek brand look to use the skins or maid portrait above. Turning header art off hides the art for every brand.
 
 ### Precedence and force-off
 
@@ -414,12 +412,11 @@ for the complete field reference.
 | `DSH_TUI_RESUME_BACKEND` | The backend `DSH_TUI_RESUME_SESSION` was read from; set only when the launcher **derived** the target (a bare `--resume` reading that backend's last session, or the safe-mode retry following the last-run record). When the boot lands on another backend — an uninstalled id falling back to `dsh`, or the remembered kernel when `DSH_TUI_BACKEND` is absent — that target **refuses with a non-zero exit**: never carried across, never a silent cold start, never a new session (the safe-mode retry is the one exception, degrading to a warning plus a cold start). An id the user passed explicitly carries no mark and is handed over as it is |
 | `DSH_TUI_RESUME_RETRY` | One-shot marker: this boot is safe mode's "retry normal startup". A retry derives its target from the last-run record, whose backend may no longer be registered, so a launch carrying this marker degrades a revoked resume target to a warning plus a cold start instead of failing. The boot deletes it from `process.env` as soon as it reads it |
 | `DSH_TUI_HELD_INPUTS` | The queued-message file a `/restart` hands its replacement (`~/.dsh-tui/held-inputs-<pid>-<random>.json`); the replacement removes the variable from `process.env` at boot and deletes the file once the texts and their images are back as held messages (a replacement that exits before that leaves it). It appears in the printed resume command when a restart stalls or fails to start (on Windows in the PowerShell form `$env:DSH_TUI_HELD_INPUTS='…'; …`); a file nobody resumed within 7 days is removed at a later launch |
-| `DSH_TUI_BACKEND` | Session backend (built-in `dsh` / `claude` / `codex`, or an installed plugin backend), normally set by `dsh-tui --backend`; an uninstalled or misspelled id starts on `dsh` with a warning (with a resume request in play it refuses instead, see above) |
-| `DSH_TUI_HOST_ENTRY` | Set to `0` to start both kernels through `dsh --profile` (by default both start from the package's own entry). When the entry cannot use the installed dsh (the `dsh` on `PATH` is not `@deepseek-ai/dsh`, its launcher script cannot be followed, or a module or export it needs is missing), a DSH launch falls back to `dsh --profile` by itself and says why in the terminal and on screen |
+| `DSH_TUI_BACKEND` | Session backend (built-in `dsh`, or an installed plugin backend), normally set by `dsh-tui --backend`; an uninstalled or misspelled id (including the removed `claude` / `codex`) starts on `dsh` with a warning (with a resume request in play it refuses instead, see above) |
+| `DSH_TUI_HOST_ENTRY` | Set to `0` to start through `dsh --profile` (by default the launch uses the package's own entry). When the entry cannot use the installed dsh (the `dsh` on `PATH` is not `@deepseek-ai/dsh`, its launcher script cannot be followed, or a module or export it needs is missing), a DSH launch falls back to `dsh --profile` by itself and says why in the terminal and on screen |
 | `DSH_TUI_UPDATE_LAUNCHER` | Set to `0` to skip global-launcher alignment in `/update` and `dsh-tui update` (pinned launchers, or when diagnosing an alignment failure); enabled by default |
 | `DSH_TUI_UPDATE_ENGINE` | Set to `0` to skip the automatic global dsh engine install/upgrade in `/update` and `dsh-tui update` (pinned engines). A TUI upgrade whose peer range does not support the current engine is still refused: a below-range engine with a proven install gets the upgrade-first command (an unavailable install gets repair guidance instead), while an above-range engine waits for a dsh-tui release that declares it (no downgrade, no install command) |
 | `DSH_TUI_DSH_PM` | `npm` or `pnpm`, overriding how the global dsh install is classified (abnormal prefixes, diagnosis). A layout that is not recognized is still never written to by guesswork. A pnpm layout must also prove that its install group contains only `dsh`; otherwise it gets `pnpm list -g --depth 0` inspection guidance instead of a one-package command that would replace the whole group |
-| `DSH_TUI_CLAUDE_PERMISSION_MODE` | Start permission mode of the Claude backend (`default`/`acceptEdits`/`plan`/`dontAsk`/`bypassPermissions`); wins over the mode `/permission` remembered |
 | `DSH_TUI_WORKSPACE_TARGET` | Workspace path or URI resolved at startup, normally set by `dsh-tui <target>` |
 | `DSH_TUI_SESSION_ROOT` | Override the JSONL session root; profile default `$DSH_HOME/sessions`, bare `cordis.yml` default `~/.dsh-tui/sessions` |
 | `DSH_PERMISSION_MODE` | Override the non-Windows sandbox policy, such as `workspace-write` or `danger-full-access`; the initial permission plane of this launch, outranking the remembered `/permission` choice |
@@ -443,90 +440,32 @@ Two directories are involved and neither substitutes for the other:
 `DSH_TUI_RENDER_LOG` may capture visible prompts, tool arguments, and output.
 Do not attach it to a public issue without reviewing and redacting it.
 
-## `/provider`: manage model providers at runtime
+## DeepSeek models only
 
-`/provider` opens an interactive wizard to add, edit, or delete model
-providers without a restart.
-
-- Sources: built-in catalog routes or custom API endpoints.
-- Only providers written by the **user settings layer** can be edited or
-  deleted; ones inherited from the composition base cannot be removed.
-- Keys are written to `~/.dsh/.credentials.yaml` (mode 0600) and render as
-  `••••••`.
-- Only non-environment keys are written to the store; a key shared with
-  another provider is kept on delete.
-- Editing the model list re-fetches the candidates: a built-in catalog route
-  starts from the installed catalog snapshot and, whenever the route stores a
-  baseURL (or the add flow just collected one), also probes
-  `GET {baseURL}/models` live with the stored key and merges the listings —
-  ids only the endpoint advertises are tagged as new and carry their
-  disclosed capacities once enabled; already-enabled models are pre-checked
-  and only an explicit un-check removes one. A catalog route without a
-  baseURL shows the snapshot only, with the origin noted in the question
-  detail. Catalog routes with no single known protocol or custom request
-  headers also explain the limitation and stay on the snapshot, rather than
-  saving endpoint-only models into an unverifiable profile.
-
-Where it writes:
-
-| Artifact | Location |
-| --- | --- |
-| Provider profile | `llm-pi-ai.providers.<route>` in the active profile config on 0.1.7, or `~/.dsh/settings.yaml` on older hosts; the route registers on write and unregisters on delete |
-| API key | `~/.dsh/.credentials.yaml` (mode 0600), referenced as `<ROUTE>_API_KEY` |
-
-### Built-in subscription OAuth
-
-The standard profile's `dsh-tui-auth` row loads this package's `./oauth`
-entry; it **no longer depends on a separate `dsh-auth` plugin package**.
-The `/provider` add branch signs in to ChatGPT/Codex (`openai-codex`), Claude
-(`anthropic`), or Grok (`xai`) subscriptions. When the installed host's pi-ai
-catalog ships the corresponding flows, it also offers OpenAI direct ChatGPT sign-in
-(`openai`, using the OpenAI API rather than the legacy Codex backend) and Meta
-Muse (`meta`). The primary validated DSH `0.2.2-rc.1` development fixture resolves pi-ai
-`1.2.0`, which includes Meta Muse and OpenAI direct sign-in.
-`/auth status`, `/auth login [provider]`, and `/auth logout <provider>` use
-that credential store for these pi-ai routes. Browser authorization tries to open the page
-automatically and offers the authorization link and manual callback URL/code
-input on one question;
-device-code flows show a copyable code while polling. A host without an
-interactive question surface refuses sign-in explicitly.
-
-The `dsh-tui-auth` row accepts `providers` (default: all supported flows present
-in the installed pi-ai catalog; an explicit non-empty subset must exist in
-that catalog), `credentialsFile` (custom file path), and
-`modelOverrides.<provider>.<model>` (optional `contextWindow` and `maxTokens`).
-A profile override replaces the whole `config` block, so retain every field
-you need. The flow implementation comes from the host's `dsh-llm-pi-ai` / pi-ai
-installation. Subscription authentication uses its subscription backend; it
-is not a general-purpose API key.
-
-The default credential file remains `$DSH_HOME/dsh-auth/credentials.json`
-(`~/.dsh/dsh-auth/credentials.json` when `DSH_HOME` is unset), with
-`DSH_AUTH_CREDENTIALS` as an override. Existing sign-ins need no migration or
-re-login. The `ctx.dshAuth` service name and `dsh-auth` log prefix remain for
-compatibility; they do not imply a separate installed package. The file
-contains long-lived refresh tokens; directory/file modes are best-effort
-0700/0600. OpenAI direct login lazily creates a stable UUID in a sibling
-`device-id` file (0600); pi-ai uses it as the installation's agent-host ID.
-Status surfaces show only sign-in and expiry metadata. Models appear in the
-picker after sign-in. If another `llm-pi-ai` profile already owns the same
-provider route, the OAuth route refuses duplicate registration.
+dsh-TUI targets DeepSeek models only: the official `deepseek-official`
+(`DEEPSEEK_API_KEY`) and `deepseek-account` (DeepSeek account authorization)
+routes. The former `/provider` wizard (adding, editing and deleting third-party
+model providers, model capability editing) and the built-in third-party
+subscription OAuth (ChatGPT/Codex, Claude, Grok and other pi-ai routes) have
+been removed. The `dsh-tui-auth` row no longer accepts `providers`,
+`credentialsFile` or `modelOverrides`: a profile override that still sets them
+fails clearly at startup; delete those keys. Subscription credentials an older
+release saved in `$DSH_HOME/dsh-auth/credentials.json` are no longer read and
+can be deleted.
 
 ### DeepSeek account authorization
 
 DSH `0.2.0-rc.1+` separately provides the Host-owned `deepseekAccount` service
-and `deepseek-account` model route. The standard profile includes it in the
-same `/provider` account sign-in branch and the `/auth status` and `/login`
-lists. You can also run `/auth login deepseek-account` directly, then select
+and `deepseek-account` model route. The standard profile's `dsh-tui-auth` row
+loads this package's `./oauth` entry, which adds it to the guide's first-step
+account sign-in and the `/auth status` and `/login` lists. You can also run `/auth login deepseek-account` directly, then select
 a `deepseek-account` model via `/model`. This is a **different route** from
 `deepseek-official`, which still needs `DEEPSEEK_API_KEY`. The command
 `/auth logout deepseek-account` delegates sign-out to the Host: it removes the Host's local
 grant, while the Host handles remote revocation in the background. The TUI
-does not implement PKCE, read the account token, or put the grant in the
-`dsh-auth/credentials.json` file above. DeepSeek account grants have no pi-ai
-token expiry/refresh timestamp, so status surfaces show only signed in/out.
-`dsh-tui-auth.config.providers` and `modelOverrides` still control pi-ai
-routes only; do not put `deepseek-account` in them.
+does not implement PKCE, read the account token, or store the grant itself.
+DeepSeek account grants have no token expiry/refresh timestamp, so status
+surfaces show only signed in/out.
 
 The browser callback uses the Host `webServer` service. A TUI-only profile's
 `dsh-tui-webserver` row listens on `127.0.0.1` with an OS-assigned port; a
@@ -554,8 +493,7 @@ port and forward that same port (for example,
 In a mixed Web profile, override the official `webserver` row. A stale global
 patch cannot apply a fixed-port override to a row it lacks, so SSH users must
 also update the global TUI package before forwarding a fixed port. Missing or
-unstartable callback listeners fail sign-in clearly without affecting the
-other pi-ai OAuth routes.
+unstartable callback listeners fail sign-in clearly.
 
 ## Composition constraints
 

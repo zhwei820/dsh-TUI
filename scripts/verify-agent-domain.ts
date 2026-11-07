@@ -13,7 +13,7 @@
  *  3. The DSH translator only emits the event types it declares
  *     (`dshEmits`), over every DSH fixture (live and replay).
  *  4. Optional vocabulary no shipped translator emits (`tool.output`) is
- *     declared unused by both translators and folded by the projector.
+ *     declared unused by the DSH translator and folded by the projector.
  *
  * Plain fs + regex for (2): no TypeScript program, like verify:boundary.
  *
@@ -24,7 +24,6 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import type { AgentEvent } from '../src/agent/events.js'
 import { DEFAULT_BACKEND_ID, formatSessionRef, parseSessionRef, sameSessionRef, type AgentSessionRef } from '../src/agent/refs.js'
-import { claudeEmits } from '../src/backends/claude/translate/events.js'
 import { createDshTranslator, dshEmits } from '../src/dsh-adapter/backend/translate.js'
 import { FIXTURE_DIR, buildFixtures } from './fixtures/dsh/generate.js'
 
@@ -37,11 +36,11 @@ const check = (label: string, ok: boolean, detail?: string): void => {
 }
 
 // ── 1. session references ───────────────────────────────────────────────
-const known = ['dsh', 'claude', 'acp', 'acp:gemini']
+const known = ['dsh', 'probe', 'acp', 'acp:gemini']
 const refs: AgentSessionRef[] = [
   { backendId: 'dsh', sessionId: 'sess-01' },
-  { backendId: 'dsh', sessionId: 'claude:not-a-prefix-for-dsh' },
-  { backendId: 'claude', sessionId: '6f1c2b8e-0000-4000-8000-000000000001' },
+  { backendId: 'dsh', sessionId: 'probe:not-a-prefix-for-dsh' },
+  { backendId: 'probe', sessionId: '6f1c2b8e-0000-4000-8000-000000000001' },
   { backendId: 'acp', sessionId: 'plain' },
   { backendId: 'acp:gemini', sessionId: 'g-1' },
   { backendId: 'acp:gemini', sessionId: 'with:colons:inside' },
@@ -50,16 +49,16 @@ for (const ref of refs) {
   const text = formatSessionRef(ref)
   const parsed = parseSessionRef(text, known)
   // A DSH id that happens to look prefixed is the one documented ambiguity:
-  // DSH refs serialize bare, so `claude:…` reads back as a Claude ref.
+  // DSH refs serialize bare, so `probe:…` reads back as a probe ref.
   if (ref.backendId === DEFAULT_BACKEND_ID && text.includes(':')) {
-    check(`bare DSH text "${text}" parses by known prefix`, parsed.backendId === 'claude')
+    check(`bare DSH text "${text}" parses by known prefix`, parsed.backendId === 'probe')
     continue
   }
   check(`ref ${ref.backendId}:${ref.sessionId} round-trips`, sameSessionRef(parsed, ref), JSON.stringify(parsed))
 }
 check('longest known prefix wins (acp:gemini over acp)', parseSessionRef('acp:gemini:x', known).backendId === 'acp:gemini')
-check('an unknown prefix is a bare DSH id', sameSessionRef(parseSessionRef('codex:abc', known), { backendId: 'dsh', sessionId: 'codex:abc' }))
-check('a prefix with an empty session id is a bare DSH id', parseSessionRef('claude:', known).backendId === 'dsh')
+check('an unknown prefix is a bare DSH id', sameSessionRef(parseSessionRef('other:abc', known), { backendId: 'dsh', sessionId: 'other:abc' }))
+check('a prefix with an empty session id is a bare DSH id', parseSessionRef('probe:', known).backendId === 'dsh')
 check('an explicit dsh: prefix is not stripped', parseSessionRef('dsh:abc', known).sessionId === 'dsh:abc')
 
 // ── 2. exhaustiveness in source ─────────────────────────────────────────
@@ -72,12 +71,11 @@ const translators = ['dsh-adapter/backend/translate.ts']
 const backendsDir = join(SRC, 'backends')
 if (existsSync(backendsDir)) {
   for (const entry of readdirSync(backendsDir)) {
-    // A backend's decision table: translate/events.ts (claude, codex), else
+    // A backend's decision table: translate/events.ts, else
     // its single-file translate.ts.
     if (existsSync(join(backendsDir, entry, 'translate', 'events.ts'))) translators.push(`backends/${entry}/translate/events.ts`)
     else if (existsSync(join(backendsDir, entry, 'translate.ts'))) translators.push(`backends/${entry}/translate.ts`)
   }
-  check('every backend with a translator is checked (claude, codex)', ['claude', 'codex'].every(id => translators.includes(`backends/${id}/translate/events.ts`)))
 }
 for (const path of translators) {
   const source = read(path)
@@ -107,12 +105,11 @@ check('DSH fixtures emit only declared event types', undeclared.length === 0, un
 
 // ── 4. optional events no shipped translator emits ──────────────────────
 // `tool.output` (live tool output, N4) is optional vocabulary: the shared
-// projector folds it, but neither the DSH nor the Claude translator emits
-// it (their output arrives with the settled result), so DSH/Claude
-// transcripts cannot change through it.
+// projector folds it, but the DSH translator does not emit it (its output
+// arrives with the settled result), so DSH transcripts cannot change through
+// it.
 for (const type of ['tool.output', 'usage', 'context.usage'] as const) {
   check(`${type}: optional and unused by the DSH translator`, !dshEmits(type) && !emitted.has(type))
-  check(`${type}: optional and unused by the Claude translator`, !claudeEmits(type))
 }
 check('the projector folds tool.output (a case of its own)', /case 'tool\.output':\s*applyToolOutput\(event\)/u.test(projection))
 
