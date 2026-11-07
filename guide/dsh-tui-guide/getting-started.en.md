@@ -446,7 +446,9 @@ installs this checkout into the local dsh — it compiles, packs, then runs
 `dsh plugin --profile dsh-tui add <tarball>` into the `dsh-tui` profile under `DSH_HOME`
 (default `~/.dsh`); start it with `dsh --profile dsh-tui`. `make install-launcher` also
 installs the `dsh-tui` / `dst` launcher globally from the same tarball, and `make uninstall`
-removes the plugin from the profile. `dsh` must already be installed.
+removes the plugin from the profile. When `dsh` is missing, `make install` first runs
+`make install-dsh`, which installs `@deepseek-ai/dsh` globally at the validated version from
+`src/dsh-adapter/contract.ts` (`npm install -g @deepseek-ai/dsh@<version>`).
 
 The repository has a single submodule, and it is required to install:
 

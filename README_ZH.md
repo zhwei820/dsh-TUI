@@ -426,7 +426,7 @@ pnpm smoke
 
 `lib/types/` 是被忽略的生成物。`pnpm build` 从干净输出目录重编译，并跑构建门禁。**不支持 Git URL 安装**。源码 manifest 把 `@dsh-std/*` 保留为 workspace 依赖，`vendor/dsh-std` 是子模块，pnpm ≥11 还默认拒绝 git 托管的 `prepare` 脚本。请安装 registry 包：`dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui`。渲染、问卷或工具卡改动还需对应的回归脚本。
 
-源码检出可用根目录 `Makefile` 跑常用命令（`make help`）；`make install` 编译、打包当前检出并装进本机 dsh 的 `dsh-tui` profile（见[安装与快速开始](docs/getting-started.md#从源码开发)）。
+源码检出可用根目录 `Makefile` 跑常用命令（`make help`）；`make install` 在缺 dsh 时先按验证线版本安装它，再编译、打包当前检出并装进本机 dsh 的 `dsh-tui` profile（见[安装与快速开始](docs/getting-started.md#从源码开发)）。
 
 ## 插件生态
 

@@ -376,7 +376,9 @@ pnpm smoke
 `make ci GROUP=<组名>`，以及把当前检出装进本机 dsh 的 `make install`——编译、打包，再执行
 `dsh plugin --profile dsh-tui add <tarball>`，装到 `DSH_HOME`（默认 `~/.dsh`）下的
 `dsh-tui` profile，之后用 `dsh --profile dsh-tui` 启动；`make install-launcher` 另从同一
-tarball 全局安装 `dsh-tui` / `dst` 启动器，`make uninstall` 从 profile 移除。需要先安装 `dsh`。
+tarball 全局安装 `dsh-tui` / `dst` 启动器，`make uninstall` 从 profile 移除。本机没有 `dsh` 时，`make install` 会先执行
+`make install-dsh`，按 `src/dsh-adapter/contract.ts` 的验证线版本全局安装
+`@deepseek-ai/dsh`（`npm install -g @deepseek-ai/dsh@<版本>`）。
 
 本仓库只有一个子模块，且安装必需：
 

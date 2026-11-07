@@ -501,8 +501,8 @@ scripts by default. Install the registry package instead:
 questionnaire, or tool-card changes also need the matching regression scripts.
 
 From a source checkout, the root `Makefile` wraps the common commands (`make help`);
-`make install` builds and packs the checkout and installs it into the local dsh's
-`dsh-tui` profile (see [getting started](docs/getting-started.en.md#develop-from-source)).
+`make install` installs a missing dsh at the validated version, then builds and packs
+the checkout and installs it into the local dsh's `dsh-tui` profile (see [getting started](docs/getting-started.en.md#develop-from-source)).
 
 ## Plugin Ecosystem
 
