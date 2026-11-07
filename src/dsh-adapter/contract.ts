@@ -112,7 +112,6 @@ export const UPSTREAM_BLESSED_PACKAGES = [
   '@deepseek-ai/dsh-deepseek-account',
   '@deepseek-ai/dsh-host-webserver',
   '@deepseek-ai/dsh-llm',
-  '@deepseek-ai/dsh-llm-pi-ai',
   '@deepseek-ai/dsh-persona',
   '@deepseek-ai/dsh-scope',
   '@deepseek-ai/dsh-session',

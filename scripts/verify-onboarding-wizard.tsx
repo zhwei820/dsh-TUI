@@ -597,7 +597,7 @@ const oauthRow = (provider: string) => ({
   check('J1a 有接缝时第一步画出三个动作行（登录 / 重新检查 / 跳过），没有加 key 行',
     s.screen().includes('❯ 登录 DeepSeek 账号')
     && s.screen().includes('重新检查') && s.screen().includes('跳过这一步')
-    && !s.screen().includes('添加模型提供方') && !s.screen().includes('API key'),
+    && !s.screen().includes('添加模型提供方'),
     s.screen())
   check('J1b 登录行带掩码状态（未登录账号数）',
     s.screen().includes('已登录 0 / 1'), s.screen())
@@ -1024,83 +1024,39 @@ const oauthRow = (provider: string) => ({
 }
 
 {
-  // J13：「添加模型提供方」跑的是 /provider 向导——启用哪些模型（模型多选）、切到
-  // 其中哪一个还是保持当前（provider-q-switch），向导自己已经问过。回到引导只报结果：
-  // 再跑 auto / 接入层，会推翻用户在向导里的选择，并把同一批模型再问一遍。
-  const trio = [
-    { provider: 'mock', id: 'a', name: 'Alpha' },
-    { provider: 'mock', id: 'b', name: 'Beta' },
-    { provider: 'mock', id: 'c', name: 'Gamma' },
-  ]
-  const cases = [
-    { name: '一个新模型 + 保持当前模型', added: [{ provider: 'mock', id: 'solo', name: 'Solo' }], switched: false },
-    { name: '三个新模型 + 保持当前模型', added: trio, switched: false },
-    { name: '三个新模型 + 向导里切到 Beta', added: trio, switched: true },
-  ]
-  for (const item of cases) {
-    const ev: Ev[] = []
-    const catalog: { list: readonly { provider: string; id: string; name: string }[] } = {
-      list: [{ provider: 'deepseek', id: 'deepseek-chat', name: 'deepseek-chat' }],
-    }
-    // 只给加 key 的接缝（没有登录行），动作行 0 就是「添加模型提供方」。
-    const channel = makeChannel({
-      listModels: async () => catalog.list,
-      providerSetup: () => ({}),
-    })
-    const s = await openWizard(ev, {
-      step: 0,
-      channel,
-      // 向导写好 profile：目录多出这批模型；「切过去」时由向导自己调 switchModel，
-      // live 路由随之变（桩 channel 的 switchModel 只记账，这里手动跟上）。
-      addProvider: async () => {
-        catalog.list = [...catalog.list, ...item.added]
-        if (item.switched) {
-          const picked = item.added[1]!
-          await channel.switchModel(picked.provider, picked.id)
-          channel.provider = picked.provider
-          channel.model = picked.id
-        }
-        return 'added'
-      },
-    })
-    await settled(() => s.screen().includes('❯ 添加模型提供方'))
-    s.send('\r')
-    const wizardSwitches = item.switched ? 1 : 0
-    const expectedDefault = item.switched ? item.added[1]!.name : 'deepseek-chat'
-    check(`J13a ${item.name}：引导只报结果，默认是向导定下的那个（${expectedDefault}）`,
-      await settled(() => s.screen().includes(`已接入 mock 的 ${item.added.length} 个模型；默认模型：${expectedDefault}`)),
-      s.screen())
-    check(`J13b ${item.name}：引导自己不调 switchModel（只有向导的 ${wizardSwitches} 次）`,
-      channel.calls.filter(call => call.startsWith('switchModel:')).length === wizardSwitches,
-      JSON.stringify(channel.calls))
-    check(`J13c ${item.name}：不进选默认层（启用与切换已在向导里问过）`,
-      !s.screen().includes('保持当前模型'), s.screen())
-    s.close()
-  }
-}
-
-{
   // J14：引导整屏盖住了通知条，而流程的失败原因只走 notify——结算时把开跑之后
   // 最新的那一条并进引导自己的提示行；开跑前就在的旧通知不算这一单的原因。
-  const channel = makeChannel({ providerSetup: () => ({}) })
+  const channel = makeChannel({
+    describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
+    oauthProviderStatuses: async () => [oauthRow('deepseek-account')],
+    oauthSetup: () => ({}),
+  })
   const s = await openWizard([], {
     step: 0,
     channel,
-    addProvider: async () => {
-      notifyOn(channel, '写入 provider 配置失败：settings-rejected')
+    signIn: async () => {
+      notifyOn(channel, '账号登录失败 · DeepSeek sign-in failed (network)')
       return 'failed'
     },
   })
-  await settled(() => s.screen().includes('❯ 添加模型提供方'))
+  await settled(() => s.screen().includes('❯ 登录 DeepSeek 账号'))
+  s.send('\r')
+  await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
   check('J14a 失败时引导显示流程自己的原因',
-    await settled(() => s.screen().includes('这次配置没有完成：写入 provider 配置失败：settings-rejected')),
+    await settled(() => s.screen().includes('这次配置没有完成：账号登录失败 · DeepSeek sign-in failed (network)')),
     s.screen())
   s.close()
-  const stale = makeChannel({ providerSetup: () => ({}) })
+  const stale = makeChannel({
+    describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
+    oauthProviderStatuses: async () => [oauthRow('deepseek-account')],
+    oauthSetup: () => ({}),
+  })
   notifyOn(stale, '开跑前的旧通知')
-  const t2 = await openWizard([], { step: 0, channel: stale, addProvider: async () => 'failed' })
-  await settled(() => t2.screen().includes('❯ 添加模型提供方'))
+  const t2 = await openWizard([], { step: 0, channel: stale, signIn: async () => 'failed' })
+  await settled(() => t2.screen().includes('❯ 登录 DeepSeek 账号'))
+  t2.send('\r')
+  await settled(() => t2.screen().includes('选择要登录的账号'))
   t2.send('\r')
   check('J14b 流程没发新通知 → 通用失败文案，不拿旧通知冒充原因',
     await settled(() => t2.screen().includes('这次配置没有完成，可以重试或换一种方式'))
@@ -1130,11 +1086,17 @@ const oauthRow = (provider: string) => ({
     await settled(() => s.screen().includes('已退出 xai 的登录'))
     && !s.screen().includes('没有新增可用模型'), s.screen())
   s.close()
-  const removed = makeChannel({ providerSetup: () => ({}) })
-  const t2 = await openWizard([], { step: 0, channel: removed, addProvider: async () => 'deleted' })
-  await settled(() => t2.screen().includes('❯ 添加模型提供方'))
+  const quiet = makeChannel({
+    describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
+    oauthProviderStatuses: async () => [oauthRow('xai')],
+    oauthSetup: () => ({}),
+  })
+  const t2 = await openWizard([], { step: 0, channel: quiet, signIn: async () => 'signed-out' })
+  await settled(() => t2.screen().includes(SIGNIN_ROW))
   t2.send('\r')
-  check('J15b 删路由且流程没发通知 → 通用"设置已更新"，不报"没有新增"',
+  await settled(() => t2.screen().includes('选择要登录的账号'))
+  t2.send('\r')
+  check('J15b 登出且流程没发通知 → 通用"设置已更新"，不报"没有新增"',
     await settled(() => t2.screen().includes('设置已更新，没有新增模型'))
     && !t2.screen().includes('没有新增可用模型'), t2.screen())
   t2.close()
@@ -1269,7 +1231,7 @@ const oauthRow = (provider: string) => ({
   s.close()
 }
 {
-  // J19（review R2）：没有 DeepSeek key、余额检查 no-key，但订阅账号已登录——第一步
+  // J19（review R2）：没有 DeepSeek key、余额检查 no-key，但账号已登录——第一步
   // 不再说"没有可用的凭证"，而是说明 DeepSeek 检查已跳过、已接入了谁；登录结算后的
   // 成功提示仍在。
   let signedIn = false
@@ -1307,47 +1269,27 @@ const oauthRow = (provider: string) => ({
   s.close()
 }
 {
-  // J20（review R2；本地演示里撞到的那一组）：用 /provider 配好的 key 路由同样算
-  // "能用"——只有 key 真的在的路由才算，DEEPSEEK_API_KEY 那一条不算。
-  const channel = makeChannel({
-    describeCredential: async (name: string) => ({ configured: name === 'DEMO_GW_API_KEY', source: 'config', writable: true }),
-    balanceInfo: async () => ({ ok: false, reason: 'no-key' }),
-    providerSetup: () => ({
-      listConfiguredProviders: () => [
-        { route: 'demo-gw', ref: 'DEMO_GW_API_KEY', shadowed: false, isCatalog: false },
-        { route: 'stale-gw', ref: 'STALE_GW_API_KEY', shadowed: false, isCatalog: false },
-        { route: 'deepseek-official', ref: 'DEEPSEEK_API_KEY', shadowed: false, isCatalog: true },
-      ],
-    }),
-  })
-  const s = await openWizard([], { step: 0, channel, addProvider: async () => 'cancelled' })
-  check('J20a 配好 key 的路由让 DeepSeek 检查变成中性说明',
-    await settled(() => s.screen().includes('已接入：demo-gw')) && !s.screen().includes(connFailText('no-key')), s.screen())
-  check('J20b key 不在的路由与 DEEPSEEK_API_KEY 路由都不算接入',
-    !s.screen().includes('stale-gw') && !s.screen().includes('deepseek-official'), s.screen())
-  s.close()
-}
-{
-  // J21（review R3）：登录行的可见性与执行走同一个接缝（`providerSetup()?.oauth`）。
-  // 只有 dsh-auth、没有 /provider 宿主服务时不画登录行（点了只会报未挂载）；
+  // J21（review R3）：登录行的可见性与执行走同一个接缝（`oauthSetup()`）。
+  // 有登录状态、但宿主没有可执行的 OAuth 接缝时不画登录行（点了只会报未挂载）；
   // dsh-auth 晚于首帧组合进来时，登录行不必等"重新检查"。
   const bare = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => [oauthRow('xai')],
+    oauthSetup: () => undefined,
   })
   const s = await openWizard([], { step: 0, channel: bare, signIn: async () => 'failed' })
-  await settled(() => s.screen().includes('重新检查') && s.screen().includes('订阅登录不可用'))
-  check('J21a 有 dsh-auth 但没有 providerSetup → 不画登录行，兜底不断言"未挂载 dsh-auth"',
-    !s.screen().includes('登录 DeepSeek 账号') && s.screen().includes('当前组合里订阅登录不可用')
+  await settled(() => s.screen().includes('重新检查') && s.screen().includes('DeepSeek 账号登录不可用'))
+  check('J21a 有登录状态但 oauthSetup 为空 → 不画登录行，兜底不断言"未挂载 dsh-auth"',
+    !s.screen().includes(SIGNIN_ROW) && s.screen().includes('当前组合里 DeepSeek 账号登录不可用')
     && !s.screen().includes('未挂载 dsh-auth'), s.screen())
   s.close()
   let composed = false
   const late = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => composed ? [oauthRow('xai')] : undefined,
-    providerSetup: () => composed ? { oauth: {} } : undefined,
+    oauthSetup: () => composed ? {} : undefined,
   })
-  const l = await openWizard([], { step: 0, channel: late, signIn: async () => 'cancelled', addProvider: async () => 'cancelled' })
+  const l = await openWizard([], { step: 0, channel: late, signIn: async () => 'cancelled' })
   await settled(() => l.screen().includes('重新检查') && called(late, 'describeCredential'))
   const checksBefore = late.calls.filter(call => call.startsWith('describeCredential')).length
   composed = true
@@ -1415,44 +1357,54 @@ const oauthRow = (provider: string) => ({
 }
 
 {
-  // J23（第二轮 review R1）：一单在跑时（draft 有 pending），登录 / 加 key 两行不能再
-  // 发起第二单——否则两套流程并发提问、并发写盘，第二单顶掉 pending，第一单的结果
+  // J23（第二轮 review R1）：一单在跑时（draft 有 pending），登录行不能再发起
+  // 第二单——否则两套流程并发提问、并发写盘，第二单顶掉 pending，第一单的结果
   // 无处结算。真实触发：问答面板在两次提问之间关掉，本屏重挂回动作列表。
   const draft = await import('../src/onboardingDraft.js')
   let release: ((outcome: 'added') => void) | undefined
-  let addCalls = 0
+  let signInCalls = 0
   let catalog: readonly { provider: string; id: string; name: string }[] = MODELS
-  const channel = makeChannel({ providerSetup: () => ({}), listModels: async () => catalog })
-  const addProvider = (): Promise<'added'> => {
-    addCalls += 1
+  const channel = makeChannel({
+    oauthProviderStatuses: async () => [oauthRow('deepseek-account')],
+    oauthSetup: () => ({}),
+    listModels: async () => catalog,
+  })
+  const signIn = (): Promise<'added'> => {
+    signInCalls += 1
     return new Promise((resolve) => { release = resolve })
   }
-  const s = await openWizard([], { step: 0, channel, addProvider })
-  await settled(() => s.screen().includes('❯ 添加模型提供方'))
+  const s = await openWizard([], { step: 0, channel, signIn })
+  await settled(() => s.screen().includes('❯ 登录 DeepSeek 账号'))
+  await s.send('\r')
+  await settled(() => s.screen().includes('选择要登录的账号'))
   await s.send('\r')
   check('J23 前置：第一单在跑（draft 有 pending，回调调了一次）',
-    await settled(() => draft.readOnboardingDraft()?.pending !== undefined && addCalls === 1),
-    JSON.stringify({ addCalls, pending: draft.readOnboardingDraft()?.pending }))
-  check('J23a 在跑时动作区说"配置进行中"，加 key 行写明暂不可用',
+    await settled(() => draft.readOnboardingDraft()?.pending !== undefined && signInCalls === 1),
+    JSON.stringify({ signInCalls, pending: draft.readOnboardingDraft()?.pending }))
+  check('J23a 在跑时动作区说"配置进行中"，登录行写明暂不可用',
     await settled(() => s.screen().includes('上一项配置还在进行') && s.screen().includes('上一项配置结束前不能再发起')),
     s.screen())
   await s.send('\r')
-  await s.click('添加模型提供方')
-  check('J23b 在跑时再按 Enter / 再点一次都不发起第二单', addCalls === 1, String(addCalls))
+  await s.click('❯ 登录 DeepSeek 账号')
+  check('J23b 在跑时再按 Enter / 再点一次都不打开选账号层、不发起第二单',
+    signInCalls === 1 && !s.screen().includes('选择要登录的账号'), `${signInCalls}\n${s.screen()}`)
   // 问答面板关掉后的重挂：新实例从 draft 读出"在跑"，同样不接。
   s.close()
-  const again = await openWizard([], { step: 0, channel, addProvider, keepDraft: true })
+  const again = await openWizard([], { step: 0, channel, signIn, keepDraft: true })
   await settled(() => again.screen().includes('上一项配置还在进行'))
   await again.send('\r')
-  check('J23c 重挂之后仍然不接（回调还是只调过一次）', addCalls === 1, String(addCalls))
-  catalog = [...MODELS, { provider: 'demo', id: 'demo-1', name: 'demo-1' }]
+  check('J23c 重挂之后仍然不接（回调还是只调过一次）',
+    signInCalls === 1 && !again.screen().includes('选择要登录的账号'), String(signInCalls))
+  catalog = [...MODELS, { provider: 'deepseek-account', id: 'deepseek-v4', name: 'DeepSeek V4' }]
   release?.('added')
   check('J23d 第一单的结果被重挂的实例接住（没有被吞掉）',
-    await settled(() => again.screen().includes('已接入') && !again.screen().includes('上一项配置还在进行')),
+    await settled(() => again.screen().includes('默认模型设为 DeepSeek V4') && !again.screen().includes('上一项配置还在进行')),
     again.screen())
   await again.send('\r')
-  check('J23e 结束后动作行恢复可用：再按 Enter 发起新的一单',
-    await settled(() => addCalls === 2), String(addCalls))
+  await settled(() => again.screen().includes('选择要登录的账号'))
+  await again.send('\r')
+  check('J23e 结束后登录行恢复可用：再按 Enter 发起新的一单',
+    await settled(() => signInCalls === 2), String(signInCalls))
   again.close()
   draft.clearOnboardingDraft()
 }

@@ -2695,7 +2695,7 @@ const dict = {
     zh: '之后随时可用 /auth 登录',
     en: 'You can sign in later with /auth',
   },
-  'onboarding-access-fallback': { zh: '当前组合里没有可用的接入入口，也可以手工配置：', en: 'No in-app access route is available in this composition; you can also configure it by hand:' },
+  'onboarding-access-fallback': { zh: '也可以手工配置 DeepSeek API key：', en: 'You can also configure a DeepSeek API key by hand:' },
   'onboarding-access-fallback-signin': { zh: '当前组合里 DeepSeek 账号登录不可用', en: 'DeepSeek account sign-in is not available in this composition' },
   'onboarding-access-fallback-env': { zh: '环境变量（重启生效）：', en: 'Environment variable (takes effect after a restart):' },
   'onboarding-access-fallback-powershell': { zh: 'PowerShell: [Environment]::SetEnvironmentVariable(\'DEEPSEEK_API_KEY\',\'sk-…\',\'User\')', en: 'PowerShell: [Environment]::SetEnvironmentVariable(\'DEEPSEEK_API_KEY\',\'sk-…\',\'User\')' },
