@@ -62,21 +62,28 @@ function presetPatches(ctx: Context, loader: PresetLoader | undefined): Map<stri
   return patches
 }
 
-/** Copy an entry list with the named rows' `config` replaced, nested groups included. */
+/**
+ * Rows dsh-tui turns off in every preset it registers. `tool-todo`: the model
+ * states its rough steps in prose instead of maintaining a todo panel list
+ * (liangshen disables the same row in its own agent.cordis.yml).
+ */
+const DISABLED_ROWS: ReadonlySet<string> = new Set(['tool-todo'])
+
+/** Copy an entry list with the named rows' `config` replaced and DISABLED_ROWS disabled, nested groups included. */
 function withRowConfigs<T>(rows: readonly T[], configs: RowConfigs, matched: Set<string>): T[] {
   return rows.map((row) => {
     const entry = row as { id?: unknown; group?: unknown; config?: unknown }
+    const base = typeof entry.id === 'string' && DISABLED_ROWS.has(entry.id) ? { ...row, disabled: true } : row
     if (typeof entry.id === 'string' && configs.has(entry.id)) {
       matched.add(entry.id)
-      return { ...row, config: configs.get(entry.id) }
+      return { ...base, config: configs.get(entry.id) }
     }
-    if (entry.group === true && Array.isArray(entry.config)) return { ...row, config: withRowConfigs(entry.config, configs, matched) }
-    return row
+    if (entry.group === true && Array.isArray(entry.config)) return { ...base, config: withRowConfigs(entry.config, configs, matched) }
+    return base
   })
 }
 
-function patchDefinition(ctx: Context, definition: PresetDefinition, configs: RowConfigs | undefined): PresetDefinition {
-  if (configs === undefined) return definition
+function patchDefinition(ctx: Context, definition: PresetDefinition, configs: RowConfigs = new Map()): PresetDefinition {
   const matched = new Set<string>()
   const plugins = withRowConfigs(definition.plugins, configs, matched)
   for (const id of configs.keys()) {

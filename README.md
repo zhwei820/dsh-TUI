@@ -23,7 +23,7 @@
 > DSH's public exports, and is moving from a mounted plugin to an app with its
 > own entry and composition root, where DSH loads in process as the first-party
 > backend. Install to enable; uninstall leaves no patches behind.
-The prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer. Clicking its todo header also hides it while idle. Hiding changes only this display: a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos.
+The prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer. Clicking its todo header also hides it while idle. Hiding changes only this display: a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos. The presets dsh-tui registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
 
 Split diff cards give one-sided additions and deletions the full body width, without an empty opposite pane. Ordinary edits remain side by side, and mixed files choose their layout separately before folding or streaming reveal.
 

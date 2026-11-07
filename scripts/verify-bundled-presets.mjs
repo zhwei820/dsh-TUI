@@ -42,6 +42,22 @@ const standard = fresh.registrations[0]
 assert.match(standard.baseUrl, /standard\.patch\.yml$/u)
 assert.equal(typeof standard.definition.plugins.find(row => row.id === 'tool-bash').disabled.__jsExpr, 'string',
   'platform expressions must remain unevaluated for the upstream Loader')
+const findRow = (rows, id) => {
+  for (const row of rows) {
+    if (row.id === id) return row
+    const nested = row.group === true && Array.isArray(row.config) ? findRow(row.config, id) : undefined
+    if (nested !== undefined) return nested
+  }
+  return undefined
+}
+for (const { definition } of fresh.registrations.slice(0, -1)) {
+  const todo = findRow(definition.plugins, 'tool-todo')
+  if (todo !== undefined) assert.equal(todo.disabled, true, `${definition.id}: tool-todo must be disabled`)
+}
+assert.equal(findRow(fresh.registrations[0].definition.plugins, 'tool-todo')?.disabled, true,
+  'standard must carry the tool-todo row, disabled')
+const liangshenRows = parse(readFileSync(new URL('../presets/liangshen/agent.cordis.yml', import.meta.url), 'utf8'), { logLevel: 'silent' })
+assert.equal(findRow(liangshenRows, 'tool-todo')?.disabled, true, 'liangshen: tool-todo must be disabled')
 const liangshen = fresh.registrations.at(-1).definition
 assert.equal(new URL(liangshen.plugins[0].config.path).protocol, 'file:')
 assert.equal(fileURLToPath(liangshen.plugins[0].config.path), fileURLToPath(new URL('../presets/liangshen/agent.cordis.yml', import.meta.url)))

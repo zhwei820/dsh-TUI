@@ -414,8 +414,11 @@
 - id: tool-ask-user
   name: '@deepseek-ai/dsh-tool-ask-user'
 
+# Disabled: the model states its rough steps in prose instead of a todo panel
+# list (dsh-tui disables the same row in the upstream presets it registers).
 - id: tool-todo
   name: '@deepseek-ai/dsh-tool-todo'
+  disabled: true
   config:
     allowParallelInProgress: true
 
