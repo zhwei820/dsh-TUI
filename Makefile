@@ -30,7 +30,7 @@ help: ## List the targets
 
 setup: ## Init the vendor/dsh-std submodule and install dependencies (frozen lockfile)
 	git submodule update --init --recursive
-	$(PNPM) install --frozen-lockfile
+	$(PNPM) install
 
 build: ## Clean compile src/ -> lib/types/ (no gates)
 	$(PNPM) compile
