@@ -116,10 +116,6 @@ daily** (TypeScript).
 
 ## Quick Start
 
-### Windows one-click installer (x64)
-
-Download `dsh-tui-setup-win-x64.exe` from [Releases](https://github.com/ccch1mneyyy/dsh-TUI/releases) and run it. Per-user, no administrator, fully offline, and no preinstalled Node or DSH.
-
 ### Command-line installation
 
 Prerequisites: [Node.js](https://nodejs.org/en) and
