@@ -29,7 +29,7 @@ dsh-tui
 - `dsh-tui --resume`：恢复上次会话；Windows 可用仓库里的 `dsh-tui.cmd`（等价）。
 - `dsh-tui safe`：安全模式——只读查看环境、列出 profile 插件并给出修复建议，还能创建干净的救援 profile（见 §5.5）。
 - `dsh --profile dsh-tui`：与 `dsh-tui` 等价的手工启动方式（`/update` 仅此方式可用）。
-- `deepseek-official` 路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 可用标准 profile 的 `deepseek-account` 浏览器授权路由。其他支持的订阅模型可用内置 OAuth 登录。环境自检用 `/doctor`。
+- `deepseek-official` 路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 可用标准 profile 的 `deepseek-account` 浏览器授权路由。dsh-TUI 只支持 DeepSeek 模型。环境自检用 `/doctor`。
 - 主验证 dsh 引擎版本 `0.2.2-rc.1`；兼容列表以 `ADAPTER.md` 为准，列表之外的版本在 logo 页提示版本漂移与对齐命令。
 - 如果 logo 页出现 ⚠ 版本漂移警告，按提示执行 `npm i -g @deepseek-ai/dsh@<版本>` 对齐 dsh 引擎。
 
@@ -37,15 +37,12 @@ dsh-tui
 
 1. **首次引导**（在"还没完成过引导"时出现：首次安装，或引导本身升级过版本）：四步向导 ——
    **账号与模型接入 → 语言与主题 → 模型与工作区 → 快捷键与招式**。
-   第一步不再只做检查，而是列出**动作**：`登录订阅账号（OAuth）`（ChatGPT / Claude / Grok 等订阅，
-   或 DeepSeek 账号浏览器授权，按已登录/未登录标注掩码状态）、`添加模型提供方（API key）`
-   （与 `/provider` 同一条向导：内置目录或自定义端点）、`重新检查`、`跳过这一步`。
-   订阅登录之后，**新出现的模型会被接住**：没有新模型只报结果；只有一个直接设为默认；
+   第一步不再只做检查，而是列出**动作**：`登录 DeepSeek 账号`（有账号服务时出现，按已登录/未登录标注掩码状态）、
+   `重新检查`、`跳过这一步`。
+   登录之后，**新出现的模型会被接住**：没有新模型只报结果；只有一个直接设为默认；
    有多个则进入内联选默认层：这些模型登录后都已可用，这里只选一个作为默认（`↑`/`↓` 移动、`Enter` 设为默认；末尾"保持当前模型"或 `Esc` 不动默认）。
-   已登录订阅账号或配好 key 路由时，第一步不再把缺 `DEEPSEEK_API_KEY` 报成失败——那只是 DeepSeek 官方 API 的余额检查被跳过。
-   添加模型提供方时，启用哪些模型、切到其中哪一个（或保持当前模型）由 `/provider` 向导自己问；回到引导只报告结果，
-   不再重复询问，也不改动向导里定下的默认模型。
-   没有可用接缝时（老宿主或裸 `cordis.yml`）给的是**真实**的手工路径：`$DSH_HOME/.credentials.yaml`
+   已登录 DeepSeek 账号算已有接入，第一步不再把缺 `DEEPSEEK_API_KEY` 报成失败——那只是 DeepSeek 官方 API 的余额检查被跳过。
+   没有任何接入时给的是**真实**的手工设置 `DEEPSEEK_API_KEY` 的路径：`$DSH_HOME/.credentials.yaml`
    的 `refs:` 段，以及 PowerShell 用户级环境变量 / cmd `setx`——不再指向并不存在的配置文件。
    `←/→` 换步骤、`Tab` 在两组面板间切、`↑/↓` 移动选择、`Enter` 执行这一步、`Esc` 跳过；
    **跳过不记账**（下次启动还会问），最后一步要在**键位卡**上按 `Enter` 才算"完成"并写入记账文件
@@ -373,9 +370,8 @@ dsh-tui
 
 | 命令 | 参数 | 作用 |
 |---|---|---|
-| `/provider` | 无 | 交互式管理模型提供方（添加 / 编辑 / 删除；标准 profile 的账号登录含 DSH 0.2.0-rc.1+ 的 DeepSeek，以及 ChatGPT/Codex / Claude / Grok；宿主 pi-ai 支持时还有 OpenAI 直连 / Meta Muse） |
-| `/auth` | `status` / `login [provider]` / `logout <provider>` | 查看账号状态、登录或登出（DeepSeek 用 `deepseek-account`；pi-ai 订阅用 `openai-codex` / `anthropic` / `xai`，较新 pi-ai 另有 `openai` / `meta`） |
-| `/login` | 无 | 凭证状态（来源、存储可写性、base URL；OAuth 模块挂载时另列账号状态） |
+| `/auth` | `status` / `login [provider]` / `logout <provider>` | 查看 DeepSeek 账号状态、登录或登出（只有 `deepseek-account`，DSH 0.2.0-rc.1+） |
+| `/login` | 无 | 凭证状态（来源、存储可写性、base URL；账号登录模块挂载时另列「账号登录」区，显示 DeepSeek 账号状态） |
 | `/logout` | 无 | 登出说明（env 来源需删环境变量并重启） |
 | `/permission` | 无 / `<preset>` / `status` | 查看/切换权限预设与策略（无参打开选择器） |
 | `/add-dir` | 无 | 文件策略范围说明（以工作目录为根） |
@@ -494,13 +490,9 @@ dsh-TUI 不预装通用技能；`/skills` 浏览 DSH 发现的技能，可直调
 - `/workspace`：`resume` / `rename <名>` / `open <路径|file:// URI>`（打开并新建会话）。
 - `dsh-tui <路径>` 同样接受工作区目标。
 - `/doctor` 自检：Node/平台、API key、模型路由、cwd、上下文窗口、会话存储、插件宿主。
-- `/provider` 交互向导管理模型提供方：添加 / 编辑 / 删除。在模型列表聚焦一项后按 `Tab`，可编辑其上下文窗口、最大输出 token、推理档位和图片输入能力；`Enter` 保存到本次 provider 草稿，取消外层向导不会写入。
-  - 标准 profile 的内置 OAuth 模块提供 **订阅账号登录**（ChatGPT/Codex / Claude / Grok；较新 pi-ai 另有 OpenAI 直连 / Meta Muse，免 API key）；也可用 `/auth login <provider>`，`/auth logout <provider>` 删除保存的 OAuth 凭据。
+- dsh-TUI 只支持 DeepSeek 模型：`deepseek-official`（`DEEPSEEK_API_KEY`）与 `deepseek-account` 两条路由；早期版本的 `/provider` 向导与第三方订阅登录已移除。
   - DSH 0.2.0-rc.1+ 的 DeepSeek 账号经宿主浏览器授权：`/auth login deepseek-account`，随后用 `/model` 选独立的 `deepseek-account` 路由；`/auth logout deepseek-account` 由宿主退登。它不修改 `deepseek-official` 的 API key。
-- 非环境变量 API key 写入 `~/.dsh/.credentials.yaml`（0600），界面只显示 `••••••`；pi-ai 订阅 OAuth 凭据另存于 `$DSH_HOME/dsh-auth/credentials.json`（未设置 DSH_HOME 时为 `~/.dsh/dsh-auth/credentials.json`）。DeepSeek 账号授权记录由宿主凭据服务持有，不写入此 OAuth 文件。
-  - 自定义端点需填路由名、API key、baseURL 与协议（`openai-completions` / `openai-responses` /
-  `anthropic-messages`）。
-- 添加/编辑后运行 `/model` 切换到新路由。
+- 在 `/settings` 里填写的非环境变量 API key 写入 `~/.dsh/.credentials.yaml`（0600），界面只显示 `••••••`。DeepSeek 账号授权记录由宿主凭据服务持有，不写入此文件；旧版 `$DSH_HOME/dsh-auth/credentials.json` 里的订阅凭据不再读取，可自行删除。
 - `/init` 创建 AGENTS.md；`/agents` 子代理列表；`/login` `/logout` 凭证管理。
 - `/permission` `/add-dir` 权限说明；`/hooks` `/vim` `/connect` 为占位。
 

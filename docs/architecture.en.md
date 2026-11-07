@@ -25,7 +25,7 @@ Cordis profile
 | --- | --- |
 | `src/index.ts` | Cordis plugin name, injection declaration, config interface, and Schema; keep the entry small and lazy |
 | `src/dsh-adapter/plugin.ts` | TTY guard, service assembly, Agent create/resume, React mount, and the single cleanup funnel |
-| `src/dsh-adapter/oauth/`, `src/oauth.ts` | pi-ai subscription OAuth routes, `/auth` command, credential store, and question bridge; DeepSeek account sign-in delegates to the Host, and the public subpath only forwards to the internal implementation |
+| `src/dsh-adapter/oauth/`, `src/oauth.ts` | Built-in DeepSeek account sign-in: `/auth` command and authorization question bridge; sign-in delegates to the Host, and the public subpath only forwards to the internal implementation |
 | `src/dsh-adapter/questions-answerer.ts` / `preset-resolution.ts` | Prerelease dispatch for user questions and agent presets; consumers stay unaware of upstream version branches |
 | `src/dsh-adapter/channel.ts` | Channel entry: builds the core, attaches the DSH extensions by `native.dsh`, starts; a construction failure rolls back through one owner; compatibility exports (including a raw DSH `Agent`) |
 | `src/dsh-adapter/channel/core/` | The backend-neutral core every `AgentSession` goes through (table below) |
@@ -47,9 +47,9 @@ The standard profile still mounts the internal `./oauth` entry as the
 `dsh-tui-auth` Cordis row before the TUI, with row-level
 `inject: [llm, commands]` preserving registration order. The TUI consumes
 status and actions through `ctx.dshAuth`; it does not implement model or OAuth
-protocols. pi-ai subscriptions keep their existing credential location and
-use the host's pi-ai flows; the DeepSeek account route delegates PKCE,
-credentials, and model routing to `ctx.deepseekAccount`. The TUI-only
+protocols. It only provides DeepSeek account sign-in, delegating PKCE,
+credentials, and model routing to `ctx.deepseekAccount` (no pi-ai
+third-party subscription routes are mounted). The TUI-only
 `dsh-tui-webserver` row supplies its browser callback. Bare `cordis.yml`
 does not insert these rows and has a different topology.
 

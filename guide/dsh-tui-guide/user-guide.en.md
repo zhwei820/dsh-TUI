@@ -29,7 +29,7 @@ dsh-tui
 - `dsh-tui --resume`: resume the last session. On Windows you can also use `dsh-tui.cmd` from the repo (equivalent).
 - `dsh-tui safe`: safe mode — read-only environment view, lists profile plugins, suggests fixes, and can create a clean rescue profile (see §5.5).
 - `dsh --profile dsh-tui`: manual launch, equivalent to `dsh-tui` (`/update` only works this way).
-- The `deepseek-official` route needs `DEEPSEEK_API_KEY`; on DSH 0.2.0-rc.1+ the standard profile can use the separate `deepseek-account` browser-authorization route. Other supported subscriptions use built-in OAuth sign-in. Run `/doctor` to check the environment.
+- The `deepseek-official` route needs `DEEPSEEK_API_KEY`; on DSH 0.2.0-rc.1+ the standard profile can use the separate `deepseek-account` browser-authorization route. dsh-TUI supports DeepSeek models only. Run `/doctor` to check the environment.
 - Primary verified dsh engine version: `0.2.2-rc.1`. See `ADAPTER.md` for compatibility lines; versions outside that list show a drift note and the command to align on the logo page.
 - If the logo page shows a ⚠ version-drift warning, align the dsh engine:
   `npm i -g @deepseek-ai/dsh@<版本>`
@@ -39,20 +39,17 @@ dsh-tui
 1. **First-run guide** (whenever the guide has not been completed yet — a fresh install, or a
    guide that bumped its own version): a four-step wizard — **accounts & models → language &
    theme → model & workspace → shortcuts & moves**. The first step is no longer a check page: it
-   offers **actions** — `Sign in to a subscription (OAuth)` (ChatGPT / Claude / Grok, or DeepSeek
-   account browser sign-in, each annotated with its masked sign-in state), `Add a model provider
-   (API key)` (the same wizard as `/provider`: a built-in catalog or a custom endpoint), `Check
-   again`, `Skip this step`. After a subscription sign-in, the **newly available models are caught**:
+   offers **actions** — `Sign in with a DeepSeek account` (when the account service is present,
+   annotated with its masked sign-in state), `Check again`, `Skip this step`. After sign-in, the
+   **newly available models are caught**:
    none → just a report; exactly one → it becomes the default; several → an inline default picker:
    all of them are usable once you are signed in, so it only picks the default (`↑`/`↓` move, `Enter`
-   sets the default; the last row "Keep the current model", or `Esc`, leaves it alone). With a
-   signed-in subscription or a keyed route, step 1 no longer reports a missing `DEEPSEEK_API_KEY` as a
-   failure — only the DeepSeek official API's balance check is skipped. Adding a provider leaves which models to enable and which of
-   them to switch to (or keeping the current model) to the `/provider` wizard itself; back in the guide
-   it only reports the result, without
-   asking again or changing the default the wizard settled. When no in-app seam exists (an older host, a bare `cordis.yml`) the fallback names the
-   **real** manual paths — the `refs:` block of `$DSH_HOME/.credentials.yaml` and PowerShell's
-   user-level variable / cmd's `setx` — instead of a config file nothing reads.
+   sets the default; the last row "Keep the current model", or `Esc`, leaves it alone). A signed-in
+   DeepSeek account counts as access, so step 1 no longer reports a missing `DEEPSEEK_API_KEY` as a
+   failure — only the DeepSeek official API's balance check is skipped. With no access at all, the
+   fallback names the **real** manual paths for setting `DEEPSEEK_API_KEY` — the `refs:` block of
+   `$DSH_HOME/.credentials.yaml` and PowerShell's user-level variable / cmd's `setx` — instead of a
+   config file nothing reads.
    `←/→` change step, `Tab` switches between the two panes, `↑/↓` move the selection, `Enter` runs
    the step, `Esc` skips. **Skipping is not recorded** (you are asked again next launch); the last
    step only counts as finished — and writes the marker — when `Enter` lands on a **shortcut card**
@@ -413,9 +410,8 @@ The command menu = built-in commands (aliases included) + DSH registry commands 
 
 | Command | Args | Effect |
 |---|---|---|
-| `/provider` | none | interactive model-provider wizard (add / edit / delete; standard-profile account sign-in includes DeepSeek on DSH 0.2.0-rc.1+, plus ChatGPT/Codex / Claude / Grok and, when supported by host pi-ai, OpenAI direct / Meta Muse) |
-| `/auth` | `status` / `login [provider]` / `logout <provider>` | inspect account status, sign in, or sign out (`deepseek-account` for DeepSeek; `openai-codex` / `anthropic` / `xai` for pi-ai subscriptions; newer pi-ai also `openai` / `meta`) |
-| `/login` | none | credential status (source, store writability, base URL; account states are listed when the OAuth module is mounted) |
+| `/auth` | `status` / `login [provider]` / `logout <provider>` | inspect DeepSeek account status, sign in, or sign out (only `deepseek-account`, DSH 0.2.0-rc.1+) |
+| `/login` | none | credential status (source, store writability, base URL; when the sign-in module is mounted, an “Account sign-in” section lists the DeepSeek account state) |
 | `/logout` | none | logout notes (env source: delete the variable and restart) |
 | `/permission` | none / `<preset>` / `status` | view/switch permission preset and policy (no arg opens the selector) |
 | `/add-dir` | none | file-policy scope notes (rooted at the working directory) |
@@ -542,13 +538,9 @@ Keys are in §2.7. Key points:
   (open and start a new session).
 - `dsh-tui <路径>` also accepts a workspace target.
 - `/doctor` check: Node/platform, API key, model routing, cwd, context window, session storage, plugin host.
-- `/provider` interactive wizard to manage model providers: add / edit / delete. Focus a model and press `Tab` to edit its context window, max output tokens, reasoning efforts, and image input; `Enter` saves to the provider draft, and cancelling the outer wizard leaves it unwritten.
-  - The standard profile's built-in OAuth module offers **subscription sign-in** (ChatGPT/Codex / Claude / Grok; OpenAI direct / Meta Muse on newer pi-ai, no API key); `/auth login <provider>` also signs in, and `/auth logout <provider>` removes the stored OAuth credential.
+- dsh-TUI supports DeepSeek models only: the `deepseek-official` (`DEEPSEEK_API_KEY`) and `deepseek-account` routes. The former `/provider` wizard and third-party subscription sign-in have been removed.
   - DSH 0.2.0-rc.1+ delegates DeepSeek account browser authorization to the Host: run `/auth login deepseek-account`, then select the separate `deepseek-account` route with `/model`; `/auth logout deepseek-account` delegates sign-out to the Host. It does not change the `deepseek-official` API key.
-- Non-env-variable API keys are written to `~/.dsh/.credentials.yaml` (0600), and the UI shows only `••••••`; pi-ai subscription OAuth credentials instead live in `$DSH_HOME/dsh-auth/credentials.json` (`~/.dsh/dsh-auth/credentials.json` when DSH_HOME is unset). The Host credential service owns DeepSeek account grants; they are not written to that OAuth file.
-  - Custom endpoints need route name, API key, baseURL, and protocol (`openai-completions` / `openai-responses` /
-  `anthropic-messages`).
-- After add/edit, run `/model` to switch to the new route.
+- Non-env-variable API keys entered in `/settings` are written to `~/.dsh/.credentials.yaml` (0600), and the UI shows only `••••••`. The Host credential service owns DeepSeek account grants; they are not written to that file. Subscription credentials an older release saved in `$DSH_HOME/dsh-auth/credentials.json` are no longer read and can be deleted.
 - `/init` creates AGENTS.md; `/agents` subagent list; `/login` `/logout` credential management.
 - `/permission` `/add-dir` permission notes; `/hooks` `/vim` `/connect` are placeholders.
 

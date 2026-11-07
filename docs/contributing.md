@@ -101,9 +101,8 @@ draft、只跑一次 CI 就关，`pr-gate` 与 `issue-link` 都按机器人放�
 - `src/index.ts`：公共 Cordis 插件入口、配置 Schema，与对运行时插件的惰性移交。
 - `src/dsh-adapter/plugin.ts`：TTY 校验、服务注册、Agent 创建/恢复、React 树挂载，以及
   终端/进程的收尾清理。
-- `src/dsh-adapter/oauth/`：pi-ai 订阅 OAuth 的 provider 路由、`/auth` 命令、
-  凭据存储与 user-questions 桥接；DeepSeek 账号授权委派给宿主服务，
-  经 `src/oauth.ts` 子入口挂载。
+- `src/dsh-adapter/oauth/`：内置 DeepSeek 账号登录——`/auth` 命令与授权
+  user-questions 桥接；授权委派给宿主服务，经 `src/oauth.ts` 子入口挂载。
 - `src/dsh-adapter/questions-answerer.ts` 与 `preset-resolution.ts`：
   隔离 user-questions / agent-preset 的上游预发布兼容分派，避免把版本分支
   散进 bootstrap 与 channel 动作面。

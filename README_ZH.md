@@ -39,7 +39,7 @@
 
 
 - **像素鲸鱼娘** — 开屏三选一动画，点击唤醒；开始第一个任务后定格。
-- **落地页与首次引导** — 每次普通启动先落在带**真输入框**的落地页（大字 + 鲸鱼 + 快捷入口，窄/矮终端自动整块降级；鲸娘图像按原生画布紧凑占位，避免图片与大字之间留出大块空白；默认开启，/settings 的 `launchpad` 关闭后直接进聊天页）；命令补全与聊天页一致：`Tab` 填入输入框，`Enter` 执行并清空。首次运行走四步向导（账号与模型接入 / 语言主题 / 模型工作区 / 快捷键），`/setup` 随时重跑；第一步可以直接登录订阅账号并接住新出现的模型（没有就不问、只有一个直接设为默认、多个才问），或经 `/provider` 向导写入 API key（由向导问切到启用的哪个模型，或保持当前模型）。
+- **落地页与首次引导** — 每次普通启动先落在带**真输入框**的落地页（大字 + 鲸鱼 + 快捷入口，窄/矮终端自动整块降级；鲸娘图像按原生画布紧凑占位，避免图片与大字之间留出大块空白；默认开启，/settings 的 `launchpad` 关闭后直接进聊天页）；命令补全与聊天页一致：`Tab` 填入输入框，`Enter` 执行并清空。首次运行走四步向导（账号与模型接入 / 语言主题 / 模型工作区 / 快捷键），`/setup` 随时重跑；第一步可以直接登录 DeepSeek 账号并接住新出现的模型（没有就不问、只有一个直接设为默认、多个才问）；没有任何接入时提示手工设置 `DEEPSEEK_API_KEY`。
 - **终端原生界面** — 流式 Markdown、工具卡、`/` 与 `@` 补全、`#L12-14` 行区间、历史搜索、中英界面。
 - **原生光标** — 聚焦的文本输入框继承终端的光标形状、颜色、闪烁及已启用的动画或拖尾效果，inline 与 fullscreen 均支持。`/model` 选择器在提供商标签、模型行和推理档位之间移动时显示同样的光标，停稳 **0.5 秒后隐藏**；区域被裁剪时回落到模型行。会话管理界面也会在工作区栏、会话行与搜索框之间移动原生光标；输入时移到搜索框，导航时回到聚焦行。动画与拖尾效果在终端设置中配置。
 - **图片** — Kitty/Sixel 缩略图，居中大图可缩放平移，粘贴前按限额适配，无图形时文字回退。Kitty 图片按预留格子的物理像素缩放，适配 HiDPI 终端。
@@ -55,7 +55,7 @@
   `/btw` 在侧栏无法显示时回退到浮层；主任务问卷与全屏草稿编辑器优先接管，侧问与草稿保持原样。
 - **IDE 选区通道** — VS Code 里选中的代码进 prompt。
 - **DSH 集成** — presets、技能、MCP、目标、待办、子代理、问卷。
-- **账号登录** — 标准 profile 提供 pi-ai 的 ChatGPT/Codex、Claude、Grok OAuth（可用时还有 OpenAI 直连与 Meta Muse）；DSH 0.2.0-rc.1+ 还通过宿主服务提供 DeepSeek 浏览器登录，路由为 `deepseek-account`。通过 `/provider` 或 `/auth` 使用，无需另装插件。
+- **DeepSeek 账号登录** — dsh-TUI 只支持 DeepSeek 模型。DSH 0.2.0-rc.1+ 的标准 profile 通过宿主服务提供 DeepSeek 浏览器登录，路由为 `deepseek-account`；通过 `/auth` 或首次引导使用，无需另装插件。
   仅更新 profile 而留下已挂载 `dsh-tui-auth` 的旧全局 TUI 补丁时，本地登录也会按需启动官方 loopback 回调监听器；SSH 固定端口转发仍需对齐全局安装包。
 - **扩展** — 浏览器交互、computer use 等。
 - **为长会话设计** — 事件驱动投影、虚拟化、有界缓存。
@@ -115,7 +115,7 @@ DSH 0.2.1 起，Agent 把会话切到别的目录（`working_directory` 工具�
 
 ### 命令行安装
 
-前置条件：安装 [Node.js](https://nodejs.org/zh-cn) 与 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)。`deepseek-official` API key 路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 的标准 profile 也可用 `/auth login deepseek-account` 登录，再通过 `/model` 选择独立的账号路由。其他支持的账号可在启动后通过 `/provider` 或 `/auth` 登录。
+前置条件：安装 [Node.js](https://nodejs.org/zh-cn) 与 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)。`deepseek-official` API key 路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 的标准 profile 也可用 `/auth login deepseek-account` 登录，再通过 `/model` 选择独立的账号路由。
 
 主适配目标为 DSH `0.2.2-rc.1`，已接入新版 Shell API、V4 会话消息、声明式预设与
 profile 设置；旧受支持版本保留兼容路径。迁移说明见[配置参考](docs/configuration.md)。
@@ -321,7 +321,7 @@ Windows 下由 `NVIM` 或 `VIM_TERMINAL` 标识的 Neovim/Vim 终端保留 VT �
 
 ## 内置命令
 
-`/resume` · `/home` · `/agentview` · `/bg` · `⌸` 打开同一个会话管理界面：工作区栏、实时状态、筛选、★ 固定。另有 `/model` `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/settings` `/setup` `/status` `/cost` `/jobs` `/skills` `/mcp` `/provider` `/auth` `/login` `/update`。
+`/resume` · `/home` · `/agentview` · `/bg` · `⌸` 打开同一个会话管理界面：工作区栏、实时状态、筛选、★ 固定。另有 `/model` `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/settings` `/setup` `/status` `/cost` `/jobs` `/skills` `/mcp` `/auth` `/login` `/update`。
 
 DSH 的 `/fork` 保持当前会话不变并创建可恢复副本；有历史的副本记录来源，归入同一会话家族。
 
@@ -331,8 +331,6 @@ DSH 的 `/fork` 保持当前会话不变并创建可恢复副本；有历史的�
 
 短终端优先保留聚焦模型与选择/取消入口，先隐藏描述和邻项，仅剩两行时再隐藏推理行。
 操作提示位于标题下，推理档位独立成区；选择器沿用终端背景，并遮住底层文字。
-
-在 `/provider` 模型列表聚焦一项并按 `Tab`，可编辑上下文窗口、最大输出 token、推理档位和图片输入能力。
 
 会话管理界面默认聚焦当前工作区最近使用的会话；没有历史时聚焦“新建会话”卡片，按 `←` 可移到工作区栏。同一工作区左右切栏或鼠标移入列表会保留会话选择；换工作区时选中该工作区最新的会话，返回之前的工作区时也重新选最新会话，不记忆各工作区的旧选择。DST 启动后会在后台预加载会话列表，成功后更新缓存。界面会立即显示上次成功读取的列表；如果后台读取仍在进行，打开 `/resume` 会复用该请求，并接收已经返回的结果。首屏快照可跨重启复用，并按内核与存储目录隔离。无论是否有快照，都优先加载当前工作区，再补齐其他工作区；新返回的会话和标题会立即合并到列表，其他工作区的缓存保留到完整读取结束。后台更新不会改变用户已经手动选择的会话。界面按会话自身 cwd 分组。DSH 先解析当前工作区的元数据，即使不足 32 条，也会在读取其他工作区日志前显示；需要深度扫描日志的标题会先显示回退名称，恢复完成后在原行更新。
 会话管理界面在来源标签下方统一显示当前工作区的绝对路径（必要时换行；极长路径可悬停查看）；会话行只保留标题与关键状态、时间，不再重复目录。DSH 的大小和模型仍可在标题悬停提示中查看。

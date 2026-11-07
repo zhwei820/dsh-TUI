@@ -54,8 +54,7 @@ Messages 搜索和本地 HTTP 抓取。在 `/settings` 的「网页搜索」分�
 ```
 
 TUI 沿用 DSH 的工具、鉴权、取消和结果持久化，不额外发起模型请求；旧宿主或未加载
-API 插件的组合不显示这些新增设置。官方 `deepseek-official` / `deepseek-account`
-路由的 `DeepSeek-V4.1-Flash` 在模型列表中显示 `1017` 标记，路由 ID 不变。
+API 插件的组合不显示这些新增设置。
 
 ## 官方请求元数据与反馈上报
 
@@ -390,70 +389,26 @@ Profile 模式不再使用旧的 `DSH_TUI_COMPACT_RATIO`、`DSH_TUI_COMPACT_RETA
 `DSH_TUI_RENDER_LOG` 可能捕获屏幕上可见的提示词、工具参数和输出，不应上传到
 公开 issue，除非已经检查并脱敏。
 
-## `/provider`：运行时管理模型提供方
+## 只支持 DeepSeek 模型
 
-`/provider` 打开交互向导，无需重启即可添加、编辑、删除模型提供方。
-
-- 来源：内置 catalog 路由或自定义 API 端点。
-- 仅**用户配置层**写入的 provider 可编辑/删除；组合 base 继承来的不可删。
-- 密钥写入 `~/.dsh/.credentials.yaml`（0600），界面只显示 `••••••`。
-- 只有非环境变量来源的密钥才写库；与其他 provider 共用的密钥删除时保留。
-- 编辑「模型列表」时会重新拉取候选：内置 catalog 路由先取安装目录快照，
-  只要该路由存有 baseURL（或正在添加时填了端点），再用已存密钥实时探测
-  `GET {baseURL}/models` 并合并——仅线上有的新模型标「线上新增」，勾选后
-  写入其披露的容量字段；已有模型预勾选，只有显式取消勾选才会移除。无
-  baseURL 的 catalog 路由只显示目录快照并在问题详情中注明。协议不唯一或
-  配置了自定义请求头的 catalog 路由也会明确提示并回退到目录快照，不把线上
-  新模型写入无法验证的 profile。
-- 逐项菜单细节见[用户指南](user-guide.md)。
-
-写入位置：
-
-| 产物 | 位置 |
-| --- | --- |
-| provider profile | 0.1.7 当前 profile 配置中的 `llm-pi-ai.providers.<路由名>`；旧版在 `~/.dsh/settings.yaml`，写入即注册路由，删除即注销 |
-| API key | `~/.dsh/.credentials.yaml`（0600），引用名为 `<路由名大写>_API_KEY` |
-
-### 内置订阅 OAuth
-
-标准 profile 的 `dsh-tui-auth` 行加载本包的 `./oauth` 入口，**不再依赖独立的
-`dsh-auth` 插件包**。`/provider` 的添加分支提供 ChatGPT/Codex（`openai-codex`）、
-Claude（`anthropic`）、Grok（`xai`）订阅账号登录。宿主 pi-ai catalog 提供相应流程
-时还可使用 OpenAI 直连 ChatGPT 登录（`openai`，使用 OpenAI API 而非旧版 Codex
-后端）和 Meta Muse（`meta`）。当前主验证线 DSH `0.2.2-rc.1` 的开发依赖解析到 pi-ai
-`1.2.0`，包含 Meta Muse 与 OpenAI 直连登录。`/auth status`、`/auth login [provider]`、
-`/auth logout <provider>` 对这些 pi-ai 路由操作同一套凭据。浏览器授权会尝试自动打开页面，并在同一
-问卷中提供授权链接与手动粘贴回调 URL/代码的输入；设备码流程在轮询期间显示可复制的
-短码。无交互问卷服务的宿主会明确拒绝登录。
-
-`dsh-tui-auth` 行可配置 `providers`（默认安装版 pi-ai catalog 中所有受支持的流程；
-显式指定时必须是其中的非空子集）、`credentialsFile`（自定义凭据文件）和
-`modelOverrides.<provider>.<model>`（可选的 `contextWindow`、`maxTokens`）。
-profile 覆盖的 `config` 是整段替换，覆盖时保留所需的每个字段。OAuth 流程使用宿主
-`dsh-llm-pi-ai` 所带的 pi-ai 实现；这不是通用 API key 登录，订阅账号只走相应的
-订阅后端。
-
-默认凭据文件保持 `$DSH_HOME/dsh-auth/credentials.json`（未设置 `DSH_HOME` 时为
-`~/.dsh/dsh-auth/credentials.json`），也可用 `DSH_AUTH_CREDENTIALS` 覆盖；旧版登录
-无需迁移或重新登录。服务名 `ctx.dshAuth`、日志前缀 `dsh-auth` 也为兼容保留，
-不代表仍需安装独立包。文件保存长期 refresh token，目录/文件尽力使用 0700/0600，
-OpenAI 直连登录会按需在凭据文件同目录创建持久 UUID 文件 `device-id`（0600），供
-pi-ai 作为当前安装的 agent-host ID。状态界面只展示登录与到期信息。登录后，模型才
-出现在选择器中；同一 provider 若已由 `llm-pi-ai` 其他配置占用，OAuth 路由会拒绝
-重复注册。
+dsh-TUI 只面向 DeepSeek 模型：`deepseek-official`（`DEEPSEEK_API_KEY`）与
+`deepseek-account`（DeepSeek 账号授权）两条官方路由。早期版本的 `/provider` 向导
+（添加 / 编辑 / 删除第三方模型提供方、模型能力编辑）与内置第三方订阅 OAuth
+（ChatGPT/Codex、Claude、Grok 等 pi-ai 路由）已移除。`dsh-tui-auth` 行不再接受
+`providers`、`credentialsFile`、`modelOverrides` 配置：仍写着这些键的 profile 覆盖会在
+启动时明确报错，删掉即可。旧版保存在 `$DSH_HOME/dsh-auth/credentials.json` 的订阅
+凭据不再被读取，可自行删除。
 
 ### DeepSeek 账号授权
 
 DSH `0.2.0-rc.1+` 的 `dsh-base` 另有宿主拥有的 `deepseekAccount` 服务和
-`deepseek-account` 模型路由。标准 profile 将它加入同一 `/provider` 账号登录分支、
-`/auth status` 与 `/login` 状态列表；也可直接运行 `/auth login deepseek-account`，
+`deepseek-account` 模型路由。标准 profile 的 `dsh-tui-auth` 行加载本包的 `./oauth`
+入口，把它加入引导第一步的账号登录、`/auth status` 与 `/login` 状态列表；也可直接运行 `/auth login deepseek-account`，
 成功后用 `/model` 选择 `deepseek-account` 下的模型。它与需要
 `DEEPSEEK_API_KEY` 的 `deepseek-official` 是**不同路由**。`/auth logout deepseek-account`
 调用宿主退登：先移除宿主凭据记录，远端撤销由宿主在后台处理。TUI 不复制 PKCE
-协议、不读取账号 token，也不把账号凭据写入上述 `dsh-auth/credentials.json`。
-DeepSeek 账号授权没有 pi-ai 的 token 到期/刷新时间；状态界面只显示已登录/未登录。
-`dsh-tui-auth.config.providers` 和 `modelOverrides` 仍只控制 pi-ai 路由，
-不用、也不能在其中填写 `deepseek-account`。
+协议、不读取账号 token，也不自行保存账号凭据。DeepSeek 账号授权没有 token
+到期/刷新时间；状态界面只显示已登录/未登录。
 
 浏览器回调由宿主 `webServer` 服务提供。TUI-only profile 的
 `dsh-tui-webserver` 行默认监听 `127.0.0.1` 的系统分配端口；与 Web 同时挂载时复用
@@ -475,7 +430,7 @@ DeepSeek 流程必须经回调完成，**没有**手动粘贴授权码的回退�
 
 混合 Web profile 则覆盖官方 `webserver` 行。旧全局补丁没有该行时，固定端口覆盖
 无法生效；SSH 用户仍需更新全局 TUI 包后再转发固定端口。回调监听器缺失或启动失败时，
-登录会明确报错，其他 pi-ai OAuth 路由不受影响。
+登录会明确报错。
 
 ## 组合约束
 

@@ -16,15 +16,14 @@
  *      Enter 走 `onRunCommand`（与手敲 `/help` 同一条路）。
  *   F. 出口：Esc 交 `skipped`，最后一步的 Enter 交 `done`——两条路分别对应
  *      `Chat` 的"不记账"与"记账"分支。
- *   J. 第一步的接入（v2）：动作行按接缝出现、缺接缝时给平台正确的兜底文案
- *      （不再有 `~/.deepseek/config.json`）；登录后按 0/1/N 三分支处理新模型
- *      （0 不问、1 直接设默认、多个进内联选默认层：单选 + 保持当前模型，不做多选）；
- *      加 key 由 /provider 向导自己问启用与切换，引导只报结果（J13）；draft 让步骤
- *      在卸载-重挂后保持；流程的失败原因与登出/删除结果在整屏引导里看得见（J14/J15）；
- *      迟到的目录读取不复活已作废的动作、选默认层在 80×24 下窗口化（J16–J18）；
- *      有别的接入时 DeepSeek 专用检查不报失败（J19/J20）；登录行与执行同一接缝、
- *      晚到的 dsh-auth 不需要重新检查（J21）；失败/取消提示不用成功色（J22）；一单在跑时
- *      登录 / 加 key 不能再发起第二单，重挂后也一样（J23）。
+ *   J. 第一步的接入（v2）：登录行按 `oauthSetup` 接缝出现（没有「添加模型提供方」行）；
+ *      只要还没有可用接入就给平台正确的兜底文案（不再有 `~/.deepseek/config.json`）；
+ *      登录后按 0/1/N 三分支处理新模型（0 不问、1 直接设默认、多个进内联选默认层：
+ *      单选 + 保持当前模型，不做多选）；draft 让步骤在卸载-重挂后保持；流程的失败原因
+ *      与登出结果在整屏引导里看得见（J14/J15）；迟到的目录读取不复活已作废的动作、
+ *      选默认层在 80×24 下窗口化（J16–J18）；已登录账号时 DeepSeek key 检查不报失败
+ *      （J19）；登录行与执行同一接缝、晚到的 dsh-auth 不需要重新检查（J21）；失败/取消
+ *      提示不用成功色（J22）；一单在跑时登录行不能再发起第二单，重挂后也一样（J23）。
  *
  * 运行：node --import tsx/esm scripts/verify-onboarding-wizard.tsx
  */
@@ -150,9 +149,8 @@ interface OpenOptions {
   rows?: number
   step?: number
   channel?: ReturnType<typeof makeChannel>
-  /** 第一步的动作回调（不传 = 对应动作行不出现）。 */
-  signIn?: (provider: string) => Promise<'added' | 'updated' | 'deleted' | 'signed-out' | 'cancelled' | 'failed'>
-  addProvider?: () => Promise<'added' | 'updated' | 'deleted' | 'signed-out' | 'cancelled' | 'failed'>
+  /** 第一步的登录回调（不传 = 登录行不出现）。 */
+  signIn?: (provider: string) => Promise<'added' | 'signed-out' | 'cancelled' | 'failed'>
   /** 保留上一个用例留下的 draft（默认每个用例都从干净状态开始）。 */
   keepDraft?: boolean
 }
@@ -176,7 +174,6 @@ async function openWizard(events: Ev[], options: OpenOptions = {}) {
         channel={channel as never}
         initialStep={options.step}
         onProviderSignIn={options.signIn}
-        onProviderAddProvider={options.addProvider}
         onClose={(outcome) => { events.push({ type: 'close', value: outcome }) }}
         onRunCommand={(name) => { events.push({ type: 'runCommand', value: name }) }}
         onApplyLang={(lang) => { events.push({ type: 'applyLang', value: lang }) }}
@@ -574,6 +571,11 @@ for (let step = 0; step < 4; step++) {
 }
 
 // ── J. 第一步的接入（账号与模型）───────────────────────────────────────────
+/**
+ * 登录动作行的描述（只有动作行有它）。标签「登录 DeepSeek 账号」也是状态行
+ * 「还没有登录 DeepSeek 账号」的子串，不能拿来判断动作行在不在。
+ */
+const SIGNIN_ROW = 'DeepSeek 账号浏览器授权'
 /** 一行 dsh-auth 登录状态（未登录）。 */
 const oauthRow = (provider: string) => ({
   provider, label: provider, oauthLabel: provider,
@@ -586,21 +588,25 @@ const oauthRow = (provider: string) => ({
     step: 0,
     channel: makeChannel({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
-      oauthProviderStatuses: async () => [oauthRow('openai-codex'), oauthRow('deepseek-account')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthProviderStatuses: async () => [oauthRow('deepseek-account')],
+      oauthSetup: () => ({}),
     }),
     signIn: async () => 'cancelled',
-    addProvider: async () => 'cancelled',
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
-  check('J1a 有接缝时第一步画出四个动作行',
-    s.screen().includes('登录订阅账号') && s.screen().includes('添加模型提供方')
-    && s.screen().includes('重新检查') && s.screen().includes('跳过这一步'),
+  await settled(() => s.screen().includes(SIGNIN_ROW))
+  check('J1a 有接缝时第一步画出三个动作行（登录 / 重新检查 / 跳过），没有加 key 行',
+    s.screen().includes('❯ 登录 DeepSeek 账号')
+    && s.screen().includes('重新检查') && s.screen().includes('跳过这一步')
+    && !s.screen().includes('添加模型提供方') && !s.screen().includes('API key'),
     s.screen())
   check('J1b 登录行带掩码状态（未登录账号数）',
-    s.screen().includes('已登录 0 / 2'), s.screen())
+    s.screen().includes('已登录 0 / 1'), s.screen())
   check('J1c 缺 key 时不再出现 ~/.deepseek/config.json',
     !s.screen().includes('.deepseek/config.json') && !s.screen().includes('deepseek/config.json'))
+  check('J1d 能登录但还没有可用接入 → 照样给手工兜底，只是不说"登录不可用"',
+    s.screen().includes('也可以手工配置') && s.screen().includes('credentials.yaml') && s.screen().includes('setx')
+    && !s.screen().includes('DeepSeek 账号登录不可用') && !s.screen().includes('/provider'),
+    s.screen())
   s.close()
 }
 {
@@ -614,12 +620,13 @@ const oauthRow = (provider: string) => ({
     }),
   })
   await settled(() => s.screen().includes('重新检查'))
-  check('J2a 没有接缝时不画登录/加 key 行（不假装能点）',
-    !s.screen().includes('登录订阅账号（OAuth）') && !s.screen().includes('添加模型提供方（API key）'),
+  check('J2a 没有接缝时不画登录行（不假装能点）',
+    !s.screen().includes(SIGNIN_ROW) && !s.screen().includes('添加模型提供方'),
     s.screen())
-  check('J2b 兜底文案给出真实位置与平台写法（credentials.yaml + setx）',
+  check('J2b 兜底文案给出真实位置与平台写法（credentials.yaml + setx），并说明登录不可用',
     s.screen().includes('credentials.yaml') && s.screen().includes('setx')
-    && !s.screen().includes('deepseek/config.json'), s.screen())
+    && s.screen().includes('当前组合里 DeepSeek 账号登录不可用')
+    && !s.screen().includes('/provider') && !s.screen().includes('deepseek/config.json'), s.screen())
   s.close()
 }
 {
@@ -635,7 +642,7 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async (provider) => {
       asked = provider
@@ -643,8 +650,8 @@ const oauthRow = (provider: string) => ({
       return 'added'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
-  s.send('\r') // 动作行 0 = 登录订阅账号
+  await settled(() => s.screen().includes(SIGNIN_ROW))
+  s.send('\r') // 动作行 0 = 登录 DeepSeek 账号
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r') // 第一个账号
   check('J3a 登录回调拿到被选中的 provider',
@@ -670,7 +677,7 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async () => {
       catalog.list = [
@@ -681,7 +688,7 @@ const oauthRow = (provider: string) => ({
       return 'added'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -713,7 +720,7 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async () => {
       catalog.list = [
@@ -723,7 +730,7 @@ const oauthRow = (provider: string) => ({
       return 'added'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -752,7 +759,7 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async () => {
       catalog.list = [
@@ -762,7 +769,7 @@ const oauthRow = (provider: string) => ({
       return 'added'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -779,7 +786,7 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async () => {
       catalog.list = [
@@ -789,7 +796,7 @@ const oauthRow = (provider: string) => ({
       return 'added'
     },
   })
-  await settled(() => kept.screen().includes('登录订阅账号'))
+  await settled(() => kept.screen().includes(SIGNIN_ROW))
   kept.send('\r')
   await settled(() => kept.screen().includes('选择要登录的账号'))
   kept.send('\r')
@@ -810,14 +817,14 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => [{ provider: 'deepseek', id: 'deepseek-chat', name: 'deepseek-chat' }],
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
     signIn: async () => {
       before.push(...s.channel.calls)
       return 'added'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -869,7 +876,7 @@ const oauthRow = (provider: string) => ({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     listModels: async () => catalog.list,
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
   })
   const s = await openWizard(ev, {
     step: 0,
@@ -877,7 +884,7 @@ const oauthRow = (provider: string) => ({
     // 永不自动解析的登录：模拟"动作还在跑"。
     signIn: () => new Promise((resolve) => { release = () => resolve('added') }),
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -891,7 +898,7 @@ const oauthRow = (provider: string) => ({
   s.close() // ← 面板关闭、本屏卸载（动作仍在跑）
   catalog.list = [{ provider: 'xai', id: 'grok-4', name: 'Grok 4' }]
   const second = await openWizard(ev, { keepDraft: true, channel: remountChannel })
-  await settled(() => second.screen().includes('登录订阅账号'))
+  await settled(() => second.screen().includes(SIGNIN_ROW))
   // 固定窗:探针 断言"动作未完成时什么都不结算"：没有可轮询的完成条件。
   await new Promise(resolve => setTimeout(resolve, 120))
   check('J9b 动作未完成时重挂不结算（不拿旧目录做决定）',
@@ -938,13 +945,13 @@ const oauthRow = (provider: string) => ({
       describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
       listModels: async () => catalog.list,
       oauthProviderStatuses: async () => [oauthRow('xai')],
-      providerSetup: () => ({ oauth: {} }),
+      oauthSetup: () => ({}),
     }),
   })
   check('J11 挂载时动作已完成 → 立即结算（自动设为默认）',
     await settled(() => s.channel.calls.includes('switchModel:xai/grok-4')), JSON.stringify(s.channel.calls))
-  check('J11b 焦点按 id 恢复到"登录订阅账号"那一行',
-    await settled(() => s.screen().includes('❯ 登录订阅账号（OAuth）')), s.screen())
+  check('J11b 焦点按 id 恢复到"登录 DeepSeek 账号"那一行',
+    await settled(() => s.screen().includes('❯ 登录 DeepSeek 账号')), s.screen())
   s.close()
   draft.clearOnboardingDraft()
 }
@@ -962,14 +969,14 @@ const oauthRow = (provider: string) => ({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     listModels: async () => catalog.list,
     oauthProviderStatuses: async () => [oauthRow('xai'), oauthRow('openai-codex')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
   })
   const a = await openWizard([], {
     step: 0,
     channel,
     signIn: () => new Promise((resolve) => { releaseA = () => resolve('added') }),
   })
-  await settled(() => a.screen().includes('登录订阅账号'))
+  await settled(() => a.screen().includes(SIGNIN_ROW))
   a.send('\r')
   await settled(() => a.screen().includes('选择要登录的账号'))
   a.send('\r')
@@ -983,7 +990,7 @@ const oauthRow = (provider: string) => ({
     channel,
     signIn: () => new Promise((resolve) => { releaseB = () => resolve('added') }),
   })
-  await settled(() => b.screen().includes('登录订阅账号'))
+  await settled(() => b.screen().includes(SIGNIN_ROW))
   b.send('\r')
   await settled(() => b.screen().includes('选择要登录的账号'))
   b.send('\u001b[B') // 选第二个账号，避免与 A 的 provider 相同
@@ -1105,7 +1112,7 @@ const oauthRow = (provider: string) => ({
   const channel = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
   })
   const s = await openWizard([], {
     step: 0,
@@ -1115,7 +1122,7 @@ const oauthRow = (provider: string) => ({
       return 'signed-out'
     },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -1144,7 +1151,7 @@ const oauthRow = (provider: string) => ({
   const channel = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
     listModels: async () => {
       if (!deferNext) return MODELS
       deferNext = false
@@ -1157,7 +1164,7 @@ const oauthRow = (provider: string) => ({
     channel,
     signIn: async (provider) => { signInCalls.push(provider); return 'added' },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   await s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   deferNext = true
@@ -1185,7 +1192,7 @@ const oauthRow = (provider: string) => ({
   const channel = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
     listModels: async () => {
       if (!deferNext) return MODELS
       deferNext = false
@@ -1197,7 +1204,7 @@ const oauthRow = (provider: string) => ({
     channel,
     signIn: async (provider) => { signInCalls.push(provider); return 'added' },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   for (let round = 1; round <= 2; round++) {
     await s.send('\r')
     await settled(() => s.screen().includes('选择要登录的账号'))
@@ -1231,7 +1238,7 @@ const oauthRow = (provider: string) => ({
   const channel = makeChannel({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
     listModels: async () => catalog,
   })
   const s = await openWizard([], {
@@ -1241,7 +1248,7 @@ const oauthRow = (provider: string) => ({
     channel,
     signIn: async () => { catalog = [...MODELS, ...many]; return 'added' },
   })
-  await settled(() => s.screen().includes('登录订阅账号'))
+  await settled(() => s.screen().includes(SIGNIN_ROW))
   await s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   await s.send('\r')
@@ -1272,7 +1279,7 @@ const oauthRow = (provider: string) => ({
     balanceInfo: async () => ({ ok: false, reason: 'no-key' }),
     listModels: async () => catalog,
     oauthProviderStatuses: async () => [{ ...oauthRow('xai'), signedIn }],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
   })
   const s = await openWizard([], {
     step: 0,
@@ -1285,7 +1292,7 @@ const oauthRow = (provider: string) => ({
   })
   check('J19 前置：登录前（什么都没有）照常报缺凭证',
     await settled(() => s.screen().includes(connFailText('no-key'))), s.screen())
-  await settled(() => s.screen().includes('❯ 登录订阅账号'))
+  await settled(() => s.screen().includes('❯ 登录 DeepSeek 账号'))
   s.send('\r')
   await settled(() => s.screen().includes('选择要登录的账号'))
   s.send('\r')
@@ -1331,7 +1338,7 @@ const oauthRow = (provider: string) => ({
   const s = await openWizard([], { step: 0, channel: bare, signIn: async () => 'failed' })
   await settled(() => s.screen().includes('重新检查') && s.screen().includes('订阅登录不可用'))
   check('J21a 有 dsh-auth 但没有 providerSetup → 不画登录行，兜底不断言"未挂载 dsh-auth"',
-    !s.screen().includes('登录订阅账号（OAuth）') && s.screen().includes('当前组合里订阅登录不可用')
+    !s.screen().includes('登录 DeepSeek 账号') && s.screen().includes('当前组合里订阅登录不可用')
     && !s.screen().includes('未挂载 dsh-auth'), s.screen())
   s.close()
   let composed = false
@@ -1346,7 +1353,7 @@ const oauthRow = (provider: string) => ({
   composed = true
   await l.send('\u001b[B') // 任意一次重画（真机里是 channel 版本变化）
   check('J21b 晚到的 dsh-auth：不点"重新检查"登录行也会出现',
-    await settled(() => l.screen().includes('登录订阅账号（OAuth）'))
+    await settled(() => l.screen().includes(SIGNIN_ROW))
     && late.calls.filter(call => call.startsWith('describeCredential')).length === checksBefore, l.screen())
   l.close()
 }
@@ -1360,7 +1367,7 @@ const oauthRow = (provider: string) => ({
     describeCredential: async () => ({ configured: false, source: 'none', writable: true }),
     listModels: async () => catalog,
     oauthProviderStatuses: async () => [oauthRow('xai')],
-    providerSetup: () => ({ oauth: {} }),
+    oauthSetup: () => ({}),
   })
   const s = await openWizard([], {
     step: 0,
@@ -1372,7 +1379,7 @@ const oauthRow = (provider: string) => ({
     },
   })
   const signIn = async (): Promise<void> => {
-    await settled(() => s.screen().includes('❯ 登录订阅账号'))
+    await settled(() => s.screen().includes('❯ 登录 DeepSeek 账号'))
     s.send('\r')
     await settled(() => s.screen().includes('选择要登录的账号'))
     s.send('\r')

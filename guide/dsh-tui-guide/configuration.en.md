@@ -59,9 +59,7 @@ The user profile patch can also select both providers:
 
 The TUI uses DSH's tools, authentication, cancellation and persisted results;
 it does not make an additional model request. Older hosts and compositions
-without the API plugin omit these new settings. The official `deepseek-official`
-and `deepseek-account` routes show a `1017` marker for `DeepSeek-V4.1-Flash` in
-the model list, retaining the original route IDs.
+without the API plugin omit these new settings.
 
 ## Official request metadata and feedback reporting
 
@@ -442,90 +440,32 @@ Two directories are involved and neither substitutes for the other:
 `DSH_TUI_RENDER_LOG` may capture visible prompts, tool arguments, and output.
 Do not attach it to a public issue without reviewing and redacting it.
 
-## `/provider`: manage model providers at runtime
+## DeepSeek models only
 
-`/provider` opens an interactive wizard to add, edit, or delete model
-providers without a restart.
-
-- Sources: built-in catalog routes or custom API endpoints.
-- Only providers written by the **user settings layer** can be edited or
-  deleted; ones inherited from the composition base cannot be removed.
-- Keys are written to `~/.dsh/.credentials.yaml` (mode 0600) and render as
-  `••••••`.
-- Only non-environment keys are written to the store; a key shared with
-  another provider is kept on delete.
-- Editing the model list re-fetches the candidates: a built-in catalog route
-  starts from the installed catalog snapshot and, whenever the route stores a
-  baseURL (or the add flow just collected one), also probes
-  `GET {baseURL}/models` live with the stored key and merges the listings —
-  ids only the endpoint advertises are tagged as new and carry their
-  disclosed capacities once enabled; already-enabled models are pre-checked
-  and only an explicit un-check removes one. A catalog route without a
-  baseURL shows the snapshot only, with the origin noted in the question
-  detail. Catalog routes with no single known protocol or custom request
-  headers also explain the limitation and stay on the snapshot, rather than
-  saving endpoint-only models into an unverifiable profile.
-
-Where it writes:
-
-| Artifact | Location |
-| --- | --- |
-| Provider profile | `llm-pi-ai.providers.<route>` in the active profile config on 0.1.7, or `~/.dsh/settings.yaml` on older hosts; the route registers on write and unregisters on delete |
-| API key | `~/.dsh/.credentials.yaml` (mode 0600), referenced as `<ROUTE>_API_KEY` |
-
-### Built-in subscription OAuth
-
-The standard profile's `dsh-tui-auth` row loads this package's `./oauth`
-entry; it **no longer depends on a separate `dsh-auth` plugin package**.
-The `/provider` add branch signs in to ChatGPT/Codex (`openai-codex`), Claude
-(`anthropic`), or Grok (`xai`) subscriptions. When the installed host's pi-ai
-catalog ships the corresponding flows, it also offers OpenAI direct ChatGPT sign-in
-(`openai`, using the OpenAI API rather than the legacy Codex backend) and Meta
-Muse (`meta`). The primary validated DSH `0.2.2-rc.1` development fixture resolves pi-ai
-`1.2.0`, which includes Meta Muse and OpenAI direct sign-in.
-`/auth status`, `/auth login [provider]`, and `/auth logout <provider>` use
-that credential store for these pi-ai routes. Browser authorization tries to open the page
-automatically and offers the authorization link and manual callback URL/code
-input on one question;
-device-code flows show a copyable code while polling. A host without an
-interactive question surface refuses sign-in explicitly.
-
-The `dsh-tui-auth` row accepts `providers` (default: all supported flows present
-in the installed pi-ai catalog; an explicit non-empty subset must exist in
-that catalog), `credentialsFile` (custom file path), and
-`modelOverrides.<provider>.<model>` (optional `contextWindow` and `maxTokens`).
-A profile override replaces the whole `config` block, so retain every field
-you need. The flow implementation comes from the host's `dsh-llm-pi-ai` / pi-ai
-installation. Subscription authentication uses its subscription backend; it
-is not a general-purpose API key.
-
-The default credential file remains `$DSH_HOME/dsh-auth/credentials.json`
-(`~/.dsh/dsh-auth/credentials.json` when `DSH_HOME` is unset), with
-`DSH_AUTH_CREDENTIALS` as an override. Existing sign-ins need no migration or
-re-login. The `ctx.dshAuth` service name and `dsh-auth` log prefix remain for
-compatibility; they do not imply a separate installed package. The file
-contains long-lived refresh tokens; directory/file modes are best-effort
-0700/0600. OpenAI direct login lazily creates a stable UUID in a sibling
-`device-id` file (0600); pi-ai uses it as the installation's agent-host ID.
-Status surfaces show only sign-in and expiry metadata. Models appear in the
-picker after sign-in. If another `llm-pi-ai` profile already owns the same
-provider route, the OAuth route refuses duplicate registration.
+dsh-TUI targets DeepSeek models only: the official `deepseek-official`
+(`DEEPSEEK_API_KEY`) and `deepseek-account` (DeepSeek account authorization)
+routes. The former `/provider` wizard (adding, editing and deleting third-party
+model providers, model capability editing) and the built-in third-party
+subscription OAuth (ChatGPT/Codex, Claude, Grok and other pi-ai routes) have
+been removed. The `dsh-tui-auth` row no longer accepts `providers`,
+`credentialsFile` or `modelOverrides`: a profile override that still sets them
+fails clearly at startup; delete those keys. Subscription credentials an older
+release saved in `$DSH_HOME/dsh-auth/credentials.json` are no longer read and
+can be deleted.
 
 ### DeepSeek account authorization
 
 DSH `0.2.0-rc.1+` separately provides the Host-owned `deepseekAccount` service
-and `deepseek-account` model route. The standard profile includes it in the
-same `/provider` account sign-in branch and the `/auth status` and `/login`
-lists. You can also run `/auth login deepseek-account` directly, then select
+and `deepseek-account` model route. The standard profile's `dsh-tui-auth` row
+loads this package's `./oauth` entry, which adds it to the guide's first-step
+account sign-in and the `/auth status` and `/login` lists. You can also run `/auth login deepseek-account` directly, then select
 a `deepseek-account` model via `/model`. This is a **different route** from
 `deepseek-official`, which still needs `DEEPSEEK_API_KEY`. The command
 `/auth logout deepseek-account` delegates sign-out to the Host: it removes the Host's local
 grant, while the Host handles remote revocation in the background. The TUI
-does not implement PKCE, read the account token, or put the grant in the
-`dsh-auth/credentials.json` file above. DeepSeek account grants have no pi-ai
-token expiry/refresh timestamp, so status surfaces show only signed in/out.
-`dsh-tui-auth.config.providers` and `modelOverrides` still control pi-ai
-routes only; do not put `deepseek-account` in them.
+does not implement PKCE, read the account token, or store the grant itself.
+DeepSeek account grants have no token expiry/refresh timestamp, so status
+surfaces show only signed in/out.
 
 The browser callback uses the Host `webServer` service. A TUI-only profile's
 `dsh-tui-webserver` row listens on `127.0.0.1` with an OS-assigned port; a
@@ -553,8 +493,7 @@ port and forward that same port (for example,
 In a mixed Web profile, override the official `webserver` row. A stale global
 patch cannot apply a fixed-port override to a row it lacks, so SSH users must
 also update the global TUI package before forwarding a fixed port. Missing or
-unstartable callback listeners fail sign-in clearly without affecting the
-other pi-ai OAuth routes.
+unstartable callback listeners fail sign-in clearly.
 
 ## Composition constraints
 

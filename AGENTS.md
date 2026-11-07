@@ -11,7 +11,7 @@ src/dsh-adapter/host-entry.ts  本包入口：非 DSH 内核不组合完整 DSH 
 src/dsh-adapter/channel.ts  Channel 入口：后端中立核心（channel/core/）+ 仅 DSH 会话挂载的扩展（channel/extensions.ts）
 src/agent/          后端中立的会话领域：AgentEvent、AgentSession、类型化能力（无 I/O、无厂商依赖）；多后端结构见 docs/agent-backend-design.md
 src/channel/        共享投影器（AgentEvent → 视图状态）与审批/问卷等中立 store
-src/dsh-adapter/oauth/    内置订阅 OAuth：provider 路由、/auth、凭据存储与问卷桥接
+src/dsh-adapter/oauth/    内置 DeepSeek 账号登录：/auth 与授权问卷桥接
 src/screens/        Chat.tsx 交互协调器与状态栏呈现
 src/components/     功能组件；design-system/ 是主题感知原语
 src/components/sidePanel/  侧栏分栏（几何、标签栏、PanelHost、键盘接缝）与内置面板适配

@@ -135,10 +135,9 @@ boundaries and helpers over introducing parallel abstractions.
   lazy handoff to the runtime plugin.
 - `src/dsh-adapter/plugin.ts`: TTY validation, service registration, agent creation/resume,
   React tree mounting, and terminal/process teardown.
-- `src/dsh-adapter/oauth/`: pi-ai subscription OAuth provider routes, the
-  `/auth` command, credential store, and user-questions bridge; DeepSeek
-  account authorization delegates to the Host service. Mounted through the
-  `src/oauth.ts` subpath entry.
+- `src/dsh-adapter/oauth/`: built-in DeepSeek account sign-in — the `/auth`
+  command and the authorization user-questions bridge; authorization delegates
+  to the Host service. Mounted through the `src/oauth.ts` subpath entry.
 - `src/dsh-adapter/questions-answerer.ts` and `preset-resolution.ts`: isolate
   upstream prerelease dispatch for user questions and agent presets so version
   branches do not spread into bootstrap or channel actions.

@@ -14,8 +14,8 @@
 - An interactive terminal TTY. `dsh-tui` cannot start with stdout redirected.
 - The `deepseek-official` route needs `DEEPSEEK_API_KEY`; on DSH 0.2.0-rc.1+
   the standard profile can instead sign in to the separate DeepSeek account
-  route with `/auth login deepseek-account`. Other supported accounts use
-  `/provider` or `/auth`. Set `DEEPSEEK_BASE_URL` for a compatible custom endpoint.
+  route with `/auth login deepseek-account`. dsh-TUI supports DeepSeek models
+  only. Set `DEEPSEEK_BASE_URL` for a compatible custom endpoint.
 
 macOS/Linux:
 
@@ -29,12 +29,12 @@ PowerShell:
 $env:DEEPSEEK_API_KEY = 'your-key'
 ```
 
-Never commit a real credential. You can also set nothing at all: the **first step of the
-first-run guide** signs in to a subscription (OAuth, including DeepSeek account browser
-authorization) or adds a model provider with an API key, writes it into the DSH credential
-store (`$DSH_HOME/.credentials.yaml`, by default `~/.dsh/.credentials.yaml`) and picks one of
-the models it brought in as the default — the environment variable is only the "you can also
-do this" path. A normal profile launch reads the environment variable directly when it is set.
+Never commit a real credential. With the DeepSeek account service (DSH 0.2.0-rc.1+) you
+can also set nothing at first: the **first step of the first-run guide** offers `Sign in with
+a DeepSeek account` (browser authorization) and picks one of the models it brought in as the
+default. With no access at all, the guide shows how to set `DEEPSEEK_API_KEY` by hand (an
+environment variable, or the `refs:` block of the DSH credential store
+`$DSH_HOME/.credentials.yaml`, by default `~/.dsh/.credentials.yaml`). A normal profile launch reads the environment variable directly when it is set.
 
 ## Install
 
@@ -561,8 +561,8 @@ dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui@latest
 
 For `deepseek-official`, confirm that `DEEPSEEK_API_KEY` is set in the same shell
 that starts `dsh`. Check `DEEPSEEK_BASE_URL` too for a custom endpoint. For
-`deepseek-account` or a subscription model, inspect `/auth status` and sign in again with
-`/auth login <provider>` if needed.
+`deepseek-account`, inspect `/auth status` and sign in again with
+`/auth login deepseek-account` if needed.
 
 ### The browser connects but dsh-tui cannot reach a self-hosted HTTPS endpoint (self-signed cert / private CA)
 

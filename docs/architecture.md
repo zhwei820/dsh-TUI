@@ -25,7 +25,7 @@ Cordis profile
 | --- | --- |
 | `src/index.ts` | Cordis 插件名称、注入声明、配置接口与 Schema；保持入口轻量并延迟加载 runtime |
 | `src/dsh-adapter/plugin.ts` | TTY 检查、服务装配、Agent 创建/恢复、React 挂载、统一退出清理 |
-| `src/dsh-adapter/oauth/`、`src/oauth.ts` | pi-ai 订阅 OAuth 路由、`/auth` 命令、凭据存储与问卷桥接；DeepSeek 账号登录委派给宿主服务，公共子入口只转发内部实现 |
+| `src/dsh-adapter/oauth/`、`src/oauth.ts` | 内置 DeepSeek 账号登录：`/auth` 命令与授权问卷桥接；登录委派给宿主服务，公共子入口只转发内部实现 |
 | `src/dsh-adapter/questions-answerer.ts` / `preset-resolution.ts` | user-questions 与 agent-preset 的预发布兼容分派；调用方不感知上游版本分支 |
 | `src/dsh-adapter/channel.ts` | Channel 入口：建核心、按 `native.dsh` 挂 DSH 扩展、启动；构造失败经同一 owner 全量回滚；兼容导出（含接收裸 DSH `Agent`） |
 | `src/dsh-adapter/channel/core/` | 后端中立核心：任何 `AgentSession` 都走它（见下表） |
@@ -45,9 +45,8 @@ Cordis profile
 
 标准 profile 仍用 `dsh-tui-auth` Cordis 行在 TUI 前挂载内部 `./oauth` 入口，
 用行级 `inject: [llm, commands]` 保证注册顺序；TUI 经 `ctx.dshAuth` 消费状态和
-动作，不自行实现模型或 OAuth 协议。pi-ai 订阅凭据位置沿用旧版，授权流程由
-宿主的 pi-ai 提供；DeepSeek 账号则经 `ctx.deepseekAccount` 使用宿主的 PKCE、
-凭据和模型路由，TUI-only profile 的 `dsh-tui-webserver` 行提供浏览器回调。
+动作，不自行实现模型或 OAuth 协议。它只提供 DeepSeek 账号登录，经
+`ctx.deepseekAccount` 使用宿主的 PKCE、凭据和模型路由（不再挂 pi-ai 第三方订阅路由），TUI-only profile 的 `dsh-tui-webserver` 行提供浏览器回调。
 裸 `cordis.yml` 未插入这些行，拓扑与标准 profile 不同。
 
 Channel 是一个后端中立核心加 DSH 扩展（见[多后端架构](agent-backend-design.md)）：

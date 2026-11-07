@@ -10,7 +10,7 @@
   交给 pnpm；pnpm 9 的传递依赖提升行为不同，会让 `dsh-working-activity`
   解析不到，表现为启动后立刻退出且几乎无报错（issue #60，见下方常见问题）。
 - 支持交互输入的终端 TTY。`dsh-tui` 不支持把 stdout 重定向后启动。
-- `deepseek-official` 模型路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 的标准 profile 也可通过 `/auth login deepseek-account` 登录独立的 DeepSeek 账号路由。其他支持的账号可用 `/provider` 或 `/auth` 登录。自定义兼容端点还可设置 `DEEPSEEK_BASE_URL`。
+- `deepseek-official` 模型路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 的标准 profile 也可通过 `/auth login deepseek-account` 登录独立的 DeepSeek 账号路由。dsh-TUI 只支持 DeepSeek 模型。自定义兼容端点还可设置 `DEEPSEEK_BASE_URL`。
 
 macOS/Linux：
 
@@ -24,10 +24,10 @@ PowerShell：
 $env:DEEPSEEK_API_KEY = 'your-key'
 ```
 
-不要把真实密钥提交到仓库。也可以什么都不设：**首次启动的引导第一步**可以直接
-`登录订阅账号（OAuth）`（含 DeepSeek 账号浏览器授权）或 `添加模型提供方（API key）`，
-写入 DSH 凭据库（`$DSH_HOME/.credentials.yaml`，默认 `~/.dsh/.credentials.yaml`），
-并把接入进来的模型选一个作为默认——环境变量只是「你也可以这样做」的那条路。
+不要把真实密钥提交到仓库。有 DeepSeek 账号服务时（DSH 0.2.0-rc.1+）也可以先不设：
+**首次启动的引导第一步**可以直接 `登录 DeepSeek 账号`（浏览器授权），并把接入进来的
+模型选一个作为默认。没有任何接入时，引导会提示手工设置 `DEEPSEEK_API_KEY`（环境变量，
+或 DSH 凭据库 `$DSH_HOME/.credentials.yaml` 的 `refs:` 段，默认 `~/.dsh/.credentials.yaml`）。
 
 ## 安装
 
@@ -496,8 +496,8 @@ dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui@latest
 ### 模型启动失败或提示没有凭证
 
 若使用 `deepseek-official`，确认启动 `dsh` 的同一个 Shell 中存在 `DEEPSEEK_API_KEY`；
-自定义端点同时检查 `DEEPSEEK_BASE_URL`。若使用 `deepseek-account` 或订阅模型，
-用 `/auth status` 检查登录状态，必要时重新运行 `/auth login <provider>`。
+自定义端点同时检查 `DEEPSEEK_BASE_URL`。若使用 `deepseek-account`，
+用 `/auth status` 检查登录状态，必要时重新运行 `/auth login deepseek-account`。
 
 ### 浏览器能访问、dsh-tui 连不上自建 HTTPS 端点（自签证书 / 私有 CA）
 

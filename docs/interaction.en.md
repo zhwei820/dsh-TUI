@@ -146,8 +146,8 @@ results back to the chat screen and add no new behavior.
 - **Wizard**: `←`/`→` change step (except step 3's effort slider, a drilled-in model list and step 1's
   access sub-layer, where the horizontal keys belong to the child control), `Tab` switches between the language/theme and
   model/effort/workspace panes, `↑`/`↓` move the selection; `Enter` runs the step (step 1 = act on the
-  focused action row — sign in to a subscription / add a provider (API key) / check again / skip this step;
-  both sign-in and key entry ride the shared question panel, which takes over the whole terminal and then
+  focused action row — sign in with a DeepSeek account / check again / skip this step;
+  sign-in rides the shared question panel, which takes over the whole terminal and then
   remounts the guide exactly where it was (progress lives in `src/onboardingDraft.ts`); after a sign-in
   with several new models an inline default picker (single choice) appears: `↑`/`↓` move, `Enter` sets the
   default, the last row "Keep the current model" leaves it alone, and `Esc` means the same and only pops
@@ -762,8 +762,8 @@ The command menu merges local commands with the DSH command registry. Type `/` t
 
 **Account and policy**
 
-- `/provider`, `/login`, `/logout`, `/permission`, `/add-dir`, `/hooks`, `/mcp`, `/plugin` — `list` shows the plugins you added (the installation-supplied bundles stay out); `install <spec>` installs a plugin into this profile (a pre-install notice and a trust confirmation; first-party packages on the packaged feed skip the confirmation; `esc` closes the pane, and during an install it attempts cancellation and waits for writes to settle, or for completion if too late; exemptions already written remain; blocked build scripts are approved in the pane, and an incompatible version can be exempted for that exact version); `remove <bundle>` / `enable <name|id>` / `disable <name|id>` are the lifecycle actions (a bundle name wins over a row identity; a module name matching multiple rows requires a specific row ID; gate 2 refuses the bundle providing this app, the host layer `dsh-base` and this package's own rows, with a reason and no service call, while every enable and removal asks first because installed sources cannot be verified; **no cancellation** — `esc` only closes the pane and the write goes on, and a removal does not delete your own data); `check <path>` validates a plugin manifest, `info <id>` describes an installed entry or an install spec, `registries` lists where installations ask; bare `/plugin` gives the full diagnostics.
-- After `/auth login deepseek-account` or `/provider` signs in, a Platform-confirmed, unshown login bonus appears with its amount and expiry as a “Whale coupon” in the whale-maid dialog; Enter/Esc closes it.
+- `/login`, `/logout`, `/permission`, `/add-dir`, `/hooks`, `/mcp`, `/plugin` — `list` shows the plugins you added (the installation-supplied bundles stay out); `install <spec>` installs a plugin into this profile (a pre-install notice and a trust confirmation; first-party packages on the packaged feed skip the confirmation; `esc` closes the pane, and during an install it attempts cancellation and waits for writes to settle, or for completion if too late; exemptions already written remain; blocked build scripts are approved in the pane, and an incompatible version can be exempted for that exact version); `remove <bundle>` / `enable <name|id>` / `disable <name|id>` are the lifecycle actions (a bundle name wins over a row identity; a module name matching multiple rows requires a specific row ID; gate 2 refuses the bundle providing this app, the host layer `dsh-base` and this package's own rows, with a reason and no service call, while every enable and removal asks first because installed sources cannot be verified; **no cancellation** — `esc` only closes the pane and the write goes on, and a removal does not delete your own data); `check <path>` validates a plugin manifest, `info <id>` describes an installed entry or an install spec, `registries` lists where installations ask; bare `/plugin` gives the full diagnostics.
+- After `/auth login deepseek-account` or the first-run guide signs in, a Platform-confirmed, unshown login bonus appears with its amount and expiry as a “Whale coupon” in the whale-maid dialog; Enter/Esc closes it.
 
 **Skills**
 
