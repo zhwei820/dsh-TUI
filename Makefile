@@ -157,11 +157,16 @@ install-launcher: pack ## Also install the dsh-tui / dst launcher globally from 
 # nothing to remove. DeepSeek Harness itself (make uninstall-dsh) and the user data under
 # ~/.dsh-tui are kept.
 uninstall: ## Remove the TUI plugin from the dsh profile and the global dsh-tui / dst launcher
-	@if command -v $(DSH) >/dev/null 2>&1; then \
-		echo "Removing $(PKG_NAME) from profile '$(DSH_PROFILE)' ($${DSH_HOME:-~/.dsh})"; \
-		$(DSH) plugin --profile $(DSH_PROFILE) remove $(PKG_NAME) || echo "make: plugin not removed (not installed in profile '$(DSH_PROFILE)'?)"; \
+	@# Same path the launcher reads (bin/dsh-tui.js profilePkgDir); dsh's own remove
+	@# fails loudly (ERR_PNPM_CANNOT_REMOVE_MISSING_DEPS) on a profile without it.
+	@home="$${DSH_HOME:-$$HOME/.dsh}"; \
+	if [ ! -f "$$home/profiles/$(DSH_PROFILE)/node_modules/$(PKG_NAME)/package.json" ]; then \
+		echo "$(PKG_NAME) is not installed in profile '$(DSH_PROFILE)' ($$home); nothing to remove"; \
+	elif ! command -v $(DSH) >/dev/null 2>&1; then \
+		echo "make: '$(DSH)' not found; cannot remove the plugin from profile '$(DSH_PROFILE)'" >&2; exit 1; \
 	else \
-		echo "'$(DSH)' not found; no profile plugin to remove"; \
+		echo "Removing $(PKG_NAME) from profile '$(DSH_PROFILE)' ($$home)"; \
+		$(DSH) plugin --profile $(DSH_PROFILE) remove $(PKG_NAME); \
 	fi
 	@if $(NPM) ls -g --depth=0 $(PKG_NAME) >/dev/null 2>&1; then \
 		echo "Removing the global dsh-tui / dst launcher"; \
