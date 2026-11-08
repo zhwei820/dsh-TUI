@@ -341,29 +341,45 @@ export function mergeLiveWindow(leaves: readonly TranscriptLeaf[], subagent: Sub
 }
 
 /**
- * Overlay the live agent-message feed on loaded history leaves. The feed is
- * folded into the leaves only when a page loads, so without this a message
- * sent after the load stays invisible, and a placed one keeps its load-time
- * state ('queued') after the child claims it, until the next reload. Placed
- * rows take their newest view by messageId; a message the loaded span has
- * not placed (newer than the load, and not before `messagesFrom`, which
- * belongs to unloaded older pages) is appended at the tail.
+ * Overlay the live agent-message feed on the merged transcript rows (history
+ * leaves + live tail). The feed is folded into the leaves only when a page
+ * loads, so without this a message sent afterwards stays invisible and a
+ * placed one keeps its load-time state until the next reload.
+ *
+ * - Placed rows take their newest view by messageId.
+ * - An unplaced message (newer than the load; anything before `messagesFrom`
+ *   belongs to unloaded older pages) is inserted by time into the live tail:
+ *   before the first trailing live line written after it, so the child's
+ *   answer to an interjection reads BELOW it.
+ * - The user's own prompt also lands in the child's log once claimed; after
+ *   a reload that copy is a plain `prompt` leaf. The message row carries the
+ *   delivery status, so a prompt leaf repeating a user message's text is
+ *   dropped instead of shown twice.
  */
-export function withLiveMessages(leaves: readonly TranscriptLeaf[], messages: readonly AgentMessageView[], messagesFrom: number): TranscriptLeaf[] {
-  if (messages.length === 0) return [...leaves]
+export function withLiveMessages(rows: readonly (TranscriptLeaf | LiveLeaf)[], messages: readonly AgentMessageView[], messagesFrom: number, selfAgentId: string): (TranscriptLeaf | LiveLeaf)[] {
+  if (messages.length === 0) return [...rows]
   const latest = new Map(messages.map(message => [message.messageId, message]))
+  const userTexts = new Set(messages.filter(message => message.from === 'user' && message.to === selfAgentId).map(message => message.text.trim()))
   const placed = new Set<string>()
-  const rows = leaves.map(leaf => {
-    if (leaf.kind !== 'agent-message') return leaf
-    placed.add(leaf.message.messageId)
-    const current = latest.get(leaf.message.messageId)
-    return current === undefined || current === leaf.message ? leaf : { ...leaf, message: current }
-  })
+  const out: (TranscriptLeaf | LiveLeaf)[] = []
+  for (const row of rows) {
+    if (row.kind === 'prompt' && userTexts.has(row.text.trim())) continue
+    if (row.kind !== 'agent-message') { out.push(row); continue }
+    placed.add(row.message.messageId)
+    const current = latest.get(row.message.messageId)
+    out.push(current === undefined || current === row.message ? row : { ...row, message: current })
+  }
   for (const message of messages) {
     if (placed.has(message.messageId) || message.observedAt < messagesFrom) continue
-    rows.push({ kind: 'agent-message', key: `am-${message.messageId}`, message })
+    let at = out.length
+    while (at > 0) {
+      const previous = out[at - 1]!
+      if (previous.kind !== 'live' || previous.line.at <= message.observedAt) break
+      at -= 1
+    }
+    out.splice(at, 0, { kind: 'agent-message', key: `am-${message.messageId}`, message })
   }
-  return rows
+  return out
 }
 
 export type TranscriptLoader = (agentId: string, window?: SubagentTranscriptWindow) => Promise<SubagentTranscriptView | null>

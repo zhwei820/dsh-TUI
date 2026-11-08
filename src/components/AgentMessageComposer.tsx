@@ -41,7 +41,25 @@ const NOTICE_OF_REASON: Readonly<Record<Extract<AgentMessageSubmitResult, { ok: 
 interface SentIntent {
   readonly intentId: string
   readonly text: string
+  readonly delivery: 'queue' | 'steer'
   state: AgentMessageState
+}
+
+/** Direct-prompt status word: what the user did, then what the child did. */
+function directStateText(state: AgentMessageState, delivery: 'queue' | 'steer'): string {
+  if (state === 'delivered') return t('agent-message-direct-received')
+  if (state === 'queued' || state === 'issued') return t(delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
+  return agentMessageStateText(state)
+}
+
+/** The note after the status word. A direct prompt says when the child will
+ *  see it (its next step / after this turn / right away) instead of the
+ *  generic inbox disclaimer; other transports keep that disclaimer. */
+function directNoteKey(via: AgentMessageControl['via'], state: AgentMessageState, delivery: 'queue' | 'steer', running: boolean): 'agent-message-claimed-note' | 'agent-message-inbox-note' | 'agent-message-steer-note' | 'agent-message-queue-note-running' | 'agent-message-queue-note-idle' {
+  if (state === 'delivered') return 'agent-message-claimed-note'
+  if (via !== 'direct-continuable' || (state !== 'queued' && state !== 'issued')) return 'agent-message-inbox-note'
+  if (delivery === 'steer') return 'agent-message-steer-note'
+  return running ? 'agent-message-queue-note-running' : 'agent-message-queue-note-idle'
 }
 
 export interface AgentMessageComposerProps {
@@ -52,6 +70,12 @@ export interface AgentMessageComposerProps {
   readonly control: AgentMessageControl
   /** The durable feed for this child — later facts about our intents. */
   readonly messages: readonly AgentMessageView[]
+  /** The target is mid-turn. With a steer-capable control, plain Enter then
+   *  steers (the message reaches the CURRENT turn at its next step) and
+   *  Ctrl+Enter queues — interjecting is what a user typing at a working
+   *  agent means, and many terminals cannot send Ctrl+Enter at all. Idle or
+   *  absent: Enter queues (an idle child starts its next turn with it). */
+  readonly targetRunning?: boolean
   /** Keyboard focus; the scene yields plain typing here while true. */
   readonly focused: boolean
   onFocusChange(focused: boolean): void
@@ -102,7 +126,7 @@ export function nextCodePoint(text: string, caret: number): number {
  * AgentMessageControl (Claude: relayed by the parent; DSH: a direct prompt
  * to a continuable child). A failure keeps the draft and says why.
  */
-export function AgentMessageComposer({ target, control, messages, focused, onFocusChange, keyHandlerRef }: AgentMessageComposerProps): React.ReactNode {
+export function AgentMessageComposer({ target, control, messages, targetRunning = false, focused, onFocusChange, keyHandlerRef }: AgentMessageComposerProps): React.ReactNode {
   // The draft lives in a ref as well as in state: keys can arrive faster
   // than React re-renders, and a handler reading a render-time copy would
   // overwrite the previous keystroke (or submit twice on a double Enter).
@@ -152,7 +176,7 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
         // transport stated (an accepted inbox is 'queued', never more).
         // Text typed while the submit was in flight stays in the box.
         if (draftRef.current.text === submitted) setDraft({ text: '', caret: 0 })
-        setSent({ intentId: outcome.intentId, text: submitted, state: outcome.state })
+        setSent({ intentId: outcome.intentId, text: submitted, delivery, state: outcome.state })
         return
       }
       // Failure keeps the draft verbatim; the notice names the stable
@@ -172,14 +196,16 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
       return true
     }
     const returnKey = key.return === true || key.return_ === true
+    // Steer ONLY under an explicit capability; Claude mediation keeps the
+    // followup placement (never interruptAndDeliver). A running target swaps
+    // the keys: Enter steers, Ctrl+Enter queues behind the current turn.
+    const steerFirst = control.steer === true && targetRunning
     if (isPlainReturnInput(input, { ...key, return: returnKey })) {
-      submit('queue')
+      submit(steerFirst ? 'steer' : 'queue')
       return true
     }
-    // Ctrl+Enter steers ONLY under an explicit capability; Claude mediation
-    // keeps the followup placement (never interruptAndDeliver).
     if (returnKey && key.ctrl === true) {
-      submit(control.steer === true ? 'steer' : 'queue')
+      submit(control.steer !== true ? 'queue' : steerFirst ? 'queue' : 'steer')
       return true
     }
     const current = draftRef.current
@@ -247,18 +273,18 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
       {latestIntentState !== undefined && sent !== null && (
         <Box flexDirection="row" gap={1}>
           <Text dimColor>{`${t('agent-message-submitted')}: `}</Text>
-          <Text color={agentMessageStateColor(latestIntentState)}>{agentMessageStateText(latestIntentState)}</Text>
+          <Text color={agentMessageStateColor(latestIntentState)}>{control.via === 'direct-continuable' ? directStateText(latestIntentState, sent.delivery) : agentMessageStateText(latestIntentState)}</Text>
           {/* 'delivered' = the child's log shows a turn took it (DSH:
               subagent-projection noteChildClaimedPrompt); before that the
               receipt only proves the inbox. */}
-          <Text dimColor>{` · ${t(latestIntentState === 'delivered' ? 'agent-message-claimed-note' : 'agent-message-inbox-note')}`}</Text>
+          <Text dimColor>{` · ${t(directNoteKey(control.via, latestIntentState, sent.delivery, targetRunning))}`}</Text>
         </Box>
       )}
       <Text dimColor>
         {canSubmit
-          ? (control.steer === true
-              ? t('agent-message-hint-queue-steer')
-              : t('agent-message-hint-queue'))
+          ? (control.steer !== true
+              ? t('agent-message-hint-queue')
+              : targetRunning ? t('agent-message-hint-steer-first') : t('agent-message-hint-queue-steer'))
           : t('agent-message-hint-nameless')}
       </Text>
     </Box>

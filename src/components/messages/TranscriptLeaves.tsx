@@ -58,6 +58,26 @@ export function AgentMessageLeafRow({ message, selfAgentId, marginTopOnTurn }: {
   selfAgentId: string
   marginTopOnTurn: boolean
 }): React.ReactNode {
+  // The user's own prompt to this child reads like a chat turn (`❯ 你`), not
+  // a relay row: it is what they typed, and the status says how far it got.
+  if (message.from === 'user' && message.to === selfAgentId) {
+    const status = message.state === 'delivered'
+      ? t('agent-message-direct-received')
+      : message.state === 'queued' || message.state === 'issued'
+        ? t(message.delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
+        : agentMessageStateText(message.state)
+    return (
+      <Box flexDirection="column" marginTop={marginTopOnTurn ? 1 : 0}>
+        <Box flexDirection="row" gap={1}>
+          <Text color="suggestion" bold>{`❯ ${t(message.delivery === 'steer' ? 'agent-message-you-steer' : 'agent-message-you')}`}</Text>
+          <Box flexShrink={0}><Text color={agentMessageStateColor(message.state)} dimColor={message.state !== 'delivered'}>{status}</Text></Box>
+        </Box>
+        <Box paddingLeft={2} flexDirection="column">
+          <Text wrap="wrap">{message.text}</Text>
+        </Box>
+      </Box>
+    )
+  }
   const from = agentMessagePartyLabel(message.from, selfAgentId, message.parentSessionId)
   const to = agentMessagePartyLabel(message.to, selfAgentId, message.parentSessionId)
   const known = from !== undefined && to !== undefined

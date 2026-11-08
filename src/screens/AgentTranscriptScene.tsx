@@ -256,6 +256,17 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
     if (!isRunning || handle === null) return
     if (followRef.current || handle.isSticky()) handle.scrollToBottom()
   }, [isRunning, tailLength])
+  // Sending jumps to the tail: the user's own prompt and the child's answer
+  // to it land there, wherever the view was scrolled.
+  const ownSent = messages.filter(message => message.from === 'user').length
+  const ownSentRef = React.useRef(ownSent)
+  React.useEffect(() => {
+    if (ownSent > ownSentRef.current) {
+      followRef.current = true
+      scrollRef.current?.scrollToBottom()
+    }
+    ownSentRef.current = ownSent
+  }, [ownSent])
 
   const headerWidth = Math.max(20, columns - 8)
   const headerLabel = agentTitle(subagent.description)
@@ -341,7 +352,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
               {transcript.status === 'loading' && <Text dimColor>{`⏳ ${t('subagent-transcript-loading')}`}</Text>}
               {transcript.status === 'unavailable' && <Text color="error">{t('subagent-transcript-unavailable')}</Text>}
               {transcript.status === 'ready' && (() => {
-                const merged = mergeLiveWindow(withLiveMessages(transcript.leaves, messages, transcript.messagesFrom), subagent, true)
+                const merged = withLiveMessages(mergeLiveWindow(transcript.leaves, subagent, true), messages, transcript.messagesFrom, subagent.agentId)
                 const liveStart = merged.findIndex(row => row.kind === 'live')
                 // The delegating task is the first prompt of the WHOLE log; with
                 // older pages still unloaded the first visible one is a follow-up.
@@ -442,6 +453,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
             target={compose.target}
             control={compose.control}
             messages={messages}
+            targetRunning={isRunning}
             focused={composerFocused}
             onFocusChange={setComposerFocused}
           />

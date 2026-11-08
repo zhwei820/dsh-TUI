@@ -793,6 +793,9 @@ export interface AgentMessageView {
   readonly observedAt: number
   /** The parent session the observation rode; absent when unknown. */
   readonly parentSessionId?: string
+  /** How a composer submission asked to be delivered ('steer' = into the
+   *  child's current turn, 'queue' = its next turn). Local submissions only. */
+  readonly delivery?: 'queue' | 'steer'
 }
 
 /** One composer submission to an agent. */

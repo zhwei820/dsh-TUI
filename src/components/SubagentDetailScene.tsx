@@ -686,7 +686,7 @@ export function SubagentDetailScene({
               {transcript.status === 'loading' && <Text dimColor>{`⏳ ${t('subagent-transcript-loading')}`}</Text>}
               {transcript.status === 'unavailable' && <Text color="error">{t('subagent-transcript-unavailable')}</Text>}
               {transcript.status === 'ready' && (() => {
-                const merged = mergeLiveWindow(withLiveMessages(transcript.leaves, messages, transcript.messagesFrom), subagent, true)
+                const merged = withLiveMessages(mergeLiveWindow(transcript.leaves, subagent, true), messages, transcript.messagesFrom, subagent.agentId)
                 const liveStart = merged.findIndex(row => row.kind === 'live')
                 // The delegating task is the first prompt of the WHOLE log; with
                 // older pages still unloaded the first visible one is a follow-up.
@@ -830,6 +830,7 @@ export function SubagentDetailScene({
             target={compose.target}
             control={compose.control}
             messages={messages}
+            targetRunning={isRunning}
             focused={composerFocused && (!panelMode || (focused && visible))}
             onFocusChange={setComposerFocused}
             {...(panelMode ? { keyHandlerRef: composerKeys } : {})}

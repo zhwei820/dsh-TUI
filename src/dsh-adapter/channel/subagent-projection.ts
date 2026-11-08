@@ -641,6 +641,7 @@ function createSessionSubagentProjection(
         sourceRef: receipt.messageId,
         observedAt: Date.now(),
         parentSessionId,
+        delivery: input.delivery,
       })
       syncNow()
       getState().emit()
