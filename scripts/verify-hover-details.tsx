@@ -464,7 +464,7 @@ try {
   const K_STUB = {
     minimalUi: false,
     // Pre-Claude-Code footer fields: the goldens below pin the field row.
-    statusBar: { mode: true, model: true, thinking: true, cwd: true, cache: true, cost: true, shortcutHint: false },
+    statusBar: { mode: true, model: true, thinking: true, cwd: true, cache: true, cost: true, tokens: false, gitBranch: false, shortcutHint: false },
     model: 'TM',
     provider: 'test-provider',
     contextWindow: 64_000,
