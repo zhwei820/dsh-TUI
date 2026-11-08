@@ -55,7 +55,7 @@ const actualFigureExports = [...figureSource.matchAll(/^export const ([A-Z0-9_]+
   .map(match => match[1]!)
   .sort()
 assert.deepEqual(actualFigureExports, expectedFigureExports, 'figures should contain active glyph exports only')
-assert.equal(THINKING_SPINNER_INTERVAL_MS, 80)
+assert.equal(THINKING_SPINNER_INTERVAL_MS, 120)
 assert.ok(THINKING_SPINNER_FRAMES.length > 0)
 assert.ok(THINKING_SPINNER_FRAMES.every(frame => stringWidth(frame) === stringWidth(THINKING_SETTLED_MARKER)))
 assert.ok([BLACK_CIRCLE, POINTER, TICK, BULLET, MULTIPLICATION_X, UP_ARROW, DOWN_ARROW].every(Boolean))

@@ -16,30 +16,36 @@ export const ALL_PLUGIN_FIELDS = '*'
  *  KEY_PATTERN in `dsh-adapter/status.ts` (a script compares the sources). */
 const PLUGIN_FIELD_KEY = /^[a-z][a-z0-9_-]*(:[a-z][a-z0-9_-]*)*$/u
 
-/** Defaults keep the essential route/context information visible. */
+/**
+ * Claude Code-style defaults: a quiet footer — the context readout, the goal
+ * chip, and `? for shortcuts` / the session-mode line under the input. Every
+ * other field (model, effort, cwd, cache, cost, the segmented context bar)
+ * stays one `/settings → statusBar.*` switch away.
+ */
 export const DEFAULT_STATUS_BAR: Readonly<StatusBarConfig> = Object.freeze({
   compact: true,
-  model: true,
-  thinking: true,
-  cwd: true,
+  model: false,
+  thinking: false,
+  cwd: false,
   contextUsage: true,
-  cache: true,
+  cache: false,
   tokens: false,
-  cost: true,
+  cost: false,
   tps: false,
   gitBranch: false,
   sessionTitle: false,
   sessionId: false,
   goal: true,
   mode: false,
-  // On by default (2026-09-10, user ask): the segmented bar is the only place
-  // the per-segment context breakdown shows, so users who never open
-  // /settings were missing it entirely. `/settings → statusBar.contextBar`
-  // (or cordis.yml `contextBar: false`) still turns it off.
-  contextBar: true,
+  // Off by default since the Claude Code-style footer (2026-11-08, user ask:
+  // replicate Claude Code's UI, keep the extras as settings). It was on by
+  // default from 2026-09-10; `/settings → statusBar.contextBar` turns the
+  // segmented per-segment breakdown back on.
+  contextBar: false,
   activity: false,
   trajectory: false,
-  shortcutHint: false,
+  // On by default: Claude Code's `? for shortcuts` under the input.
+  shortcutHint: true,
   // Third-party text in permanent chrome: on by default (a plugin that
   // registered a field asked to be seen), with one switch to silence all of
   // them without disabling the plugins.

@@ -135,10 +135,17 @@ export function feedbackRowLines(prefix: string, label: string, reason: string, 
   return hardWrap(`${prefix}${t('approval-feedback-row', { label, reason: shown })}`, cells).slice(0, maxLines)
 }
 
-/** The localized label of an option without backend wording. */
-function optionLabel(option: PermissionOptionView): string {
+/**
+ * The localized label of an option without backend wording (Claude Code's
+ * `Yes` / `Yes, and don't ask again` / `No, and tell … (esc)`). The long
+ * reject wording only appears where a reason can actually be typed; the
+ * typed-reason row keeps the short `No` as its label.
+ */
+function optionLabel(option: PermissionOptionView, acceptsFeedback: boolean, typing = false): string {
   if (option.label !== undefined && option.label !== '') return option.label
-  return option.kind === 'allow-once' ? t('approval-yes') : option.kind === 'allow-always' ? t('approval-always') : t('approval-no')
+  if (option.kind === 'allow-once') return t('approval-yes')
+  if (option.kind === 'allow-always') return t('approval-always')
+  return acceptsFeedback && !typing ? t('approval-no-feedback') : t('approval-no')
 }
 
 export function ApprovalPanel({ approval, background = false, onDecide }: ApprovalPanelProps): React.ReactNode {
@@ -346,15 +353,15 @@ export function ApprovalPanel({ approval, background = false, onDecide }: Approv
         {options.map((option, index) => {
           const focused = index === focusIndex
           const hovered = index === hoverIndex
-          const label = optionLabel(option)
-          const reasonLines = acceptsFeedback && option.kind === 'reject' && feedback !== ''
+          const typing = acceptsFeedback && option.kind === 'reject' && feedback !== ''
+          const label = optionLabel(option, acceptsFeedback, typing)
+          const reasonLines = typing
             ? feedbackRowLines(`${index + 1}. `, label, feedback, columns, compact ? 1 : FEEDBACK_MAX_LINES)
             : undefined
           return (
             <Box
               key={option.id}
               flexDirection="row"
-              marginTop={!compact && focused ? 1 : 0}
               onClick={() => decide(index, true)}
               onMouseEnter={() => setHoverIndex(index)}
               onMouseLeave={() => setHoverIndex(current => (current === index ? -1 : current))}

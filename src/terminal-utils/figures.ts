@@ -20,21 +20,10 @@ export const UP_ARROW = '\u2191' // ↑
 export const DOWN_ARROW = '\u2193' // ↓
 
 /**
- * Thinking frames share a two-column footprint with the settled anchor. The
- * leading space prevents the label from shifting when the stream settles.
+ * Thinking frames: Claude Code's twinkling star, one display cell each, the
+ * same footprint as the settled `∴` so the label never shifts on settle.
  */
-export const THINKING_SPINNER_FRAMES = [
-  ' \u280b', // ⠋
-  ' \u2819', // ⠙
-  ' \u2839', // ⠹
-  ' \u2838', // ⠸
-  ' \u283c', // ⠼
-  ' \u2834', // ⠴
-  ' \u2826', // ⠦
-  ' \u2827', // ⠧
-  ' \u2807', // ⠇
-  ' \u280f', // ⠏
-]
-export const THINKING_SPINNER_INTERVAL_MS = 80
+export const THINKING_SPINNER_FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢']
+export const THINKING_SPINNER_INTERVAL_MS = 120
 /** Settled marker shown after a reasoning block stops streaming. */
-export const THINKING_SETTLED_MARKER = '\u2693' // ⚓
+export const THINKING_SETTLED_MARKER = '\u2234' // ∴

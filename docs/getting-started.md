@@ -371,8 +371,10 @@ pnpm build
 pnpm smoke
 ```
 
-仓库根目录的 `Makefile` 封装了常用命令（`make help` 列出全部）：`make setup`（初始化子模块并
-安装依赖）、`make build` / `make check`（编译 / 编译加构建门禁）、`make smoke`、
+仓库根目录的 `Makefile` 封装了常用命令（`make help` 列出全部）：`make setup`（先跑 `make submodule`
+让子模块跟上 `main`，再安装依赖）、`make submodule`（让 `vendor/dsh-std` 跟随
+`.gitmodules` 声明的 `main`：游离 HEAD 切回 main，再 `--ff-only` 快进到 origin 最新，有未推提交、
+改动或分叉时原样不动；强制对齐记录的 commit 用 `make submodule-sync`）、`make build` / `make check`（编译 / 编译加构建门禁）、`make smoke`、
 `make ci GROUP=<组名>`，以及把当前检出装进本机 dsh 的 `make install`——编译、打包，再执行
 `dsh plugin --profile dsh-tui add <tarball>`，装到 `DSH_HOME`（默认 `~/.dsh`）下的
 `dsh-tui` profile，之后用 `dsh --profile dsh-tui` 启动；`make install-launcher` 另从同一

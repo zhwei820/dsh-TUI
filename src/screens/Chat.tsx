@@ -5935,6 +5935,9 @@ export function Chat({
   // draws the user's `/activity` preset, so the compaction row borrows the same
   // indicator instead of answering with the classic dot.
   const activitySlot = channel.activityEnabled && !channel.minimalUi
+  // Claude Code keeps the interrupt key on the working line itself; an
+  // interrupt already requested says so instead of promising a dead key.
+  const interruptHint = t(channel.cancelPending ? 'statusline-hint-interrupting' : 'statusline-hint-working')
 
   // An automatic compaction runs INSIDE the turn, so it rides whichever spinner
   // the slot shows as a badge instead of a second row (the spinner's timer is
@@ -7233,7 +7236,7 @@ export function Chat({
                   // inflating the reading next to a real upload number). An
                   // automatic compaction mid-turn badges THIS line too — it is
                   // the spinner slot whenever real activity data exists.
-                  suffix={`${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}`}
+                  suffix={`${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`} · ${interruptHint}`}
                 />
               </Box>
             ) : (
@@ -7247,6 +7250,7 @@ export function Chat({
                 pauseStartTimeRef={pauseStartTimeRef}
                 thinkingStatus={thinkingStatus}
                 suffix={compactionBadge}
+                interruptHint={interruptHint}
               />
             ))}
         {!channel.working && channel.compaction !== undefined && (

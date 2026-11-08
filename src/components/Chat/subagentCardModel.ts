@@ -21,6 +21,14 @@
  */
 import type { ChatRow, SubagentRow, SubagentToolCall } from '../../adapter/ports/channel-view.js'
 
+/** Header name of a delegation, in the transcript's tool-name voice. */
+export const AGENT_LABEL = 'Agent'
+
+/** `Agent(description)`: the one title every subagent surface uses. */
+export function agentTitle(description: string): string {
+  return `${AGENT_LABEL}(${description})`
+}
+
 /** Tool calls a collapsed single card shows (the most recent ones). */
 export const SUBAGENT_RECENT_TOOLS = 3
 /** Upper bound on tool lines an expanded (Ctrl+O) card lays out. */

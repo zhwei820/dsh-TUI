@@ -71,8 +71,8 @@ export const SETTING_DEFINITIONS = {
     label: 'Diff layout',
     descriptions: { zh: 'diff 布局' },
     group: 'conversation',
-    hint: 'Edit/Write tool cards: auto picks by terminal width, or force one layout.',
-    hintDescriptions: { zh: 'Edit/Write 工具卡的 diff 呈现：auto 按终端宽度选择，或强制一种布局。' },
+    hint: 'Edit/Write tool cards: unified (default, Claude Code style), side-by-side, or auto by terminal width.',
+    hintDescriptions: { zh: 'Edit/Write 工具卡的 diff 呈现：统一式（默认，Claude Code 风格）、双栏对照，或按终端宽度自动选择。' },
     kind: 'select',
     options: [
       { value: 'auto', label: 'Auto (by width)', descriptions: { zh: '自动（按宽度）' } },

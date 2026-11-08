@@ -15,32 +15,22 @@ import { isMinimalUiMode } from '../../minimalUiMode.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
 import { primaryComboString } from '../../utils/keymap.js'
 
-/** Preview body rows — a FIXED row count (kimicode-style constant-height
- *  ticker). Ink's truncate slices the whole string across newlines as one
- *  logical line, so a single joined Text collapses to 1-2 rows whenever
- *  the combined width passes the terminal width, then bounces back as
- *  lines shift. One Text per row, each truncated to the width and padded
- *  to exactly this many rows, keeps the block height stream-independent. */
-const PREVIEW_ROWS = 3
 
 type Props = {
   thinking: string
   /** The FULL un-revealed text (reasoning rows under smooth streaming):
    *  `thinking` carries the revealed slice the expanded body paints, while
-   *  the live preview ticker must follow the newest ARRIVED content — never
-   *  a lagging reveal. Falls back to `thinking`. */
+   *  kept for callers; the folded header no longer previews text. */
   textFull?: string
   /** Adds the top margin between messages. */
   marginTopOnTurn: boolean
   /** Show the full text (Ctrl+O, per-row expansion, or live click toggle). */
   verbose: boolean
-  /** True while the reasoning block is still streaming — the leading anchor
-   *  becomes a rotating braille spinner (Kimi Code style) and settles back
-   *  to the anchor once the step ends. */
+  /** True while the reasoning block is still streaming — the leading mark
+   *  twinkles (Claude Code's star) and settles to `∴` once the step ends. */
   streaming?: boolean
-  /** Streaming compact mode (thinkingFold=preview): a 3-row live ticker of
-   *  the model's latest reasoning lines instead of the full block —
-   *  kimicode-style constant height; the block never resizes mid-stream. */
+  /** Streaming folded mode (thinkingFold=preview): the one header line
+   *  alone, Claude Code style — the block never resizes mid-stream. */
   preview?: boolean
   /** Thinking wall-clock duration once the reasoning block settled (ms). */
   durationMs?: number
@@ -55,14 +45,11 @@ type Props = {
 }
 
 /**
- * Thinking block: settled rows fold to `⚓ Thinking` plus the localized
- * ctrl+o expand hint (hint-expand-ctrl-o);
- * streaming rows switch between a three-line preview and the full reasoning
- * text on click. The live leading mark is a rotating braille spinner
- * (`⠋⠙⠹…`, Kimi Code style), settling back to the static anchor (`⚓`). When
- * the channel records the reasoning duration, the label carries it
- * (`⚓ Thinking · 12s …`) — dsh-tui's take on making thinking time visible in
- * the transcript.
+ * Thinking block in the Claude Code visual language: settled rows fold to
+ * `∴` + `thinking-settled` (with the recorded duration) + the ctrl+o expand
+ * hint; streaming rows show one twinkling header line (`thinking-label`),
+ * or the full reasoning text when expanded (click / Ctrl+O / thinkingFold
+ * full).
  */
 export function AssistantThinkingMessage({
   thinking,
@@ -89,11 +76,6 @@ export function AssistantThinkingMessage({
     )
   }
 
-  // The preview ticker tracks the newest ARRIVED line (smooth streaming must
-  // not lag it behind the reveal); the expanded body below paints `thinking`
-  // — the revealed slice under smooth streaming, the full text otherwise.
-  const tickerText = textFull ?? thinking
-
   // Spinner frame (80ms cadence, only while the reasoning is still
   // streaming — same pattern as BtwPanel's answering spinner).
   const [frame, setFrame] = React.useState(0)
@@ -103,16 +85,15 @@ export function AssistantThinkingMessage({
     return () => clearInterval(interval)
   }, [streaming])
 
-  const duration =
-    durationMs !== undefined && durationMs >= 1000
-      ? ` · ${formatDuration(durationMs)}`
-      : ''
+  const durationText =
+    durationMs !== undefined && durationMs >= 1000 ? formatDuration(durationMs) : undefined
 
-  // Kimi Code style blue pulse: the streaming glyph breathes along the
-  // header's brand→ice ladder, one sine period per ~7 frames (≈0.56s) —
+  // The streaming glyph breathes along the header's brand→ice ladder —
   // lively without strobing. The minimal UI drops the color (plain glyph);
-  // settled always keeps the plain dim anchor.
-  const label = `${t('thinking-label')}${duration}${streaming ? '…' : ` ${t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })}`}`
+  // settled always keeps the plain dim `∴`.
+  const label = streaming
+    ? `${t('thinking-label')}${durationText === undefined ? '' : ` · ${durationText}`}…`
+    : `${durationText === undefined ? t('thinking-settled-bare') : t('thinking-settled', { duration: durationText })} ${t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })}`
   const minimalUi = isMinimalUiMode()
   const pulse = (Math.sin(frame * 0.9) + 1) / 2
   const pulseColor = interpolateColor(BRAND, ICE, pulse)
@@ -134,62 +115,7 @@ export function AssistantThinkingMessage({
       <Text italic dimColor={!hovered} color={hovered ? 'text' : undefined}>{`${minimalUi ? '*' : THINKING_SETTLED_MARKER} ${label}`}</Text>
     )
 
-  if (preview) {
-    // Live ticker: the model's last few reasoning lines, dimmed, one Text
-    // per row so each truncates to the width independently, padded to a
-    // constant PREVIEW_ROWS-tall block that follows the stream. The folded
-    // summary takes over when the step settles. The LAST row truncates
-    // from the start (leading ellipsis) so the newest tokens — which grow
-    // at the line's end — stay visible while the line is longer than the
-    // width.
-    const lines = tickerText.split('\n')
-    const visible = lines.slice(-PREVIEW_ROWS)
-    const clipped = lines.length > visible.length
-    // Pad with single spaces — an empty-string Text renders with zero
-    // height in ink, so '' padding would not hold the row open.
-    const rows = Array.from(
-      { length: PREVIEW_ROWS },
-      (_, i) => visible[i] ?? ' ',
-    )
-    return (
-      <Box
-        flexDirection="column"
-        marginTop={marginTopOnTurn ? 1 : 0}
-        backgroundColor={isSelected ? 'messageActionsBackground' : undefined}
-        onClick={onClick}
-        {...hoverProps}
-      >
-        {header}
-        <Box
-          flexDirection="column"
-          paddingLeft={2}
-          height={PREVIEW_ROWS}
-          flexShrink={0}
-          overflow="hidden"
-        >
-          {rows.map((line, i) => (
-            <Box key={i} flexDirection="row" height={1}>
-              {/* The bar is a fixed-width column OUTSIDE the truncating text:
-                * ink's truncate-start rewrites the text's leading columns, so
-                * a bar inside the text would be eaten by the ellipsis. */}
-              <Text dimColor italic>{'│ '}</Text>
-              <Box flexDirection="row" flexGrow={1}>
-                <Text
-                  dimColor
-                  italic
-                  wrap={i === rows.length - 1 ? 'truncate-start' : 'truncate'}
-                >
-                  {i === 0 && clipped ? `…${line}` : line}
-                </Text>
-              </Box>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    )
-  }
-
-  if (!verbose) {
+  if (preview || !verbose) {
     return (
       <Box
         marginTop={marginTopOnTurn ? 1 : 0}

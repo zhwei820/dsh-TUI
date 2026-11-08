@@ -330,6 +330,21 @@ function patchLines(diff: ToolPatchDiff, multiFile: boolean): BodyLine[] {
  *  patch file (`ToolFileDiff.patch`) renders through {@link patchLines}. */
 function diffLines(diffs: readonly ToolFileDiff[]): BodyLine[] {
   const out: BodyLine[] = []
+  // Claude Code's lead line (`Updated with 3 additions and 1 removal`) for
+  // old/new-text edits; a patch file's header already carries `(+N -M)`.
+  if (diffs.length > 0 && !diffs.some(isPatchDiff)) {
+    let additions = 0
+    let removals = 0
+    for (const diff of diffs) {
+      if (isPatchDiff(diff)) continue
+      if (diff.oldText !== null) removals += sideLines(diff.oldText).length
+      additions += sideLines(diff.newText).length
+    }
+    out.push(dim(t('diff-summary', {
+      additions: t('diff-additions', { count: additions }),
+      removals: t('diff-removals', { count: removals }),
+    })))
+  }
   let prevPath: string | undefined
   for (const diff of diffs) {
     if (isPatchDiff(diff)) {
@@ -1051,6 +1066,8 @@ export function AssistantToolUseMessage({
                                 ? 'ide'
                                 : undefined
                     }
+                    // Claude Code tints added/removed rows, not only their text.
+                    backgroundColor={line.tone === 'add' ? 'diffAdded' : line.tone === 'del' ? 'diffRemoved' : undefined}
                     dimColor={(line.tone === 'dim' && !(line.revealOnHover === true && hovered)) || line.tone === 'live'}
                     wrap={line.tone === 'live' ? 'truncate-end' : 'wrap'}
                   >

@@ -440,7 +440,10 @@ pnpm smoke
 ```
 
 The root `Makefile` wraps the common commands (`make help` lists them all): `make setup`
-(init the submodule and install dependencies), `make build` / `make check` (compile /
+(run `make submodule` to put the submodule on `main`, then install dependencies), `make submodule` (keep `vendor/dsh-std` on the
+`main` branch declared in `.gitmodules`: a detached HEAD switches back to it, then it fast-forwards
+to origin with `--ff-only`, leaving unpushed commits, local changes or divergence alone;
+`make submodule-sync` forces the recorded commit instead), `make build` / `make check` (compile /
 compile plus build gates), `make smoke`, `make ci GROUP=<name>`, and `make install`, which
 installs this checkout into the local dsh — it compiles, packs, then runs
 `dsh plugin --profile dsh-tui add <tarball>` into the `dsh-tui` profile under `DSH_HOME`

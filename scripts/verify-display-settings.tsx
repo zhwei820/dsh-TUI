@@ -72,8 +72,22 @@ function makeHarness(columns = 140, rows = 12) {
   return { term, stdout, stderr, stdin: new FakeStdin(), writes, screen }
 }
 
+// The pre-Claude-Code footer (every route/context field on, the segmented
+// bar on, no shortcut hint). Field-level checks below exercise the fields
+// through it; the quiet defaults have their own check.
+const LEGACY_STATUS_BAR = {
+  ...DEFAULT_STATUS_BAR,
+  model: true,
+  thinking: true,
+  cwd: true,
+  cache: true,
+  cost: true,
+  contextBar: true,
+  shortcutHint: false,
+}
+
 const baseChannel = {
-  statusBar: { ...DEFAULT_STATUS_BAR },
+  statusBar: { ...LEGACY_STATUS_BAR },
   agentId: 'd5a3b7c9-e1f2-4a6b-8c3d-0123456789ab',
   lastUsage: { input: 200_000, cacheRead: 5_000, cacheWrite: 1_000, output: 6_789 },
   contextWindow: 266_000,
@@ -155,12 +169,12 @@ async function renderStatus(
 check('DEFAULT_STATUS_BAR keeps the intended compact defaults', () => {
   assert.deepEqual(DEFAULT_STATUS_BAR, {
     compact: true,
-    model: true,
-    thinking: true,
-    cwd: true,
+    model: false,
+    thinking: false,
+    cwd: false,
     contextUsage: true,
-    cache: true,
-    cost: true,
+    cache: false,
+    cost: false,
     tokens: false,
     tps: false,
     gitBranch: false,
@@ -168,10 +182,10 @@ check('DEFAULT_STATUS_BAR keeps the intended compact defaults', () => {
     sessionId: false,
     goal: true,
     mode: false,
-    contextBar: true,
+    contextBar: false,
     activity: false,
     trajectory: false,
-    shortcutHint: false,
+    shortcutHint: true,
     // Plugin footer fields (tuiStatus.setField): on by default, and the list
     // starts at `*` so an upgrade changes nothing.
     pluginFields: true,
@@ -236,7 +250,7 @@ check('compact StatusLine collapses the home directory with a trailing separator
 const homeChild = await renderStatus({
   displayCwd: `${home}/dev/display-project`,
   cwd: `${home}/dev/display-project`,
-  statusBar: { ...DEFAULT_STATUS_BAR, compact: false },
+  statusBar: { ...LEGACY_STATUS_BAR, compact: false },
 })
 check('full StatusLine collapses paths below home', () => {
   assert.ok(homeChild.includes('~/dev/display-project'), `missing collapsed home child in:\n${homeChild}`)
@@ -246,7 +260,7 @@ check('full StatusLine collapses paths below home', () => {
 const external = await renderStatus({
   displayCwd: '/opt/display-project',
   cwd: '/opt/display-project',
-  statusBar: { ...DEFAULT_STATUS_BAR, compact: false },
+  statusBar: { ...LEGACY_STATUS_BAR, compact: false },
 })
 check('full StatusLine keeps local paths outside home unchanged', () => {
   assert.ok(external.includes('/opt/display-project'), `missing external cwd in:\n${external}`)
@@ -256,7 +270,7 @@ check('full StatusLine keeps local paths outside home unchanged', () => {
 const providerDisplay = await renderStatus({
   displayCwd: `${home}/remote-project`,
   cwd: '/tmp/provider-alias',
-  statusBar: { ...DEFAULT_STATUS_BAR, compact: false },
+  statusBar: { ...LEGACY_STATUS_BAR, compact: false },
 })
 check('full StatusLine preserves provider-owned display paths', () => {
   assert.ok(providerDisplay.includes(`${home}/remote-project`), `missing provider cwd in:\n${providerDisplay}`)
@@ -291,7 +305,7 @@ check('minimal UI StatusLine stays free of the context bar', () => {
 })
 
 const withSessionId = await renderStatus({
-  statusBar: { ...DEFAULT_STATUS_BAR, sessionId: true },
+  statusBar: { ...LEGACY_STATUS_BAR, sessionId: true },
 })
 check('session id switch shows the # + 8-char short id', () => {
   assert.ok(withSessionId.includes('#d5a3b7c9'), `missing short session id in:\n${withSessionId}`)
@@ -303,10 +317,26 @@ check('compact StatusLine hides the shortcuts hint by default', () => {
 })
 
 const compactWithShortcutHint = await renderStatus({
-  statusBar: { ...DEFAULT_STATUS_BAR, shortcutHint: true },
+  statusBar: { ...LEGACY_STATUS_BAR, shortcutHint: true },
 })
 check('compact StatusLine renders the enabled shortcuts hint exactly once', () => {
   assert.equal((compactWithShortcutHint.match(/\? for shortcuts/g) ?? []).length, 1)
+})
+
+// The shipped defaults: Claude Code's quiet footer.
+const quiet = await renderStatus({ statusBar: { ...DEFAULT_STATUS_BAR } })
+check('default StatusLine is the quiet Claude Code footer', () => {
+  assert.ok(quiet.includes('ctx 77% (206k/266k)'), `missing context readout in:\n${quiet}`)
+  assert.equal((quiet.match(/\? for shortcuts/g) ?? []).length, 1, `missing shortcut hint in:\n${quiet}`)
+  for (const marker of ['display-model-probe', 'display-project', 'cache 2.4%', '77.4%']) {
+    assert.ok(!quiet.includes(marker), `unexpected ${JSON.stringify(marker)} in:\n${quiet}`)
+  }
+})
+
+const planQuiet = await renderStatus({ statusBar: { ...DEFAULT_STATUS_BAR }, modeIndex: 1, mode: { id: 'plan', plan: true } })
+check('a non-default session mode replaces the shortcut hint', () => {
+  assert.ok(planQuiet.includes('⏸ plan mode on (shift+tab to cycle)'), `missing mode line in:\n${planQuiet}`)
+  assert.ok(!planQuiet.includes('? for shortcuts'), `shortcut hint should yield to the mode line:\n${planQuiet}`)
 })
 
 const probeGoal = {
@@ -325,15 +355,17 @@ check('compact StatusLine renders the goal chip when a goal exists', () => {
 
 const withGoalHidden = await renderStatus({
   goal: probeGoal,
-  statusBar: { ...DEFAULT_STATUS_BAR, goal: false },
+  statusBar: { ...LEGACY_STATUS_BAR, goal: false },
 })
 check('goal chip respects the statusBar.goal switch', () => {
   assert.ok(!withGoalHidden.includes('2/5'), `unexpected goal chip in:\n${withGoalHidden}`)
 })
 
 const working = await renderStatus({ working: true })
-check('working StatusLine always renders its Esc interrupt hint', () => {
-  assert.equal((working.match(/esc to interrupt/g) ?? []).length, 1)
+// The interrupt key rides the spinner line now (Claude Code placement), so
+// the status row must not repeat it.
+check('working StatusLine leaves the Esc interrupt hint to the spinner line', () => {
+  assert.equal((working.match(/esc to interrupt/g) ?? []).length, 0)
 })
 
 const selecting = await renderStatus({}, 140, { selectionActive: true })
@@ -344,7 +376,7 @@ check('selection StatusLine always renders its Esc return hint', () => {
 for (const columns of [84, 100, 126]) {
   const narrow = await renderStatus({
     statusBar: {
-      ...DEFAULT_STATUS_BAR,
+      ...LEGACY_STATUS_BAR,
       tokens: true,
       tps: true,
       gitBranch: true,
@@ -366,7 +398,7 @@ for (const columns of [84, 100, 126]) {
 
 // Full / all-switches-on scenario. Stable feature markers avoid a whole-screen snapshot.
 const fullStatus = {
-  ...DEFAULT_STATUS_BAR,
+  ...LEGACY_STATUS_BAR,
   compact: false,
   tokens: true,
   tps: true,
@@ -408,7 +440,7 @@ check('status line renders the session cost estimate for a priced model', () => 
 })
 const withoutCost = await renderStatus({
   ...costProbe,
-  statusBar: { ...DEFAULT_STATUS_BAR, cost: false },
+  statusBar: { ...LEGACY_STATUS_BAR, cost: false },
 })
 check('statusBar.cost switch still hides the cost field', () => {
   assert.ok(!withoutCost.includes('≈¥'), `unexpected cost estimate in:\n${withoutCost}`)

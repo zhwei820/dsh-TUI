@@ -176,7 +176,7 @@ const check = (name: string, ok: boolean, detail?: string): void => {
 /** The panel's interaction tail: the decision question, both option rows and
  *  the key hint. Whatever the preview does, these must be painted. */
 const approvePanelVisible = (): boolean =>
-  visible('要允许这次操作吗？') && visible('1. 允许（仅本次）') && visible('2. 拒绝') && visible('↑/↓ 选择')
+  visible('是否继续？') && visible('1. 是') && visible('2. 否') && visible('↑/↓ 选择')
 const questionPanelVisible = (): boolean =>
   visible('Option Alpha') && visible('Option Beta') && visible('↑/↓ 选择')
 
@@ -213,19 +213,19 @@ await settle(() => visible('hello'), { timeoutMs: 5000 })
 // 1) A short command renders as before: nothing folded, reason intact.
 {
   const parked = approvals.park(fakeApprovalReq('short', 'rm -rf /tmp/x\nls -la'))
-  await settle(() => visible('要允许这次操作吗？'), { timeoutMs: 3000 })
+  await settle(() => visible('是否继续？'), { timeoutMs: 3000 })
   check('short command: panel tail visible', approvePanelVisible(), screenText())
   check('short command: no fold marker', !visible('行未显示'), screenText())
   check('short command: the reason shows', visible('verify probe'), screenText())
   stdin.write('2')
   await parked
-  await settle(() => !visible('要允许这次操作吗？'))
+  await settle(() => !visible('是否继续？'))
 }
 
 // 2) A 300-line command folds instead of flooding the screen.
 {
   const parked = approvals.park(fakeApprovalReq('long', longCommand))
-  await settle(() => visible('要允许这次操作吗？'), { timeoutMs: 3000 })
+  await settle(() => visible('是否继续？'), { timeoutMs: 3000 })
   const text = screenText()
   wideOmitted = omittedCount(text)
   check('long command: panel tail visible', approvePanelVisible(), text)
@@ -234,7 +234,7 @@ await settle(() => visible('hello'), { timeoutMs: 5000 })
   check('long command: the reason still shows', visible('verify probe'), text)
   stdin.write('2')
   await parked
-  await settle(() => !visible('要允许这次操作吗？'))
+  await settle(() => !visible('是否继续？'))
 }
 
 // 3) The questionnaire panel keeps the same invariant.
@@ -274,7 +274,7 @@ await settle(() => visible('hello'), { timeoutMs: 5000 })
   check('24 rows: panel tail visible', approvePanelVisible(), screenText())
   stdin.write('2')
   await parked
-  await settle(() => !visible('要允许这次操作吗？'))
+  await settle(() => !visible('是否继续？'))
 }
 
 // 5) A spent preview budget marks the asker's reason instead of dropping it:
@@ -410,7 +410,7 @@ for (const mode of [true, false]) for (const columns of [100, 40]) for (const ch
     settle(_outcome, decision) { if (decision?.kind === 'reject') rejectedReason = decision.message },
   })
   const label = `approval ${fullscreen ? 'fullscreen' : 'inline'} ${columns}x10 ${choiceCount} choices`
-  const choicesVisible = (): boolean => visible('1. 允许') && visible(`${choiceCount}. 拒绝`) && visible('↑/↓ 选择')
+  const choicesVisible = (): boolean => visible('1. 是') && visible(`${choiceCount}. 否`) && visible('↑/↓ 选择')
   check(`${label}: decision rows, hints and footer fit`,
     await settled(() => choicesVisible() && fullFooterVisible()), screenText())
   stdin.write('\x1b[1;3B'.repeat(40))

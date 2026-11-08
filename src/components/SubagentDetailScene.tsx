@@ -14,6 +14,7 @@ import {
   type TranscriptLoader,
 } from './messages/subagentTranscript.js'
 import { t } from '../i18n.js'
+import { agentTitle } from './Chat/subagentCardModel.js'
 import { Divider } from './design-system/Divider.js'
 import { ExitButton, isPanelPlainReturn } from './SubagentDashboard.js'
 import { isPlainReturnInput } from '../utils/modifiers.js'
@@ -41,11 +42,11 @@ function formatTimestamp(ts: number): string {
 
 function statusGlyph(status: SubagentState['status']): { glyph: string; color: keyof Theme | undefined; label: string } {
   const minimalUi = isMinimalUiMode()
-  if (status === 'completed') return { glyph: minimalUi ? '✓' : '🟢', color: minimalUi ? undefined : 'success', label: 'done' }
-  if (status === 'failed') return { glyph: minimalUi ? '×' : '🔴', color: minimalUi ? undefined : 'error', label: 'failed' }
-  if (status === 'cancelled') return { glyph: minimalUi ? '×' : '🔴', color: minimalUi ? undefined : 'error', label: 'cancelled' }
-  if (status === 'unknown') return { glyph: minimalUi ? '·' : '⚪', color: minimalUi ? undefined : 'subtle', label: 'history' }
-  return { glyph: minimalUi ? '·' : '🟡', color: minimalUi ? undefined : 'warning', label: 'running' }
+  if (status === 'completed') return { glyph: '✓', color: minimalUi ? undefined : 'success', label: 'done' }
+  if (status === 'failed') return { glyph: minimalUi ? '×' : '✗', color: minimalUi ? undefined : 'error', label: 'failed' }
+  if (status === 'cancelled') return { glyph: minimalUi ? '×' : '✗', color: minimalUi ? undefined : 'error', label: 'cancelled' }
+  if (status === 'unknown') return { glyph: '·', color: minimalUi ? undefined : 'subtle', label: 'history' }
+  return { glyph: minimalUi ? '·' : '●', color: minimalUi ? undefined : 'warning', label: 'running' }
 }
 
 const PAGES_WITHOUT_TRANSCRIPT = ['summary', 'output', 'tools'] as const
@@ -506,7 +507,7 @@ export function SubagentDetailScene({
       {/* Header: identity line, stats line, timing line */}
       <Box flexDirection="row" gap={1}>
         <Text color={info.color} bold>{info.glyph}</Text>
-        <Text bold>{`${t('subagent-card-prefix')}${subagent.description}`}</Text>
+        <Text bold>{agentTitle(subagent.description)}</Text>
         <Text dimColor>·</Text>
         <Text color={info.color}>{info.label}</Text>
         {subagent.mode === 'continuable' && <Text color="warning">{t('subagent-mode-continuable')}</Text>}

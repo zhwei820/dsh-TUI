@@ -12,6 +12,7 @@ import {
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
 import { ExitButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
+import { agentTitle } from '../components/Chat/subagentCardModel.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView, AgentViewSource } from '../components/messages/agentTeam.js'
 import { agentNeighbourhood, type AgentParentFact } from '../components/messages/agentTeam.js'
 
@@ -252,7 +253,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
   }, [isRunning, tailLength])
 
   const headerWidth = Math.max(20, columns - 8)
-  const headerLabel = `${t('subagent-card-prefix')}${subagent.description}`
+  const headerLabel = agentTitle(subagent.description)
   // 没有 history 来源时不标 history（只剩有界 tail，由范围说明解释）。
   const liveBadge = isRunning ? t('agent-view-live') : loadTranscript === undefined ? '' : t('agent-view-history')
   const hasHistory = loadTranscript !== undefined && transcript.status === 'ready'

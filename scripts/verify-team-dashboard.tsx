@@ -157,7 +157,7 @@ try {
     check('full: no continuable badge on a teammate', !f.lines.some(line => line.includes('reviewer') && line.includes('continuable')))
     check('full: a provisioning member is listed', f.lines.some(line => line.includes('planner') && line.includes('provisioning')))
     check('full: a failed member shows its error', f.lines.some(line => line.includes('tester') && line.includes('failed')) && screen.includes('│ spawn refused'))
-    check('full: other subagents keep their own card', screen.includes('Other subagents') && screen.includes('Subagent: workflow step'))
+    check('full: other subagents keep their own card', screen.includes('Other subagents') && screen.includes('Agent(workflow step'))
     check('full: task board lines', screen.includes('● Draft the plan') && screen.includes('◐ Build it') && screen.includes('○ Review it'))
     check('full: owner, blocked and scope-warning marks',
       f.lines.some(line => line.includes('Build it') && line.includes('@builder') && line.includes('⚠1'))
@@ -212,7 +212,7 @@ try {
     check('teammate view: active count in the header', /2 active/.test(screen), f.lines.slice(0, 4).join('|'))
     check('teammate view: this session is marked on its own row', f.lines.some(line => line.includes('reviewer · this session') && line.includes('active')))
     check('teammate view: a sibling reads active, not idle', f.lines.some(line => line.includes('builder') && line.includes('active')))
-    check('teammate view: its own child is another subagent', screen.includes('Other subagents') && screen.includes('Subagent: own child'))
+    check('teammate view: its own child is another subagent', screen.includes('Other subagents') && screen.includes('Agent(own child'))
     f.unmount()
   }
 
@@ -241,7 +241,7 @@ try {
   {
     const f = await mount(100, 30, {}, 'Subagent Dashboard')
     const screen = f.lines.join('\n')
-    check('no team: subagent title and cards', screen.includes('Subagent: desc of mate-run') && !screen.includes('Agent Team'))
+    check('no team: subagent title and cards', screen.includes('Agent(desc of mate-run') && !screen.includes('Agent Team'))
     check('no team: no team sections', !screen.includes('Members') && !screen.includes('Tasks ·'))
     f.unmount()
   }

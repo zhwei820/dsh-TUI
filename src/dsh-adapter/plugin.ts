@@ -1212,7 +1212,8 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     // Read when the DSH extensions attach (the adoption), after the row's
     // facts are in; the display fields below are fixed at the first frame.
     get effort() { return rowFacts.config === undefined ? config.effort : rowFacts.config.effort },
-    activity: config.activity,
+    // Opt-in: only an explicit `activity: true` takes over the spinner slot.
+    activity: config.activity === true,
     // Explicit cordis.yml value (static deployment choice) wins over the
     // runtime `/activity` preference, which wins over the default.
     activityFrames: config.activityFrames ?? readActivityFrames() ?? 'moon8',
@@ -1391,7 +1392,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     const scope = createSettingsScope<SettingsValue>(configOwner, settingsCtx.settings,
       tuiSettingsNs,
       Schema.object({
-        diffLayout: Schema.union(['auto', 'split', 'unified']).default('auto'),
+        diffLayout: Schema.union(['auto', 'split', 'unified']).default('unified'),
         thinkingFold: Schema.union(['preview', 'full']).default('preview'),
         jobGroupFold: Schema.union(['auto', 'always', 'never']).default('auto'),
         toolBackground: Schema.union(['none', 'subtle', 'strong']).default('none'),
@@ -1593,7 +1594,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       shortcuts?: Partial<Record<ShortcutActionId, string>>
     }
     const applyLayout = (value: SettingsValue): void => {
-      if (!shadow) channel.setDiffLayout(value.diffLayout ?? config.diffLayout ?? 'auto')
+      if (!shadow) channel.setDiffLayout(value.diffLayout ?? config.diffLayout ?? 'unified')
     }
     const applyWhale = (value: { whale?: boolean }): void => {
       if (shadow) return

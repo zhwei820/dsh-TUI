@@ -405,8 +405,8 @@ const dict = {
   'model-unknown': { zh: '未知模型「{{spec}}」· /model 查看全部', en: 'Unknown model "{{spec}}" · /model to view all' },
   'compact-unavailable': { zh: '压缩不可用——当前 leaf 没有压缩服务', en: 'Compaction unavailable · no compaction service in this leaf' },
   'compact-while-working': { zh: '回合运行中，无法压缩会话', en: 'Cannot compact while a turn is running' },
-  'compact-working': { zh: '正在压缩会话…', en: 'Summarizing earlier turns…' },
-  'compact-done': { zh: '会话已压缩', en: 'Session summary is ready' },
+  'compact-working': { zh: '正在压缩对话…', en: 'Compacting conversation…' },
+  'compact-done': { zh: '压缩完成', en: 'Compaction complete' },
   'compact-nothing': { zh: '没有可压缩的内容', en: 'Nothing to compact' },
   'compact-failed': { zh: '压缩失败 · {{err}}', en: 'Compaction failed · {{err}}' },
   'compact-flush-failed': {
@@ -420,7 +420,7 @@ const dict = {
   // 压缩状态行（prompt 上方的 spinner 槽位）。压缩只暴露两个可观测阶段：
   // 首块输出前是在重放上下文（无可计数），之后才有生成量。
   'compact-phase-prefill': { zh: '读取上下文…', en: 'reading context…' },
-  'compact-esc-cancel': { zh: 'Esc 取消', en: 'Esc cancels' },
+  'compact-esc-cancel': { zh: 'esc 取消', en: 'esc to cancel' },
   'compact-cancelled': { zh: '压缩已取消', en: 'Compaction cancelled' },
   // 回合进行中的自动压缩：工作 spinner 上的后缀（只此一词，别抢行）。
   'compact-badge': { zh: '压缩中', en: 'compacting' },
@@ -1371,6 +1371,10 @@ const dict = {
   'statusline-hint-working': { zh: 'esc 中断', en: 'esc to interrupt' },
   'statusline-hint-interrupting': { zh: '中断中…', en: 'interrupting…' },
   'statusline-hint-shortcuts': { zh: '? 查看快捷键', en: '? for shortcuts' },
+  'diff-summary': { zh: '已更新：{{additions}}，{{removals}}', en: 'Updated with {{additions}} and {{removals}}' },
+  'diff-additions': { zh: '新增 {{count}} 行', en: { one: '{{count}} addition', other: '{{count}} additions' } },
+  'diff-removals': { zh: '删除 {{count}} 行', en: { one: '{{count}} removal', other: '{{count}} removals' } },
+  'statusline-hint-mode': { zh: '{{glyph}} {{name}}已开启（shift+tab 切换）', en: '{{glyph}} {{name}} on (shift+tab to cycle)' },
   // ── 底栏字段 hover 明细（补充行读出；技术标签 ctx/free/read 等保持不译）──
   'status-detail-session-id': { zh: '会话日志目录与此 id 同名', en: 'the session log directory is named after this id' },
   'status-detail-mode': { zh: '点击或 /permission 切换权限模式', en: 'click or /permission to switch the permission mode' },
@@ -1856,6 +1860,8 @@ const dict = {
   'thinking-disabled': { zh: '隐藏', en: 'Hidden' },
   'thinking-disabled-desc': { zh: '隐藏思考过程；模型仍会照常思考', en: 'Hide reasoning; the model will still think as usual' },
   'thinking-label': { zh: '思考', en: 'Thinking' },
+  'thinking-settled': { zh: '已思考 {{duration}}', en: 'Thought for {{duration}}' },
+  'thinking-settled-bare': { zh: '已思考', en: 'Thought' },
   // Thinking reported only as an estimated token count (no thinking text).
   'thinking-tokens-live': { zh: '思考中 · ~{{n}} tokens', en: 'Thinking · ~{{n}} tokens' },
   'thinking-tokens-done': { zh: '已思考 · ~{{n}} tokens', en: 'Thought · ~{{n}} tokens' },
@@ -1874,7 +1880,7 @@ const dict = {
 
   'rename-current': { zh: '当前名称  {{title}}', en: 'Current title  {{title}}' },
   'rename-done': { zh: '已重命名为「{{title}}」', en: 'Renamed to "{{title}}"' },
-  'compact-summary-folded': { zh: '摘要已折叠', en: 'Summary folded' },
+  'compact-summary-folded': { zh: '对话已压缩', en: 'Conversation compacted' },
   'new-message': { zh: '↓ {{n}} 条新消息', en: '↓ 1 new message' },
   'new-messages': { zh: '↓ {{n}} 条新消息', en: '↓ {{n}} new messages' },
   'back-to-bottom': { zh: '↓ 回到底部（Enter/End）', en: '↓ back to bottom (Enter/End)' },
@@ -1931,12 +1937,13 @@ const dict = {
   'question-paste-too-long': { zh: '粘贴内容过长（最多 {{n}} 个字符），请精简后再试', en: 'Pasted content is too long (max {{n}} characters) — trim it and try again' },
 
   // ── components/approvals/ApprovalPanel.tsx ──────────────────────────
-  'approval-waiting': { zh: ' ⏳ 等待审批 · {{tool}} ', en: ' Awaiting approval · {{tool}} ' },
+  'approval-waiting': { zh: ' {{tool}} ', en: ' {{tool}} ' },
   'approval-external-hint': { zh: '外部来源：该审批未关联当前会话的活跃工具调用，命令文本可能被伪造，请核实后再决定', en: 'External origin: this approval is not tied to a live tool call of this session — the command text may be forged; verify before deciding' },
-  'approval-proceed': { zh: '要允许这次操作吗？', en: 'Allow this operation?' },
-  'approval-yes': { zh: '允许（仅本次）', en: 'Yes, allow once' },
-  'approval-no': { zh: '拒绝', en: 'No' },
-  'approval-always': { zh: '允许，且不再询问', en: 'Yes, and don\'t ask again' },
+  'approval-proceed': { zh: '是否继续？', en: 'Do you want to proceed?' },
+  'approval-yes': { zh: '是', en: 'Yes' },
+  'approval-no': { zh: '否', en: 'No' },
+  'approval-no-feedback': { zh: '否，并告诉模型该怎么做（esc）', en: 'No, and tell the model what to do differently (esc)' },
+  'approval-always': { zh: '是，且不再询问', en: 'Yes, and don\'t ask again' },
   'approval-hint': { zh: '↑/↓ 选择 · Enter 确认 · Esc 拒绝', en: '↑/↓ select · Enter confirm · Esc reject' },
   'approval-hint-feedback': { zh: '↑/↓/Tab 选择 · Enter 确认 · 选中拒绝后可输入理由 · Esc 拒绝', en: '↑/↓/Tab select · Enter confirm · on No, type a reason · Esc reject' },
   'approval-hint-preview': { zh: '↑/↓ 选择 · Enter 确认 · Esc 拒绝 · {{up}}/{{down}} 翻阅预览', en: '↑/↓ select · Enter confirm · Esc reject · {{up}}/{{down}} scroll preview' },
@@ -1962,7 +1969,6 @@ const dict = {
   'subagent-dashboard-title': { zh: ' 子代理面板 ', en: ' Subagent Dashboard ' },
   'subagent-dashboard-hint-basic': { zh: '↑/↓ 浏览 · Esc 关闭', en: '↑/↓ browse · Esc close' },
   'subagent-dashboard-hint-detail': { zh: '↑/↓ 选择 · Enter 查看详情 · Esc 关闭', en: '↑/↓ select · Enter view detail · Esc close' },
-  'subagent-card-prefix': { zh: '子代理：', en: 'Subagent: ' },
   'subagent-tool-uses': { zh: '{{count}} 次工具调用', en: { one: '{{count}} tool use', other: '{{count}} tool uses' } },
   'subagent-tokens': { zh: '{{count}} tokens', en: '{{count}} tokens' },
   'subagent-more-tool-uses': { zh: '还有 {{count}} 次工具调用', en: { one: '+{{count}} more tool use', other: '+{{count}} more tool uses' } },

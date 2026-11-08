@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Box, Text, useTerminalSize, useAnimationFrame } from '../ui.js'
 import type { SubagentState } from '../dsh-adapter/subagents.js'
 import { t } from '../i18n.js'
+import { agentTitle } from './Chat/subagentCardModel.js'
 import { jobOutputRows } from './Chat/JobCard.js'
 import { isMinimalUiMode } from '../minimalUiMode.js'
 import type { ClickEvent } from '../ink/events/click-event.js'
@@ -25,11 +26,11 @@ export interface SubagentCardProps {
 /** Status glyph and color of a team member (`·`-style in minimal UI). */
 export function teamStatusGlyph(status: TeamMemberStatus, minimalUi: boolean): { readonly glyph: string; readonly color?: 'warning' | 'subtle' | 'error' | 'accent' } {
   switch (status) {
-    case 'running': return minimalUi ? { glyph: '·' } : { glyph: '🟡', color: 'warning' }
-    case 'idle': return minimalUi ? { glyph: '○' } : { glyph: '🔵', color: 'accent' }
-    case 'active': return minimalUi ? { glyph: '◇' } : { glyph: '🟣', color: 'accent' }
-    case 'provisioning': return minimalUi ? { glyph: '…' } : { glyph: '⚪', color: 'subtle' }
-    case 'failed': return minimalUi ? { glyph: '×' } : { glyph: '🔴', color: 'error' }
+    case 'running': return minimalUi ? { glyph: '·' } : { glyph: '●', color: 'warning' }
+    case 'idle': return minimalUi ? { glyph: '○' } : { glyph: '○', color: 'accent' }
+    case 'active': return minimalUi ? { glyph: '◇' } : { glyph: '◆', color: 'accent' }
+    case 'provisioning': return minimalUi ? { glyph: '…' } : { glyph: '…', color: 'subtle' }
+    case 'failed': return minimalUi ? { glyph: '×' } : { glyph: '✗', color: 'error' }
   }
 }
 
@@ -54,10 +55,10 @@ export function SubagentCard({ subagent, focused, onClick, variant = 'default', 
   const minimalUi = isMinimalUiMode()
   const teamGlyph = teamMember === undefined ? undefined : teamStatusGlyph(teamMember.status, minimalUi)
   const glyph = teamGlyph !== undefined ? teamGlyph.glyph
-    : running ? (minimalUi ? '·' : '🟡')
-    : subagent.status === 'unknown' ? (minimalUi ? '·' : '⚪')
-    : subagent.status === 'failed' || subagent.status === 'cancelled' ? (minimalUi ? '×' : '🔴')
-    : (minimalUi ? '✓' : '🟢')
+    : running ? (minimalUi ? '·' : '●')
+    : subagent.status === 'unknown' ? '·'
+    : subagent.status === 'failed' || subagent.status === 'cancelled' ? (minimalUi ? '×' : '✗')
+    : '✓'
   const glyphColor = teamGlyph !== undefined ? teamGlyph.color
     : minimalUi ? undefined
     : running ? 'warning' as const
@@ -96,7 +97,7 @@ export function SubagentCard({ subagent, focused, onClick, variant = 'default', 
         <Text color={glyphColor}>{glyph}</Text>
       </Box>
       <Box flexGrow={1} flexShrink={1} overflow="hidden">
-        <Text bold color={focused ? 'accent' : undefined} wrap="truncate-end">{teamMember !== undefined ? teamMember.name : panelMode ? subagent.description : `${t('subagent-card-prefix')}${subagent.description}`}</Text>
+        <Text bold color={focused ? 'accent' : undefined} wrap="truncate-end">{teamMember !== undefined ? teamMember.name : panelMode ? subagent.description : agentTitle(subagent.description)}</Text>
       </Box>
       {teamMember !== undefined && (
         <Box flexShrink={0} marginLeft={1}>

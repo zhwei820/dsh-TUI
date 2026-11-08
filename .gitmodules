@@ -1,3 +1,4 @@
 [submodule "vendor/dsh-std"]
 	path = vendor/dsh-std
 	url = https://github.com/T-Auto/dsh-std.git
+	branch = main

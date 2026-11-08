@@ -1,16 +1,16 @@
 /**
- * repro-thinking-stream-fold — 流式 thinking 行三行预览/全文切换回归。
+ * repro-thinking-stream-fold — 流式 thinking 行折叠/全文切换回归。
  *
- * 用户报告：thinkingFold=preview 时默认能看到三行，但点击后正文变成
- * 0 行，只剩 spinner 头；期望点击展开全文，再点收回三行预览。
+ * Claude Code 视觉：thinkingFold=preview 时流式思考只显示一行标题（星形
+ * 闪烁 + 思考…），点击展开全文，再点收回到标题行；头行始终可见。
  *
  * 场景：fullscreen Chat + streaming reasoning 行（thinkingFold=preview），
  * 注入 SGR 点击：
- *   1. 初始：固定三行最新思考预览；
+ *   1. 初始：只有标题行，没有正文；
  *   2. 点击头部 → 展开完整正文；
- *   3. 再点 → 收回三行预览（而不是隐藏正文）；
- *   4. full 默认全文，点击同样只收为三行预览；
- *   5. 步骤落定后保持全文，但标题立即停止旋转，turn 结束再折叠。
+ *   3. 再点 → 收回到标题行（头行仍在）；
+ *   4. full 默认全文，点击同样收回到标题行；
+ *   5. 步骤落定后保持全文，但标题立即停止闪烁（∴ 已思考 35s），turn 结束再折叠。
  *
  * 运行：node --import tsx/esm scripts/repro-thinking-stream-fold.tsx
  */
@@ -120,13 +120,12 @@ const headerRow = (ls: string[]) => ls.findIndex(line => thinkingHeaders.has(lin
 // 超时才判失败（term-test 的 settled 就是这条语义）。
 const waitFor = (pred: () => boolean, ms = 3000): Promise<boolean> => settled(pred, { timeoutMs: ms })
 
-await waitFor(() => headerRow(lines()) >= 0 && bodyLines(lines()) === 3)
+await waitFor(() => headerRow(lines()) >= 0 && bodyLines(lines()) === 0)
 let ls = lines()
 const headerIdx = headerRow(ls)
 check('含“思考”的提示行不会被识别为折叠头', headerRow([ls[0] ?? '']) === -1 && headerIdx > 0)
 check('流式思考头行可见', headerIdx >= 0, headerIdx >= 0 ? `行${headerIdx}` : '未找到')
-check('默认三行预览', bodyLines(ls) === 3, `body=${bodyLines(ls)}`)
-check('预览跟随最新三行', ls.some(line => line.includes('推理第11行')), '应包含推理第11行')
+check('默认只有标题行', bodyLines(ls) === 0, `body=${bodyLines(ls)}`)
 
 // 点击头行 → 展开全文。
 stdin.write(`\x1b[<0;6;${headerIdx + 1}M`)
@@ -135,18 +134,18 @@ await waitFor(() => bodyLines(lines()) >= 10)
 ls = lines()
 check('点击后展开完整正文', bodyLines(ls) >= 10, `body=${bodyLines(ls)}`)
 
-// 固定窗:墙钟 再点同一行 → 收回三行预览。先等过 500ms 多击窗：同格快连两次会被判
+// 固定窗:墙钟 再点同一行 → 收回到标题行。先等过 500ms 多击窗：同格快连两次会被判
 // 双击选词，这是既有语义——快速连点归选区，不归折叠。
 await sleep(600)
 const headerIdx2 = headerRow(ls)
 stdin.write(`\x1b[<0;6;${headerIdx2 + 1}M`)
 stdin.write(`\x1b[<0;6;${headerIdx2 + 1}m`)
-await waitFor(() => bodyLines(lines()) === 3)
+await waitFor(() => bodyLines(lines()) === 0)
 ls = lines()
-check('再点收回三行预览', bodyLines(ls) === 3, `body=${bodyLines(ls)}`)
-check('收起后不会隐藏全部正文', bodyLines(ls) > 0, `body=${bodyLines(ls)}`)
+check('再点收回到标题行', bodyLines(ls) === 0, `body=${bodyLines(ls)}`)
+check('收起后头行仍可见（可再次展开）', headerRow(ls) >= 0)
 
-// full 只是默认值相反：仍然只在全文/三行预览间切换，不再进入 0 行正文。
+// full 只是默认值相反：仍然在全文/标题行之间切换。
 channel.thinkingFold = 'full'
 channel.version += 1
 for (const listener of listeners) listener()
@@ -158,9 +157,9 @@ await sleep(600) // 固定窗:墙钟 同上，等过 500ms 多击判定窗再点
 const fullHeaderIdx = headerRow(ls)
 stdin.write(`\x1b[<0;6;${fullHeaderIdx + 1}M`)
 stdin.write(`\x1b[<0;6;${fullHeaderIdx + 1}m`)
-await waitFor(() => bodyLines(lines()) === 3)
+await waitFor(() => bodyLines(lines()) === 0)
 ls = lines()
-check('full 设置点击后收为三行预览', bodyLines(ls) === 3, `body=${bodyLines(ls)}`)
+check('full 设置点击后收为标题行', bodyLines(ls) === 0 && headerRow(ls) >= 0, `body=${bodyLines(ls)}`)
 
 // 再展开，然后模拟当前 step 已落定、整个 turn 仍在工具阶段。
 await sleep(600) // 固定窗:墙钟 同上，等过 500ms 多击判定窗再点第二次
@@ -174,7 +173,7 @@ reasoningRow.thinkingOpen = true
 reasoningRow.durationMs = 35_000
 channel.version += 1
 for (const listener of listeners) listener()
-await waitFor(() => lines().some(line => line.includes(`${THINKING_SETTLED_MARKER} ${t('thinking-label')} · 35s`)))
+await waitFor(() => lines().some(line => line.includes(`${THINKING_SETTLED_MARKER} ${t('thinking-settled', { duration: '35s' })}`)))
 ls = lines()
 check('步骤落定后标题改为静态标记', headerRow(ls) === -1)
 check('步骤落定后 full 正文仍保持展开', bodyLines(ls) >= 10, `body=${bodyLines(ls)}`)

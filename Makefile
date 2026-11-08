@@ -22,15 +22,90 @@ JOBS        ?= 6
 # The DSH line this checkout is validated against (src/dsh-adapter/contract.ts).
 DSH_VERSION ?= $(shell sed -n "s/^export const UPSTREAM_VALIDATED_VERSION = '\(.*\)'$$/\1/p" src/dsh-adapter/contract.ts)
 
-.PHONY: help setup build check typecheck smoke package pack require-dsh ensure-dsh install-dsh \
-	install install-launcher uninstall dev dev-config ci guide clean
+.PHONY: help setup submodule submodule-init submodule-sync build check typecheck smoke package pack require-dsh \
+	ensure-dsh install-dsh install install-launcher uninstall dev dev-config ci guide clean
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-17s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-setup: ## Init the vendor/dsh-std submodule and install dependencies (frozen lockfile)
-	git submodule update --init --recursive
+setup: submodule ## Put vendor/dsh-std on main (make submodule) and install dependencies
 	$(PNPM) install
+
+# ===== submodule =====
+# Ported from innerloan's `make submodule`. vendor/dsh-std declares `branch = main` in
+# .gitmodules; `make submodule` keeps it on that branch and fast-forwards it to origin.
+# A bare `git submodule update --init` is avoided on purpose: it forces every submodule to
+# the recorded commit on a detached HEAD, which silently drops the files of commits made
+# inside the submodule. Here it is fetch + `merge --ff-only`, so git refuses anything that
+# could overwrite work (unpushed commits, dirty tree, diverged history) and it stays as is.
+#
+# Only a detached HEAD is switched (to the declared branch, tracking origin/<branch> if no
+# local one exists). If you are on a named branch, that branch wins: it is fast-forwarded
+# instead, and .gitmodules' branch= is rewritten to it — after the fetch succeeded, so only
+# a branch that exists on origin gets written. The edit stays in the working tree.
+# A detached HEAD whose commit is on no ref is not switched (only the reflog would find it).
+# Moving the submodule changes the commit this repo records; `git add vendor/dsh-std` if
+# you want to keep it, and re-run `pnpm install` when its packages changed.
+#
+# Each line is "<name> <path> <branch>"; name is the .gitmodules key, not always the path.
+# Use a real branch name for branch=, not git's special `.` (follow the superproject's
+# branch): the write-back above would overwrite it on every run.
+TRACKED_SUBMODULES = git config -f .gitmodules --get-regexp '^submodule\..*\.branch$$' \
+	| sed 's/^submodule\.\(.*\)\.branch \(.*\)$$/\1 \2/' \
+	| while read -r n b; do echo "$$n $$(git config -f .gitmodules --get submodule.$$n.path) $$b"; done
+
+# Clones only what is missing (at the recorded commit); never moves an existing checkout.
+submodule-init:
+	@missing=$$(git submodule status | awk '/^-/ {print $$2}'); \
+	 if [ -n "$$missing" ]; then \
+	   echo "[submodule] cloning missing: $$missing"; \
+	   git submodule update --init --recursive -- $$missing; \
+	 fi
+
+submodule: submodule-init ## Keep submodules on their .gitmodules branch (main) and fast-forward to origin (never discards work)
+	@# Read the whole list first: the loop may rewrite .gitmodules, which TRACKED_SUBMODULES reads.
+	@list=$$($(TRACKED_SUBMODULES)); \
+	 echo "$$list" | while read -r n p b; do \
+	   [ -n "$$p" ] || continue; \
+	   printf "[submodule] %-16s " "$$p"; \
+	   cur=$$(git -C "$$p" symbolic-ref -q --short HEAD || true); \
+	   if [ -n "$$cur" ]; then t="$$cur"; else t="$$b"; fi; \
+	   git -C "$$p" fetch -q origin "$$t" 2>/dev/null || { echo "fetch origin/$$t failed (no such remote branch / network / auth?); skipped"; continue; }; \
+	   if [ -n "$$cur" ] && [ "$$cur" != "$$b" ]; then \
+	     git config -f .gitmodules submodule."$$n".branch "$$cur" || { echo "on $$cur, but rewriting .gitmodules failed; skipped"; continue; }; \
+	     printf "on %s, not switched; .gitmodules branch %s -> %s: " "$$cur" "$$b" "$$cur"; \
+	   fi; \
+	   if [ -z "$$cur" ]; then \
+	     if [ -z "$$(git -C "$$p" for-each-ref --contains HEAD --count=1 --format='%(refname)' refs/heads refs/remotes)" ]; then \
+	       echo "detached HEAD $$(git -C "$$p" rev-parse --short=8 HEAD) is on no branch (only the reflog would find it); left alone"; continue; \
+	     fi; \
+	     printf "detached HEAD, switching to %s: " "$$b"; \
+	     if git -C "$$p" rev-parse -q --verify "refs/heads/$$b" >/dev/null; then \
+	       git -C "$$p" checkout -q "$$b" 2>/dev/null || { echo "cannot switch (local changes would be overwritten); left as is"; continue; }; \
+	     else \
+	       git -C "$$p" checkout -q -b "$$b" --track "origin/$$b" 2>/dev/null || { echo "cannot switch (local changes would be overwritten / no origin/$$b); left as is"; continue; }; \
+	     fi; \
+	   fi; \
+	   before=$$(git -C "$$p" rev-parse HEAD); \
+	   if git -C "$$p" merge --ff-only -q FETCH_HEAD 2>/dev/null; then \
+	     after=$$(git -C "$$p" rev-parse HEAD); \
+	     if [ "$$before" != "$$after" ]; then \
+	       echo "fast-forwarded $$(git -C "$$p" rev-parse --short=8 $$before) -> $$(git -C "$$p" rev-parse --short=8 $$after)"; \
+	     else \
+	       ahead=$$(git -C "$$p" rev-list --count FETCH_HEAD..HEAD 2>/dev/null || echo 0); \
+	       if [ "$$ahead" -gt 0 ]; then echo "up to date, $$ahead local commit(s) not pushed to origin/$$t"; \
+	       else echo "at origin/$$t"; fi; \
+	     fi; \
+	   else \
+	     ahead=$$(git -C "$$p" rev-list --count FETCH_HEAD..HEAD 2>/dev/null || echo '?'); \
+	     echo "cannot fast-forward ($$ahead local commit(s) or a dirty tree); left as is"; \
+	   fi; \
+	 done
+	@# A leading + means the checkout differs from the recorded pointer; reported, not changed.
+	@git submodule status | awk '/^\+/ {print "[submodule] " $$2 " differs from the recorded commit; git add " $$2 " to record it"}'
+
+submodule-sync: ## Force submodules to the recorded commit (detaches, overwrites local changes)
+	git submodule update --init --recursive --force
 
 build: ## Clean compile src/ -> lib/types/ (no gates)
 	$(PNPM) compile

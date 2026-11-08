@@ -38,6 +38,7 @@ export function WorkingSpinner({
   pauseStartTimeRef,
   thinkingStatus,
   suffix,
+  interruptHint,
 }: {
   mode: SpinnerMode
   hasActiveTools: boolean
@@ -51,6 +52,8 @@ export function WorkingSpinner({
   /** Extra leading field (e.g. the auto-compaction badge) shown before the
    *  timer/token counters; omitted for an ordinary turn. */
   suffix?: string
+  /** `esc to interrupt` / `interrupting…`, the last field in the parens. */
+  interruptHint?: string
 }): React.ReactNode {
   const { columns } = useTerminalSize()
 
@@ -80,6 +83,7 @@ export function WorkingSpinner({
         verbose
         columns={columns}
         thinkingStatus={thinkingStatus}
+        interruptHint={interruptHint}
       />
     </Box>
   )

@@ -96,7 +96,9 @@ export interface Config {
   whaleGirl?: boolean
   /** Reduce decorative header content and colors. */
   minimal?: boolean
-  /** Show the live working line derived in-process from base session events. */
+  /** Live working line derived in-process from base session events: `true`
+   *  replaces the spinner with it, unset keeps the feed but shows the
+   *  spinner, `false` detaches the feed too. */
   activity?: boolean
   /** Working-activity indicator preset (`moon8`/`moon`/`comet`/`dots`/…
    *  or `random`; see activityFrames.ts). When absent, the `/activity`
@@ -335,7 +337,11 @@ export const Config: Schema<Config, RuntimeConfig<Config>> = editableConfig<Conf
   ),
   whaleGirl: Schema.boolean().default(false),
   minimal: Schema.boolean().default(false),
-  activity: Schema.boolean().default(true),
+  // No `.default()` on purpose (same rule as launchpad): unset keeps the
+  // activity FEED on (idle summary, trajectory) while the working line stays
+  // the classic spinner (Claude Code style); only an explicit `true` swaps
+  // the plugin's live line into the spinner slot, `false` detaches both.
+  activity: Schema.boolean().required(false),
   activityFrames: Schema.string().required(false),
   contextBar: Schema.boolean().default(true),
   fullscreen: Schema.boolean().default(true),
@@ -346,7 +352,8 @@ export const Config: Schema<Config, RuntimeConfig<Config>> = editableConfig<Conf
   launchpad: Schema.boolean(),
   lang: Schema.string().required(false),
   preset: Schema.string().required(false),
-  diffLayout: Schema.union(['auto', 'split', 'unified']).default('auto'),
+  // Unified by default (Claude Code style); `auto`/`split` stay selectable.
+  diffLayout: Schema.union(['auto', 'split', 'unified']).default('unified'),
   thinkingFold: Schema.union(['preview', 'full']).default('preview'),
   jobGroupFold: Schema.union(['auto', 'always', 'never']).default('auto'),
   toolBackground: Schema.union(['none', 'subtle', 'strong']).default('none'),

@@ -32,7 +32,7 @@ const NO_SUBAGENT_COST: Channel['subagentCost'] = []
 import type { SelectionSnapshot } from '../dsh-adapter/ide-channel.js'
 import { modeDisplayName } from '../sessionModes.js'
 import { MiniWake } from '../components/trajectory/MiniWake.js'
-import { getTheme, isLightThemeActive } from '../theme.js'
+import { getTheme, isLightThemeActive, type Theme } from '../theme.js'
 import { ContextBarView } from '../components/ContextBarView.js'
 import { TooltipTarget } from '../components/Tooltip.js'
 import { compactWorkingDirectory, displayWorkingDirectory, formatProject } from '../sessions/format.js'
@@ -650,17 +650,35 @@ const selectionBadge = formatSelectionBadge(channel.selection)
     ...inSlot('right-tail'),
   ]
 
+  // Claude Code's under-the-input line: a non-default session mode wins
+  // (`⏸ plan mode on (shift+tab to cycle)`), else `? for shortcuts`. While
+  // working the interrupt key rides the spinner line (Chat), so this row
+  // stays free for selection/hover readouts.
+  const activeMode = backendMode !== undefined
+    ? (backendMode.id === 'default' ? undefined : {
+        name: backendMode.name,
+        colour: (backendMode.id === 'bypassPermissions' || backendMode.id === 'dontAsk' ? 'warning' : backendMode.id === 'plan' ? 'planMode' : 'inactiveShimmer') as keyof Theme,
+        glyph: backendMode.id === 'plan' ? '⏸' : '⏵⏵',
+      })
+    : modeMarked && channel.mode.id !== 'default'
+      ? {
+          name: modeDisplayName(channel.mode),
+          colour: (channel.mode.plan === true ? 'planMode' : 'warning') as keyof Theme,
+          glyph: channel.mode.plan === true ? '⏸' : '⏵⏵',
+        }
+      : undefined
+  const modeHint = !selectionActive && !channel.working && activeMode !== undefined && channel.minimalUi !== true
+    ? t('statusline-hint-mode', { glyph: activeMode.glyph, name: activeMode.name })
+    : ''
   const hint = selectionActive
     ? t('statusline-hint-select')
     : channel.working
-      // An interrupt already requested but not yet converged: "esc to
-      // interrupt" would promise an action the channel ignores by contract
-      // (and a wedged turn can hold this state forever). Say what the state
-      // is instead, so the key never looks dead.
-      ? t(channel.cancelPending ? 'statusline-hint-interrupting' : 'statusline-hint-working')
-      : statusBar.shortcutHint && !helpOpen
-        ? t('statusline-hint-shortcuts')
-        : ''
+      ? ''
+      : modeHint !== ''
+        ? modeHint
+        : statusBar.shortcutHint && !helpOpen
+          ? t('statusline-hint-shortcuts')
+          : ''
   const activity = projectedActivity
   const showActivity =
     statusBar.activity &&
@@ -708,7 +726,7 @@ const selectionBadge = formatSelectionBadge(channel.selection)
   const trailer: React.ReactNode = detail !== null
     ? detail
     : hint !== ''
-      ? <Text color="inactiveShimmer">{hint}</Text>
+      ? <Text color={modeHint !== '' && activeMode !== undefined ? activeMode.colour : 'inactiveShimmer'}>{hint}</Text>
       : null
 
   const compactFields = [...leftFields, ...rightFields]

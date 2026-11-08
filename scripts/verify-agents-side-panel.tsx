@@ -279,9 +279,9 @@ try {
   // 守卫只拦字母/粘贴组合：Cmd+Enter 仍按 Enter 选中当前卡（isPanelPlainReturn
   // 不转发 super）。单键判定，不依赖两次按键之间的 React 提交。
   await writeKey('\x1b[13;9u')
-  await settled(() => has('Subagent: AAA1'))
+  await settled(() => has('Agent(AAA1'))
   check('keys: Cmd+Enter still opens the focused card (guard keeps modifier keys)',
-    has('Subagent: AAA1'), (lines().find(l => l.includes('Subagent:')) ?? '').trim())
+    has('Agent(AAA1'), (lines().find(l => l.includes('Agent(')) ?? '').trim())
   await writeKey('\x1b')
   await settled(() => has('AAA1') && !has('/3'))
   // paste 重映射到命名键（ctrl+down）时，守卫也必须把它当粘贴组合拦下。
@@ -294,10 +294,10 @@ try {
   const pasteMoved = await settled(() => findRow('open in main view') !== actionRow)
   resetKeymapOverrides()
   await writeKey('\r')
-  await settled(() => has('Subagent: AAA1'))
+  await settled(() => has('Agent(AAA1'))
   check('keys: a remapped paste combo (ctrl+down) does not move the roster focus',
-    pasteMoved === false && has('Subagent: AAA1') && !has('Subagent: AAA2'),
-    (lines().find(l => l.includes('Subagent:')) ?? '').trim())
+    pasteMoved === false && has('Agent(AAA1') && !has('Agent(AAA2'),
+    (lines().find(l => l.includes('Agent(')) ?? '').trim())
   await writeKey('\x1b')
   await settled(() => has('AAA1') && !has('/3'))
   // 修饰键+方向键仍移焦点：焦点卡的 action 行随焦点换位；等它真的换位
@@ -307,9 +307,9 @@ try {
   const movedDown = await settled(() => findRow('open in main view') !== topRow)
   check('keys: Cmd+downArrow still moves the roster focus (guard keeps modifier keys)', movedDown)
   await writeKey('\r')
-  await settled(() => has('Subagent: AAA2'))
-  check('keys: Cmd+downArrow then Enter opens the second card', has('Subagent: AAA2'),
-    (lines().find(l => l.includes('Subagent:')) ?? '').trim())
+  await settled(() => has('Agent(AAA2'))
+  check('keys: Cmd+downArrow then Enter opens the second card', has('Agent(AAA2'),
+    (lines().find(l => l.includes('Agent(')) ?? '').trim())
   await writeKey('\x1b')
   await settled(() => has('AAA1') && !has('/3'))
   // Cmd+↑ 用普通 ↓（既有行为）先把焦点移离 0，再要求 Cmd+↑ 把它移回；
@@ -321,8 +321,8 @@ try {
   const movedBack = await settled(() => findRow('open in main view') === topRowAgain)
   check('keys: Cmd+upArrow still moves the roster focus back (guard keeps modifier keys)', setupMoved && movedBack)
   await writeKey('\r')
-  await settled(() => has('1/3') && has('Subagent: AAA1'))
-  check('keys: Enter opens the focused card detail (usePanelInput dispatch)', has('1/3') && has('Subagent: AAA1'),
+  await settled(() => has('1/3') && has('Agent(AAA1'))
+  check('keys: Enter opens the focused card detail (usePanelInput dispatch)', has('1/3') && has('Agent(AAA1'),
     (lines().find(l => l.includes('/3')) ?? '').trim())
   check('detail: the dashboard list is replaced by the paged scene', !has('AAA2'))
 

@@ -176,7 +176,7 @@ try {
   // --- H. 状态栏字段：model/git 悬停明细 ---------------------------------
   const channelStub = {
     minimalUi: false,
-    statusBar: { gitBranch: true },
+    statusBar: { gitBranch: true, model: true },
     model: 'TM',
     provider: 'test-provider',
     contextWindow: 64_000,
@@ -328,6 +328,8 @@ try {
   const barRig = makeRig(120, 12)
   const barStub = {
     ...channelStub,
+    // The segmented bar is opt-in since the Claude Code-style footer.
+    statusBar: { ...(channelStub as { statusBar?: object }).statusBar, contextBar: true },
     contextBarEnabled: true,
     contextSegments: SEGMENTS,
     lastUsage: { input: 12_000, output: 0, cacheRead: 500, cacheWrite: 0 },
@@ -404,7 +406,7 @@ try {
             channel={{
               ...barStub,
               ...sample,
-              statusBar: { contextBar: true, contextUsage: true, cache: false },
+              statusBar: { contextBar: true, contextUsage: true, cache: false, model: true },
             } as never}
           />
           <tooltip.TooltipLayer />
@@ -461,7 +463,8 @@ try {
   const K_BLANK_SIG = '60@ffffff/ffffff'
   const K_STUB = {
     minimalUi: false,
-    statusBar: { mode: true },
+    // Pre-Claude-Code footer fields: the goldens below pin the field row.
+    statusBar: { mode: true, model: true, thinking: true, cwd: true, cache: true, cost: true, shortcutHint: false },
     model: 'TM',
     provider: 'test-provider',
     contextWindow: 64_000,
@@ -599,12 +602,15 @@ try {
       key: '计划模式',
       channel: { ...K_STUB, mode: { id: 'plan', plan: true, sandbox: 'read-only', approval: 'ask' } },
       line: ' TM · 计划模式 · dsh-tui',
+      // Claude Code's under-the-input mode line (the only new row).
+      hint: ' ⏸ 计划模式已开启（shift+tab 切换）',
       sig: '1@ffffff/ffffff 2@aab2c2/ffffff 3@8d95a6/ffffff 8@7fae99/ffffff 3@8d95a6/ffffff 7@aab2c2/ffffff 36@ffffff/ffffff',
     },
     {
       key: '完全访问（danger-full-access + approval never）',
       channel: { ...K_STUB, mode: { id: 'full', plan: false, sandbox: 'danger-full-access', approval: 'never' } },
       line: ' TM · 完全访问 · dsh-tui',
+      hint: ' ⏵⏵ 完全访问已开启（shift+tab 切换）',
       sig: '1@ffffff/ffffff 2@aab2c2/ffffff 3@8d95a6/ffffff 8@d8b270/ffffff 3@8d95a6/ffffff 7@aab2c2/ffffff 36@ffffff/ffffff',
     },
   ]
@@ -614,12 +620,13 @@ try {
     check('K2 就绪：' + golden.key, await settled(() => screenHas(term, 'dsh-tui')))
     await sleep(250) // 固定窗:探针 末帧落定：金标准比对的是「整行字节」，不能比对半帧
     const dump = dumpMode(term)
+    const goldenHint = (golden as { hint?: string }).hint
     check('K2 ' + golden.key + ' 字符行逐字节不变',
-      dump.lines.join('\n') === golden.line, 'got=' + JSON.stringify(dump.lines))
+      dump.lines.join('\n') === (goldenHint === undefined ? golden.line : `${golden.line}\n${goldenHint}`), 'got=' + JSON.stringify(dump.lines))
     check('K2 ' + golden.key + ' 状态行配色逐格不变',
       dump.sigs[0] === golden.sig, 'got=' + JSON.stringify(dump.sigs[0]))
     check('K2 ' + golden.key + ' 其余行仍是空屏',
-      dump.sigs.slice(1).every(s => s === K_BLANK_SIG))
+      dump.sigs.slice(goldenHint === undefined ? 1 : 2).every(s => s === K_BLANK_SIG))
     instance.unmount()
     await sleep(120) // 固定窗:pacing 换实例前等上一个卸载收尾
   }
@@ -653,7 +660,7 @@ try {
     // (c) DSH（backendMode 缺席）+ statusBar.mode=false → 与改动前逐字节
     // 一致：标记模式照样藏起，行内容等于基础模式金标准。
     {
-      const { rig, instance } = await openModeRig({ ...K_STUB, statusBar: { mode: false }, modeIndex: 1 })
+      const { rig, instance } = await openModeRig({ ...K_STUB, statusBar: { ...K_STUB.statusBar, mode: false }, modeIndex: 1 })
       check('K3c DSH mode:false 就绪', await settled(() => screenHas(rig.term, 'dsh-tui')))
       await sleep(250) // 固定窗:探针 末帧落定：金标准比对的是「整行字节」，不能比对半帧
       const dump = dumpMode(rig.term)

@@ -7,6 +7,7 @@ import { ToolUseLoader } from '../ToolUseLoader.js'
 import { toolNameColor } from '../messages/AssistantToolUseMessage.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
 import {
+  AGENT_LABEL,
   formatAgentDuration,
   formatTokenCount,
   isSettledSubagent,
@@ -19,8 +20,6 @@ import {
   type SubagentStatusLine,
 } from './subagentCardModel.js'
 
-/** Header name of a delegation, in the transcript's tool-name voice. */
-const AGENT_LABEL = 'Agent'
 /** Body gutter, aligned with the tool card's (`AssistantToolUseMessage`). */
 const GUTTER_FIRST = ' ⎿ '
 const GUTTER_REST = '   '

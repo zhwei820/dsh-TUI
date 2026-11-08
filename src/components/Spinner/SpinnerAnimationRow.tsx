@@ -54,6 +54,8 @@ export type SpinnerAnimationRowProps = {
   columns: number
   /** 'thinking' while reasoning streams; number = duration (ms) after it ends. */
   thinkingStatus: 'thinking' | number | null
+  /** Trailing key hint (`esc to interrupt`), the last field in the parens. */
+  interruptHint?: string | undefined
 }
 
 /**
@@ -78,6 +80,7 @@ export function SpinnerAnimationRow({
   verbose,
   columns,
   thinkingStatus,
+  interruptHint,
 }: SpinnerAnimationRowProps): React.ReactNode {
   const [viewportRef, time] = useAnimationFrame(reducedMotion ? null : 50)
 
@@ -179,12 +182,19 @@ export function SpinnerAnimationRow({
     wantsTimerAndTokens &&
     (leaderTokens > 0 || uploadTokens > 0) &&
     availableSpace > usedAfterTimer + tokensWidth
+  const usedAfterTokens = usedAfterTimer + (showTokens ? tokensWidth + 2 + sep : 0)
+  // The interrupt hint is the last field to earn room (Claude Code order:
+  // time · tokens · thinking · esc to interrupt); a narrow row drops it first.
+  const showInterrupt =
+    interruptHint !== undefined && interruptHint !== '' &&
+    availableSpace > usedAfterTokens + stringWidth(interruptHint)
   const thinkingOnly =
     showThinking &&
     thinkingStatus === 'thinking' &&
     !spinnerSuffix &&
     !showTimer &&
-    !showTokens
+    !showTokens &&
+    !showInterrupt
 
   // === Thinking shimmer color ===
   const thinkingOpacity =
@@ -233,6 +243,13 @@ export function SpinnerAnimationRow({
               {thinkingText}
             </Text>
           ),
+        ]
+      : []),
+    ...(showInterrupt
+      ? [
+          <Text dimColor key="interrupt">
+            {interruptHint}
+          </Text>,
         ]
       : []),
   ]

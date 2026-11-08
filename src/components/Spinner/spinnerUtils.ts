@@ -7,10 +7,11 @@
 export type RGBColor = { r: number; g: number; b: number }
 
 /**
- * A calm breathing dot: every frame is one display cell, including in
- * narrow CJK terminals, and no platform-specific glyph set is needed.
+ * Claude Code's twinkling star (`·` → `✽`, then back): every frame is one
+ * display cell (Dingbats are East-Asian-narrow), so CJK terminals keep the
+ * row from jittering.
  */
-const DEFAULT_FRAME_SET = ['·', '•', '●', '•']
+const DEFAULT_FRAME_SET = ['·', '✢', '✳', '✶', '✻', '✽']
 
 /**
  * 返回 spinner 帧字符序列。
