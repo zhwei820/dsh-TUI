@@ -14,6 +14,7 @@ import { TeamMessageBubble } from './messages/TeamMessageBubble.js'
 import { AssistantTextLeafRow, ThinkingLeafRow, ToolLeafRow } from './messages/TranscriptLeaves.js'
 import { liveOutputMaxLines, liveOutputRows } from './messages/liveOutputLines.js'
 import { SubagentMessage } from './Chat/SubagentMessage.js'
+import { detectSubagentGroups, groupSummary, type SubagentGroupSlot } from './Chat/subagentCardModel.js'
 import { JobCard } from './Chat/JobCard.js'
 import { JobGroupHeader } from './Chat/JobGroupHeader.js'
 import { isMinimalUiMode } from '../minimalUiMode.js'
@@ -236,6 +237,7 @@ function signatureParts(
   displayTextLen: number,
   sessionCwd: string | undefined,
   fullscreen: boolean,
+  subagentSlot: SubagentGroupSlot | undefined,
 ): Array<string | number | boolean> {
   signatureScratch.length = 0
   // Universal height inputs: width reflows every row; kind switches height
@@ -293,11 +295,16 @@ function signatureParts(
       // 卡片高度输入：running→settled 折叠 waterfall+tool 行（5→1 行），
       // failed 增加 error 行。缺这些字段的话 offscreen 结算后 cached
       // height 永不过期 → 滚回 blank band / 滚不到底。
+      // Card height inputs (subagentCardModel.ts line budget): status picks
+      // the trailing line, the tool count the visible tool lines and the
+      // `+N more` line, Ctrl+O/per-row expand lists every call, and a
+      // parallel run's head carries one extra summary line.
       signatureScratch.push(
         row.subagent?.status ?? '',
         row.subagent?.toolCalls.length ?? 0,
-        row.subagent?.outputLines.length ?? 0,
-        row.subagent?.error?.length ?? 0,
+        row.subagent?.reportedToolUses ?? 0,
+        expanded || expandedRows.has(row.id),
+        subagentSlot === undefined ? 0 : subagentSlot.index === 0 ? 1 : 2,
       )
       break
     case 'job': {
@@ -552,6 +559,10 @@ export function MessageList({
     thinkingVisible: boolean
     out: readonly ChatRow[]
     margins: ReadonlyMap<number, boolean>
+    /** Parallel subagent runs (row id → slot) over the visible list. */
+    subagentGroups: ReadonlyMap<number, SubagentGroupSlot>
+    /** Visible subagent rows by id: a run's head reads its members live. */
+    subagentRowsById: ReadonlyMap<number, ChatRow>
     /** Per-row `streaming === true` bits. The settle flip (streaming cleared
      * in place, rows identity/length unchanged) changes empty-assistant
      * filtering below, so the cache must rebuild on any bit change. */
@@ -587,6 +598,13 @@ export function MessageList({
   let jobsSig = (expanded ? 1 : 0) * 7 + (jobGroupFold === 'always' ? 1 : jobGroupFold === 'never' ? 2 : 3)
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!
+    // Subagent rows join the fingerprint too: a snapshot landing on a fresh
+    // row, and a status flip, decide parallel-run membership
+    // (detectSubagentGroups) without moving the row array.
+    if (row.kind === 'subagent') {
+      jobsSig = (jobsSig * 33 + row.id + (row.subagent === undefined ? 0 : 11 + row.subagent.status.length)) | 0
+      continue
+    }
     if (row.kind !== 'job' || row.job === undefined) continue
     jobsSig = (jobsSig * 33 + row.id + jobStatusCode(row.job.status) + (expandedRows.has(row.id) ? 7 : 0)) | 0
   }
@@ -749,11 +767,18 @@ export function MessageList({
     // over the FULL list so a windowed row keeps the exact spacing it would
     // have in a fully-mounted list. Group members are the exception: they sit
     // flush under their head, which is the separator line the group removes.
+    // Parallel subagent runs read as ONE tree (head summary + branches):
+    // members hang flush under the head, like job-group members.
+    const subagentGroups = detectSubagentGroups(visibleOut)
+    const subagentRowsById = new Map<number, ChatRow>()
+    if (subagentGroups.size > 0) {
+      for (const row of visibleOut) if (subagentGroups.has(row.id)) subagentRowsById.set(row.id, row)
+    }
     const margins = new Map<number, boolean>()
     {
       let prev: ChatRow['kind'] | undefined
       for (const row of visibleOut) {
-        const member = row.jobGroup !== undefined && !row.jobGroup.head
+        const member = (row.jobGroup !== undefined && !row.jobGroup.head) || (subagentGroups.get(row.id)?.index ?? 0) > 0
         margins.set(row.id, prev !== undefined && !member)
         prev = row.kind
       }
@@ -767,6 +792,8 @@ export function MessageList({
       thinkingVisible,
       out: visibleOut,
       margins,
+      subagentGroups,
+      subagentRowsById,
       streamBits,
       jobsSig,
       turnRowOn: turnUsageRow,
@@ -775,6 +802,8 @@ export function MessageList({
   }
   const visibleRows = visibleRowsCacheRef.current!.out
   const margins = visibleRowsCacheRef.current!.margins
+  const subagentGroups = visibleRowsCacheRef.current!.subagentGroups
+  const subagentRowsById = visibleRowsCacheRef.current!.subagentRowsById
   // Selection keeps its highlight; expanding a row adds no band of its own.
   // A tool card supplies the configured tool-card surface (and its diff line
   // tints) from the inside; the band itself stays limited to selection.
@@ -922,6 +951,7 @@ export function MessageList({
         revealDisplayLen(row, smoothStreaming, revealScope),
         sessionCwd,
         fullscreen,
+        subagentGroups.get(row.id),
       )
       const cachedParts = sigs.get(row.id)
       let same = false
@@ -1543,6 +1573,15 @@ export function MessageList({
           const marginTopOnTurn = margins.get(row.id) === true
           const tool = row.tool
           const subagent = row.kind === 'subagent' ? row.subagent : undefined
+          // Parallel-run position; only the head reads the run's live state
+          // (members pass zeros so their memo ignores siblings' progress).
+          const subagentSlot = subagent === undefined ? undefined : subagentGroups.get(row.id)
+          const subagentRun = subagentSlot !== undefined && subagentSlot.index === 0
+            ? groupSummary(subagentSlot.memberIds.flatMap(id => {
+                const member = subagentRowsById.get(id)?.subagent
+                return member === undefined ? [] : [member]
+              }))
+            : undefined
           const job = row.kind === 'job' ? row.job : undefined
           const jobGroup = row.kind === 'job' ? row.jobGroup : undefined
           const revealVersion = smoothStreaming && row.kind === 'tool' && row.fresh === true &&
@@ -1617,6 +1656,10 @@ export function MessageList({
               fullscreen={fullscreen}
               turnUsage={row.turnUsage}
               subagent={subagent}
+              subagentGroupIndex={subagentSlot?.index}
+              subagentGroupCount={subagentSlot?.memberIds.length}
+              subagentGroupRunning={subagentRun?.running ?? 0}
+              subagentGroupFailed={subagentRun?.failed ?? 0}
               job={job}
               jobGroup={jobGroup}
               onToggleRow={onToggleRow}
@@ -1723,6 +1766,12 @@ type MemoRowProps = {
   // SubagentRow, stable ref (subagent lifecycle events update the store, not
   // the row ref itself, so a plain ref compare stays correct).
   subagent: SubagentRow | undefined
+  /** Parallel-run position (see detectSubagentGroups); undefined = lone card. */
+  subagentGroupIndex: number | undefined
+  subagentGroupCount: number | undefined
+  /** Head only: members still live / failed (0 on members). */
+  subagentGroupRunning: number
+  subagentGroupFailed: number
   // JobRow, same update contract as SubagentRow (replaced per job commit).
   job: JobRow | undefined
   /** Group decoration for a run of consecutive job cards (see JobGroupRow). */
@@ -1808,6 +1857,10 @@ function TranscriptRow({
   fullscreen,
   turnUsage,
   subagent,
+  subagentGroupIndex,
+  subagentGroupCount,
+  subagentGroupRunning,
+  subagentGroupFailed,
   job,
   jobGroup,
   onToggleRow,
@@ -2109,8 +2162,10 @@ function TranscriptRow({
           <SubagentMessage
             subagent={subagent}
             marginTopOnTurn={marginTopOnTurn}
-            activityFrames={activityFrames}
-            isExpanded={isExpanded}
+            expanded={expanded || isExpanded}
+            group={subagentGroupIndex === undefined || subagentGroupCount === undefined
+              ? undefined
+              : { index: subagentGroupIndex, count: subagentGroupCount, running: subagentGroupRunning, failed: subagentGroupFailed }}
             onClick={openSubagent}
             onOpenView={onOpenSubagentView === undefined ? undefined : () => onOpenSubagentView(subagent.agentId, rowId)}
           />

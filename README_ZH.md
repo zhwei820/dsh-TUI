@@ -54,7 +54,7 @@
 - **会话工作流** — `/new` `/compact` `/export` `/btw`、模型热切换、fork、回溯、vim、全屏草稿编辑器。
   `/btw` 在侧栏无法显示时回退到浮层；主任务问卷与全屏草稿编辑器优先接管，侧问与草稿保持原样。
 - **IDE 选区通道** — VS Code 里选中的代码进 prompt。
-- **DSH 集成** — presets、技能、MCP、目标、待办、子代理、问卷。
+- **DSH 集成** — presets、技能、MCP、目标、待办、子代理、问卷。子代理显示为 `● Agent(描述)` 卡片，列出最近的工具调用，结束后显示 `完成（N 次工具调用 · tokens · 用时）`；并行的子代理合成一棵 `N 个子代理运行中…` 树，`Ctrl+O` 列出全部工具调用。
 - **DeepSeek 账号登录** — dsh-TUI 只支持 DeepSeek 模型。DSH 0.2.0-rc.1+ 的标准 profile 通过宿主服务提供 DeepSeek 浏览器登录，路由为 `deepseek-account`；通过 `/auth` 或首次引导使用，无需另装插件。
   仅更新 profile 而留下已挂载 `dsh-tui-auth` 的旧全局 TUI 补丁时，本地登录也会按需启动官方 loopback 回调监听器；SSH 固定端口转发仍需对齐全局安装包。
 - **扩展** — 浏览器交互、computer use 等。

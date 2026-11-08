@@ -1,176 +1,232 @@
 import React from 'react'
-import { Box, Text, useAnimationFrame, useTerminalSize } from '../../ui.js'
-import type { SubagentRow } from '../../dsh-adapter/channel.js'
-import type { Theme } from '../../theme.js'
+import { Box, Text } from '../../ui.js'
+import type { SubagentRow, SubagentToolCall } from '../../adapter/ports/channel-view.js'
 import { t } from '../../i18n.js'
-import { resolvePreset } from '../activityFrames.js'
+import { primaryComboString } from '../../utils/keymap.js'
+import { ToolUseLoader } from '../ToolUseLoader.js'
 import { toolNameColor } from '../messages/AssistantToolUseMessage.js'
-import { stringWidth } from '../../ink/stringWidth.js'
-import { isMinimalUiMode } from '../../minimalUiMode.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
+import {
+  formatAgentDuration,
+  formatTokenCount,
+  isSettledSubagent,
+  statusLineOf,
+  subagentElapsedMs,
+  subagentTokens,
+  subagentToolUses,
+  toolCallParts,
+  visibleToolCalls,
+  type SubagentStatusLine,
+} from './subagentCardModel.js'
 
-/** The waterfall window is a Kimi Code style constant-height region. */
-const WATERFALL_ROWS = 3
-/** Card left padding + the `│ ` gutter prefix. */
-const WATERFALL_GUTTER = 4
+/** Header name of a delegation, in the transcript's tool-name voice. */
+const AGENT_LABEL = 'Agent'
+/** Body gutter, aligned with the tool card's (`AssistantToolUseMessage`). */
+const GUTTER_FIRST = ' ⎿ '
+const GUTTER_REST = '   '
 
-function duration(ms = 0): string {
-  const seconds = Math.floor(ms / 1000)
-  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m${seconds % 60}s`
+/** Position of a card inside a parallel run (see `detectSubagentGroups`). */
+export interface SubagentGroupView {
+  readonly index: number
+  readonly count: number
+  /** Head only: members still live / settled as failed. */
+  readonly running: number
+  readonly failed: number
 }
-function tokens(row: SubagentRow): string {
-  const total = row.tokens?.total ?? ((row.tokens?.input ?? 0) + (row.tokens?.output ?? 0) || 0)
-  return total > 0 ? `${total} tok` : '- tok'
+
+function expandHint(): string {
+  return t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })
 }
-function status(row: SubagentRow): { glyph: string; label: string; color: keyof Theme | undefined } {
-  const minimalUi = isMinimalUiMode()
-  if (row.status === 'completed') return { glyph: minimalUi ? '✓' : '🟢', label: t('subagent-status-completed'), color: minimalUi ? undefined : 'success' }
-  if (row.status === 'failed') return { glyph: minimalUi ? '×' : '🔴', label: t('subagent-status-failed'), color: minimalUi ? undefined : 'error' }
-  if (row.status === 'cancelled') return { glyph: minimalUi ? '×' : '🔴', label: t('subagent-status-cancelled'), color: minimalUi ? undefined : 'error' }
-  // No end was ever reported (the run's process is gone): settled, unknown.
-  if (row.status === 'unknown') return { glyph: minimalUi ? '·' : '⚪', label: t('subagent-status-unknown'), color: minimalUi ? undefined : 'subtle' }
-  return { glyph: minimalUi ? '·' : '🟡', label: t('subagent-status-running'), color: minimalUi ? undefined : 'warning' }
+
+/** `14 tool uses · 41.2k tokens · 1m 12s` (parts the backend reported). */
+function statsText(subagent: SubagentRow, withDuration: boolean): string {
+  const parts = [t('subagent-tool-uses', { count: subagentToolUses(subagent) })]
+  const tokens = subagentTokens(subagent)
+  if (tokens !== undefined) parts.push(t('subagent-tokens', { count: formatTokenCount(tokens) }))
+  if (withDuration) parts.push(formatAgentDuration(subagentElapsedMs(subagent)))
+  return parts.join(' · ')
 }
-/** Hard single-line clip by display width — a wrapped waterfall row would
- * break the constant-height window. */
-function clipLine(text: string, maxWidth: number): string {
-  if (maxWidth <= 1) return ''
-  let width = 0
-  let index = 0
-  while (index < text.length) {
-    // Advance by the next full code point so wide glyphs (CJK, emoji) are
-    // never split in half.
-    const next = text.codePointAt(index)!
-    const char = String.fromCodePoint(next)
-    const charWidth = stringWidth(char)
-    if (width + charWidth > maxWidth - 1) break
-    width += charWidth
-    index += char.length
+
+function ToolCallText({ tool }: { tool: SubagentToolCall }): React.ReactNode {
+  const { name, args } = toolCallParts(tool)
+  return (
+    <Text wrap="truncate-end">
+      <Text color={tool.status === 'failed' ? 'error' : toolNameColor(name)}>{name}</Text>
+      {args !== undefined && <Text dimColor>{`(${args})`}</Text>}
+    </Text>
+  )
+}
+
+function StatusLineText({ line, subagent, withStats }: { line: SubagentStatusLine; subagent: SubagentRow; withStats: boolean }): React.ReactNode {
+  switch (line.kind) {
+    case 'initializing':
+      return <Text dimColor wrap="truncate-end">{t('subagent-initializing')}</Text>
+    case 'done':
+      return (
+        <Text wrap="truncate-end">
+          {t('subagent-done')}
+          {withStats && <Text dimColor>{` (${statsText(subagent, true)})`}</Text>}
+        </Text>
+      )
+    case 'error':
+      return <Text color="error" wrap="truncate-end">{line.message === '' ? t('subagent-status-failed') : t('subagent-error', { message: line.message })}</Text>
+    case 'cancelled':
+      return <Text color="error" wrap="truncate-end">{t('subagent-status-cancelled')}</Text>
+    case 'unknown':
+      return <Text dimColor wrap="truncate-end">{t('subagent-status-unknown')}</Text>
   }
-  return index < text.length ? `${text.slice(0, index)}…` : text
+}
+
+/** One gutter-prefixed body row; `prefix` is the fixed-width left column. */
+function BodyRow({ prefix, children }: { prefix: string; children: React.ReactNode }): React.ReactNode {
+  return (
+    <Box flexDirection="row">
+      <Box width={prefix.length} flexShrink={0}><Text dimColor>{prefix}</Text></Box>
+      <Box flexGrow={1} flexShrink={1}>{children}</Box>
+    </Box>
+  )
 }
 
 /**
- * Borderless, fixed-height activity card embedded directly in the transcript
- * (Kimi Code visual language). Running: header + one-line current tool + a
- * constant 3-row waterfall (each row hard-clipped to one terminal line so
- * the card height never changes). Settled: folds to the header line alone
- * (failure keeps one error line). The running glyph reuses the user's
- * working-activity preset (`/activity`), so the indicator follows the same
- * setting as the main spinner.
+ * Body lines under a card or group member: tool calls, the `+N more tool
+ * uses` line, and the trailing status line. `first`/`rest` are the gutter
+ * strings for the first and following rows. The line count must match
+ * `singleCardBodyLines` / `groupMemberLines` (the virtualized row height).
  */
-export function SubagentMessage({ subagent, marginTopOnTurn, activityFrames, onClick, onOpenView }: {
+function bodyRows(subagent: SubagentRow, expanded: boolean, first: string, rest: string, withStats: boolean): React.ReactNode[] {
+  const { tools, hidden } = visibleToolCalls(subagent, expanded)
+  const status = statusLineOf(subagent, tools.length)
+  const rows: React.ReactNode[] = []
+  const prefix = () => (rows.length === 0 ? first : rest)
+  const more = (): React.ReactNode => (
+    <BodyRow key="more" prefix={prefix()}>
+      <Text dimColor wrap="truncate-end">{`${t('subagent-more-tool-uses', { count: hidden })}${expanded ? '' : ` ${expandHint()}`}`}</Text>
+    </BodyRow>
+  )
+  // Expanded (Ctrl+O) windows drop the OLDEST calls, so the count line goes
+  // first; collapsed cards show the recent few with the count after them
+  // (`subagent-more-tool-uses` + `hint-expand-ctrl-o`, Claude Code's order).
+  if (expanded && hidden > 0) rows.push(more())
+  for (const tool of tools) {
+    rows.push(<BodyRow key={`t${rows.length}`} prefix={prefix()}><ToolCallText tool={tool} /></BodyRow>)
+  }
+  if (!expanded && hidden > 0) rows.push(more())
+  if (status !== undefined) {
+    rows.push(<BodyRow key="status" prefix={prefix()}><StatusLineText line={status} subagent={subagent} withStats={withStats} /></BodyRow>)
+  }
+  return rows
+}
+
+/** Collapsed group member: the one `⎿` line (latest tool or status). */
+function memberStatusRow(subagent: SubagentRow, prefix: string): React.ReactNode {
+  const { tools } = visibleToolCalls(subagent, false)
+  const latest = tools[tools.length - 1]
+  const status = statusLineOf(subagent, tools.length)
+  return (
+    <BodyRow key="status" prefix={prefix}>
+      {status !== undefined
+        ? <StatusLineText line={status} subagent={subagent} withStats={false} />
+        : latest !== undefined ? <ToolCallText tool={latest} /> : <Text> </Text>}
+    </BodyRow>
+  )
+}
+
+/** The `⤢` open-in-main-screen affordance on a card's first line. */
+function OpenViewGlyph({ onOpenView }: { onOpenView: () => void }): React.ReactNode {
+  const [hovered, setHovered] = React.useState(false)
+  return (
+    <Box
+      flexShrink={0}
+      marginLeft={1}
+      onClick={(event: ClickEvent) => {
+        // 拦截冒泡：这一格是「主屏查看」，不是卡片点击（→详情）。
+        event.stopImmediatePropagation()
+        onOpenView()
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Text color={hovered ? 'accent' : 'subtle'}>{'⤢'}</Text>
+    </Box>
+  )
+}
+
+/**
+ * Transcript subagent card in the Claude Code visual language (layout and
+ * line budget: `subagentCardModel.ts`). A lone delegation renders as a tool
+ * card — `● Agent(description)` with its recent tool calls under the `⎿`
+ * gutter and a `Done (… tool uses · … tokens · …)` line once settled. A
+ * parallel run renders as one tree: the head row carries the `Running N
+ * agents…` line, every member (head included) a `├─`/`└─` branch. Ctrl+O
+ * (`expanded`) lists every tool call. Clicking a card opens its detail.
+ */
+export function SubagentMessage({ subagent, marginTopOnTurn, expanded, group, onClick, onOpenView }: {
   subagent: SubagentRow
   marginTopOnTurn: boolean
-  activityFrames?: string
-  isExpanded: boolean
+  /** Ctrl+O transcript mode or this row's own expand toggle. */
+  expanded: boolean
+  group?: SubagentGroupView | undefined
   onClick?(event: ClickEvent): void
   /** 在主屏打开子代理转录：与卡片点击（→ 详情）并列的独立动作；拦截冒泡，
    *  普通正文点击与选区不受影响。 */
   onOpenView?(): void
 }): React.ReactNode {
-  const settled = subagent.status === 'completed' || subagent.status === 'failed' || subagent.status === 'cancelled' || subagent.status === 'unknown'
-  // 动画订阅仅限运行中的卡片：settled 后传 null 退出共享 clock（keepAlive
-  // 归零 → interval 清除），否则历史里的每张完成卡片都以 120ms 永久驱动
-  // React commit。viewportRef 必须挂到根节点——useTerminalViewport 初始
-  // isVisible:true，ref 不挂就永远不修正（虚拟化滚出视口的卡片继续动画）。
-  const [viewportRef, time] = useAnimationFrame(settled ? null : 120)
-  const { columns } = useTerminalSize()
-  const info = status(subagent)
+  const settled = isSettledSubagent(subagent)
+  const failed = subagent.status === 'failed' || subagent.status === 'cancelled'
   const [hovered, setHovered] = React.useState(false)
   const clickable = onClick !== undefined
-  const elapsed = subagent.completedAt ? subagent.durationMs : Date.now() - subagent.startedAt
-  const lastRunning = [...subagent.toolCalls].reverse().find(tool => tool.status === 'running')
-  const previousDone = lastRunning
-    ? subagent.toolCalls[subagent.toolCalls.indexOf(lastRunning) - 1]
-    : subagent.toolCalls[subagent.toolCalls.length - 1]
-  const preset = React.useMemo(() => resolvePreset(activityFrames), [activityFrames])
-  const activity = settled ? [] : subagent.outputLines.slice(-WATERFALL_ROWS)
-  const runningGlyph = preset.frames[Math.floor(time / preset.intervalMs) % preset.frames.length] ?? '·'
-  const rowWidth = Math.max(20, (columns ?? 80) - WATERFALL_GUTTER)
+  const hoverProps = clickable
+    ? { onMouseEnter: () => setHovered(true), onMouseLeave: () => setHovered(false) }
+    : {}
 
-  // 点击打开详情场景；hover 不刷整行背景（转录视觉保持安静），只把状态
-  // glyph 提亮为品牌色作为可点指示。
-  return <Box
-    flexDirection="column"
-    marginTop={marginTopOnTurn ? 1 : 0}
-    paddingLeft={2}
-    ref={viewportRef}
-    onClick={onClick}
-    onMouseEnter={clickable ? () => setHovered(true) : undefined}
-    onMouseLeave={clickable ? () => setHovered(false) : undefined}
-  >
-    <Box flexDirection="row" gap={1}>
-      <Text color={hovered && clickable ? 'accent' : info.color}>{settled ? info.glyph : ` ${runningGlyph}`}</Text>
-      <Text bold color={hovered && clickable ? 'accent' : undefined}>{`${t('subagent-card-prefix')}${subagent.description}`}</Text>
-      <Text dimColor>·</Text><Text>{subagent.model ?? subagent.provider ?? 'default'}</Text>
-      {subagent.effort && <><Text dimColor>·</Text><Text dimColor>{subagent.effort}</Text></>}
-      <Text dimColor>·</Text><Text dimColor>{duration(elapsed)}</Text>
-      <Text dimColor>·</Text><Text dimColor>{tokens(subagent)}</Text>
-      <Text dimColor>·</Text><Text dimColor>{subagent.toolCalls.length} tools</Text>
-      <Text dimColor>·</Text><Text color={info.color}>{info.label}</Text>
-      {onOpenView !== undefined && (
-        <Box
-          flexShrink={0}
-          marginLeft={1}
-          onClick={(event: ClickEvent) => {
-            // 拦截冒泡：这一格是「主屏查看」，不是卡片点击（→详情）。
-            event.stopImmediatePropagation()
-            onOpenView()
-          }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
-        >
-          {/* 字形位（与面板 ⤢ 全屏同一词汇）：卡片行是恒定高度的水流行，
-              长标签会把状态列顶折行；完整名称留给 Dashboard/Detail 入口。 */}
-          <Text color={hovered ? 'accent' : 'subtle'}>{'⤢'}</Text>
+  if (group === undefined) {
+    return (
+      <Box flexDirection="column" marginTop={marginTopOnTurn ? 1 : 0} onClick={onClick} {...hoverProps}>
+        <Box flexDirection="row" flexWrap="nowrap">
+          <ToolUseLoader shouldAnimate={!settled} isUnresolved={!settled} isError={failed} toolName="task" />
+          <Box flexShrink={1}>
+            <Text wrap="truncate-end">
+              <Text bold color={hovered ? 'accent' : toolNameColor('task')}>{AGENT_LABEL}</Text>
+              {`(${subagent.description})`}
+            </Text>
+          </Box>
+          {onOpenView !== undefined && <OpenViewGlyph onOpenView={onOpenView} />}
+        </Box>
+        {bodyRows(subagent, expanded, GUTTER_FIRST, GUTTER_REST, true)}
+      </Box>
+    )
+  }
+
+  const head = group.index === 0
+  const last = group.index === group.count - 1
+  const branch = last ? '   └─ ' : '   ├─ '
+  const under = last ? '      ' : '   │  '
+  const groupSettled = group.running === 0
+  return (
+    <Box flexDirection="column" marginTop={head && marginTopOnTurn ? 1 : 0} onClick={onClick} {...hoverProps}>
+      {head && (
+        <Box flexDirection="row" flexWrap="nowrap">
+          <ToolUseLoader shouldAnimate={!groupSettled} isUnresolved={!groupSettled} isError={groupSettled && group.failed === group.count} toolName="task" />
+          <Text wrap="truncate-end">
+            <Text bold>{groupSettled ? t('subagent-group-finished', { count: group.count }) : t('subagent-group-running', { count: group.count })}</Text>
+            {group.failed > 0 && <Text color="error">{` · ${t('subagent-group-failed', { count: group.failed })}`}</Text>}
+            {!expanded && <Text dimColor>{` ${expandHint()}`}</Text>}
+          </Text>
         </Box>
       )}
+      <Box flexDirection="row" flexWrap="nowrap">
+        <Box width={branch.length} flexShrink={0}><Text dimColor>{branch}</Text></Box>
+        <Box flexShrink={1}>
+          <Text wrap="truncate-end">
+            <Text bold={hovered} color={hovered ? 'accent' : undefined}>{subagent.description}</Text>
+            <Text dimColor>{` · ${statsText(subagent, false)}`}</Text>
+          </Text>
+        </Box>
+        {onOpenView !== undefined && <OpenViewGlyph onOpenView={onOpenView} />}
+      </Box>
+      {expanded
+        ? bodyRows(subagent, true, `${under}⎿  `, `${under}   `, false)
+        : memberStatusRow(subagent, `${under}⎿  `)}
     </Box>
-    {!settled && (lastRunning ?? previousDone) !== undefined && (
-      <Text wrap="truncate">
-        {lastRunning !== undefined ? (
-          <>
-            {previousDone !== undefined && (
-              <>
-                <Text dimColor>{'  · '}</Text>
-                <Text color="success">✓</Text>
-                <Text color={toolNameColor(previousDone.name)}>{previousDone.name}</Text>
-                <Text dimColor>{' · '}</Text>
-              </>
-            )}
-            {lastRunning.argsPreview === undefined && (
-              <Text color={toolNameColor(lastRunning.name)}>{lastRunning.name}</Text>
-            )}
-            {lastRunning.argsPreview !== undefined && (
-              <>
-                <Text color={toolNameColor(lastRunning.name)}>{lastRunning.name}</Text>
-                <Text dimColor>{` (${clipLine(lastRunning.argsPreview.replace(/\s+/g, ' ').trim(), Math.max(10, rowWidth - lastRunning.name.length - 6))})`}</Text>
-              </>
-            )}
-          </>
-        ) : (
-          previousDone !== undefined && (
-            <>
-              <Text dimColor>{'  · '}</Text>
-              <Text color="success">✓</Text>
-              <Text color={toolNameColor(previousDone.name)}>{previousDone.name}</Text>
-              {previousDone.argsPreview !== undefined && (
-                <Text dimColor>{` (${clipLine(previousDone.argsPreview.replace(/\s+/g, ' ').trim(), Math.max(10, rowWidth - previousDone.name.length - 6))})`}</Text>
-              )}
-            </>
-          )
-        )}
-      </Text>
-    )}
-    {!settled && Array.from({ length: WATERFALL_ROWS }, (_, index) => (
-      // key 不含 time：含 time 的 key 让每个 animation tick 都变成
-      // unmount+mount，DOMElement/Yoga node churn 且 nodeCache 失配扩大
-      // terminal damage。内容更新走 in-place diff。
-      <Text key={`${subagent.agentId}-wf-${index}`} dimColor wrap="truncate">{`  │ ${clipLine(activity[index] ?? '', rowWidth)}`}</Text>
-    ))}
-    {settled && subagent.status === 'failed' && subagent.error && (
-      <Text color="error" wrap="truncate">{`  └ ${clipLine(subagent.error, rowWidth)}`}</Text>
-    )}
-  </Box>
+  )
 }

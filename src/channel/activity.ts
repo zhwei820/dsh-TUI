@@ -218,6 +218,7 @@ export function createActivityProjection(getState: () => ActivityState, deps: Ac
     outputLines: state.output.slice(-3),
     toolCalls: state.toolCalls.map(tool => ({ ...tool })),
     ...(state.tokens === undefined ? {} : { tokens: { ...state.tokens } }),
+    ...(state.reportedToolUses === undefined ? {} : { reportedToolUses: state.reportedToolUses }),
     ...(state.summary === undefined ? {} : { summary: state.summary }),
     ...(state.stopReason === undefined ? {} : { stopReason: state.stopReason }),
     ...(state.error === undefined ? {} : { error: state.error }),

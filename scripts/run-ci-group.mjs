@@ -239,6 +239,9 @@ const GROUPS = {
 // 曾以 120ms/卡片持续驱动 React commit，N 张相位错开合成 ~30ms
 // 均匀帧 cadence。
     ["verify-subagent-settle", ['node', '--import', 'tsx/esm', 'scripts/verify-subagent-settle.tsx']],
+// 对话流子代理卡片（Claude Code 视觉）：单卡 Agent(desc) 头 + 最近工具 + `+N more`、
+// Done/Initializing/Error 状态行、并行组 Running N agents… 树形分支、Ctrl+O 展开全部工具。
+    ["verify-subagent-card", ['node', '--import', 'tsx/esm', 'scripts/verify-subagent-card.tsx']],
 // 子代理流投影批处理：chunk 风暴的 snapshot+行投影必须按 16ms 帧
 // 对齐合并（token 率 100-300/s 下的全量深拷贝热路径），且生命周期
 // 事件（tool/call、subagent/end）保持同步立即可见。

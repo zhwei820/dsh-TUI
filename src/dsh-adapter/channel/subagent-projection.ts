@@ -277,6 +277,7 @@ function createSessionSubagentProjection(
         status: sub.status, startedAt: sub.startedAt, completedAt: sub.completedAt,
         durationMs: sub.completedAt ? sub.completedAt - sub.startedAt : Date.now() - sub.startedAt,
         outputLines: sub.output.slice(-3), toolCalls: sub.toolCalls, tokens: sub.tokens,
+        ...(sub.reportedToolUses === undefined ? {} : { reportedToolUses: sub.reportedToolUses }),
         summary: sub.summary, stopReason: sub.stopReason, error: sub.error,
       }
       row.subagent = view

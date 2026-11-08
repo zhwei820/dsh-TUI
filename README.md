@@ -57,7 +57,7 @@ Resuming a DSH session preserves its recorded reasoning effort (or its live sele
 - **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, fullscreen draft editor.
   `/btw` uses an overlay when its sidebar cannot render. Main-task questionnaires and the fullscreen draft editor take priority while preserving the side question and draft.
 - **IDE selection channel** — a VS Code selection lands in the prompt.
-- **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires.
+- **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires. Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call.
 - **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers Host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
   A profile-only update from a global TUI patch that already mounts `dsh-tui-auth` can still start the official loopback callback listener on demand; fixed-port SSH forwarding still requires the global package to be aligned.
 - **Extensions** — browser interaction, computer use and more.

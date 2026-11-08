@@ -277,6 +277,8 @@ export interface SubagentRow {
   outputLines: string[]
   toolCalls: SubagentState['toolCalls']
   tokens?: SubagentState['tokens']
+  /** The backend's own tool-use count (`SubagentState.reportedToolUses`). */
+  reportedToolUses?: number
   summary?: string
   stopReason?: string
   error?: string
