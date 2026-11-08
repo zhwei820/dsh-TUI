@@ -293,6 +293,19 @@ export function SubagentDetailScene({
   /** Folded reasoning runs (the transcript's thinking grammar). Enter flips
    *  every run at once so one key stays predictable across thought steps. */
   const [thinkingOpen, setThinkingOpen] = React.useState(false)
+  /** Runs a click flipped against `thinkingOpen` (keyed per page: `o-` output
+   *  blocks, `t-` transcript rows). Enter clears them so it stays all-or-none. */
+  const [flippedThinking, setFlippedThinking] = React.useState<ReadonlySet<string>>(() => new Set())
+  const toggleThinking = (key: string): void => setFlippedThinking(prev => {
+    const next = new Set(prev)
+    if (!next.delete(key)) next.add(key)
+    return next
+  })
+  const flipAllThinking = (): void => {
+    setThinkingOpen(open => !open)
+    setFlippedThinking(new Set())
+  }
+  React.useEffect(() => { setFlippedThinking(new Set()) }, [subagent.agentId, isRunning])
   const blocks = groupOutputEvents(subagent.outputEvents)
   const hasThinking = blocks.some(block => block.kind === 'thinking')
   const settled = !isRunning
@@ -413,8 +426,9 @@ export function SubagentDetailScene({
       setComposerFocused(true)
       return
     }
-    // o = 转录页载入更早一页（与页首按钮同一动作）。
-    if (input.toLowerCase() === 'o' && activePage === 'transcript') {
+    // o = 转录页载入更早一页（与页首按钮同一动作）。Ctrl+O 同样以 input 'o'
+    // 到达，须排除，否则误触载入。
+    if (input.toLowerCase() === 'o' && !key.ctrl && activePage === 'transcript') {
       event.stopImmediatePropagation()
       loadOlderTranscript()
       return
@@ -424,7 +438,7 @@ export function SubagentDetailScene({
       // Enter folds the reasoning while the output or transcript page is
       // showing (the transcript's ctrl+o equivalent). Elsewhere it keeps its
       // "leave the detail" meaning, which Esc and the ✕ button still provide.
-      if ((activePage === 'output' && hasThinking) || (activePage === 'transcript' && hasTranscriptThinking)) setThinkingOpen(open => !open)
+      if ((activePage === 'output' && hasThinking) || (activePage === 'transcript' && hasTranscriptThinking)) flipAllThinking()
       else onBack()
       return
     }
@@ -485,13 +499,13 @@ export function SubagentDetailScene({
       setComposerFocused(true)
       return true
     }
-    if (input.toLowerCase() === 'o' && activePage === 'transcript') {
+    if (input.toLowerCase() === 'o' && !key.ctrl && activePage === 'transcript') {
       loadOlderTranscript()
       return true
     }
     if (isPanelPlainReturn(input, key)) {
       // Enter 与整屏形态同义：输出/转录页有思考块时先折叠它，别处退回 Dashboard。
-      if ((activePage === 'output' && hasThinking) || (activePage === 'transcript' && hasTranscriptThinking)) setThinkingOpen(open => !open)
+      if ((activePage === 'output' && hasThinking) || (activePage === 'transcript' && hasTranscriptThinking)) flipAllThinking()
       else onBack()
       return true
     }
@@ -612,10 +626,11 @@ export function SubagentDetailScene({
                   const chars = text.replace(/\s+/g, '').length
                   const label = `${THINKING_SETTLED_MARKER} ${t('subagent-thinking-fold', { count: block.lines.length, chars })}`
                   const hint = thinkingOpen ? t('subagent-thinking-collapse') : t('subagent-thinking-expand')
+                  const open = thinkingOpen !== flippedThinking.has(`o-${index}`)
                   return (
-                    <Box key={`think-${index}`} flexDirection="column">
+                    <Box key={`think-${index}`} flexDirection="column" onClick={event => { if (!event.cellIsBlank) toggleThinking(`o-${index}`) }}>
                       <Text italic dimColor>{`${label}  ·  ${hint}`}</Text>
-                      {thinkingOpen ? (
+                      {open ? (
                         <Box flexDirection="column" paddingLeft={2}>
                           {block.lines.map((line, i) => (
                             <Text key={i} dimColor italic wrap="wrap">{line.text}</Text>
@@ -737,7 +752,15 @@ export function SubagentDetailScene({
                         )
                       }
                       if (row.kind === 'thinking') {
-                        return <ThinkingLeafRow key={`think-${row.key}`} thinking={row.text} marginTopOnTurn={margin} verbose={thinkingOpen} />
+                        return (
+                          <ThinkingLeafRow
+                            key={`think-${row.key}`}
+                            thinking={row.text}
+                            marginTopOnTurn={margin}
+                            verbose={thinkingOpen !== flippedThinking.has(`t-${row.key}`)}
+                            onClick={event => { if (!event.cellIsBlank) toggleThinking(`t-${row.key}`) }}
+                          />
+                        )
                       }
                       if (row.kind === 'thinking-unavailable') {
                         return (

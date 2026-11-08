@@ -138,13 +138,21 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
 
   // ── history pages (the same pager the Detail transcript page uses) ──
   const [expandedLeaf, setExpandedLeaf] = React.useState<string | null>(null)
+  /** Thinking rows the user unfolded by click (several may stay open, like
+   *  the main transcript's per-row expansion). */
+  const [openThinking, setOpenThinking] = React.useState<ReadonlySet<string>>(() => new Set())
+  const toggleThinking = (key: string): void => setOpenThinking(prev => {
+    const next = new Set(prev)
+    if (!next.delete(key)) next.add(key)
+    return next
+  })
   const agentId = subagent.agentId
   // Settlement makes the disk copy final: the isRunning flip reloads once.
   const { transcript, loadOlder } = useSubagentTranscript(loadTranscript, agentId, true, isRunning, messages)
   // Live first (session header + its moves); a child with no live session
   // (idle, or discovered after a restart) takes what its own log states.
   const shownCwd = subagent.cwd ?? (transcript.status === 'ready' ? transcript.cwd : undefined)
-  React.useEffect(() => { setExpandedLeaf(null) }, [agentId, isRunning])
+  React.useEffect(() => { setExpandedLeaf(null); setOpenThinking(new Set()) }, [agentId, isRunning])
 
   // ── workbench neighbourhood: the loaded transcript's parent fact wins
   // (the disk copy); until it loads the roster's fields speak. ────────────
@@ -243,7 +251,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
       scrollRef.current?.scrollBy(key.pageUp ? -8 : 8)
       return
     }
-    if (input.toLowerCase() === 'o') {
+    // Plain o only: Ctrl+O arrives as input 'o' with key.ctrl and must not
+    // page in older history.
+    if (input.toLowerCase() === 'o' && !key.ctrl) {
       event.stopImmediatePropagation()
       loadOlder()
       return
@@ -330,7 +340,13 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
               {/* Reasoning folds like the main agent's: a run of thinking
                   lines is one folded `∴` row; the main process stays visible. */}
               {foldTailThinking(fallbackTail).map((entry, index) => entry.kind === 'thinking' ? (
-                <ThinkingLeafRow key={`tail-think-${index}`} thinking={entry.text} marginTopOnTurn={false} verbose={false} />
+                <ThinkingLeafRow
+                  key={`tail-think-${index}`}
+                  thinking={entry.text}
+                  marginTopOnTurn={false}
+                  verbose={openThinking.has(`tail-${index}`)}
+                  onClick={event => { if (!event.cellIsBlank) toggleThinking(`tail-${index}`) }}
+                />
               ) : (
                 <Text
                   key={`tail-${index}`}
@@ -397,7 +413,15 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
                         )
                       }
                       if (row.kind === 'thinking') {
-                        return <ThinkingLeafRow key={`think-${row.key}`} thinking={row.text} marginTopOnTurn={margin} verbose={false} />
+                        return (
+                          <ThinkingLeafRow
+                            key={`think-${row.key}`}
+                            thinking={row.text}
+                            marginTopOnTurn={margin}
+                            verbose={openThinking.has(row.key)}
+                            onClick={event => { if (!event.cellIsBlank) toggleThinking(row.key) }}
+                          />
+                        )
                       }
                       if (row.kind === 'thinking-unavailable') {
                         return (

@@ -18,7 +18,6 @@ import type { ClickEvent } from '../../ink/events/click-event.js'
 import { revealLinesOf, scopeRevealKey, snapReveal } from '../smoothReveal.js'
 import { useRevealScope } from '../revealScope.js'
 import { useRevealVersion } from '../../hooks/useRevealVersion.js'
-import { primaryComboString } from '../../utils/keymap.js'
 import { agentMessageStateColor, agentMessageStateText } from './TranscriptLeaves.js'
 import type { AgentMessageState } from './agentTeam.js'
 import { liveOutputMaxLines, liveOutputView } from './liveOutputLines.js'
@@ -444,8 +443,8 @@ function capLines(lines: BodyLine[], max: number, verbose: boolean, hiddenChars:
   // hidden" answers in one place. A lines-only fold keeps the historical
   // shared hint byte-identical.
   const hint = hiddenChars > 0
-    ? { ...dim(t('tool-card-lines-hidden', { parts: foldHintParts(hiddenLines, hiddenChars), key: primaryComboString('transcript') })), revealOnHover: true }
-    : { ...dim(t('lines-folded-expand', { n: hiddenLines, key: primaryComboString('transcript') })), revealOnHover: true }
+    ? { ...dim(t('tool-card-lines-hidden', { parts: foldHintParts(hiddenLines, hiddenChars) })), revealOnHover: true }
+    : { ...dim(t('lines-folded-expand', { n: hiddenLines })), revealOnHover: true }
   return [...lines.slice(0, max), hint]
 }
 
@@ -644,7 +643,7 @@ function HeaderTitle({ name, title, isTerminal, folded, displayArgs, argsLanguag
             <>
               <Text>({folded.first})</Text>
               {folded.hiddenLines > 0 && (
-                <Text dimColor>{` ${t('lines-folded-expand', { n: folded.hiddenLines, key: primaryComboString('transcript') })}`}</Text>
+                <Text dimColor>{` ${t('lines-folded-expand', { n: folded.hiddenLines })}`}</Text>
               )}
             </>
           )}

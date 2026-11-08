@@ -2,7 +2,6 @@ import React from 'react'
 import { Box, Text } from '../../ui.js'
 import type { SubagentRow, SubagentToolCall } from '../../adapter/ports/channel-view.js'
 import { t } from '../../i18n.js'
-import { primaryComboString } from '../../utils/keymap.js'
 import { ToolUseLoader } from '../ToolUseLoader.js'
 import { toolNameColor } from '../messages/AssistantToolUseMessage.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
@@ -31,10 +30,6 @@ export interface SubagentGroupView {
   /** Head only: members still live / settled as failed. */
   readonly running: number
   readonly failed: number
-}
-
-function expandHint(): string {
-  return t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })
 }
 
 /** `14 tool uses · 41.2k tokens · 1m 12s` (parts the backend reported). */
@@ -99,7 +94,7 @@ function bodyRows(subagent: SubagentRow, expanded: boolean, first: string, rest:
   const prefix = () => (rows.length === 0 ? first : rest)
   const more = (): React.ReactNode => (
     <BodyRow key="more" prefix={prefix()}>
-      <Text dimColor wrap="truncate-end">{`${t('subagent-more-tool-uses', { count: hidden })}${expanded ? '' : ` ${expandHint()}`}`}</Text>
+      <Text dimColor wrap="truncate-end">{t('subagent-more-tool-uses', { count: hidden })}</Text>
     </BodyRow>
   )
   // Expanded (Ctrl+O) windows drop the OLDEST calls, so the count line goes
@@ -209,7 +204,6 @@ export function SubagentMessage({ subagent, marginTopOnTurn, expanded, group, on
           <Text wrap="truncate-end">
             <Text bold>{groupSettled ? t('subagent-group-finished', { count: group.count }) : t('subagent-group-running', { count: group.count })}</Text>
             {group.failed > 0 && <Text color="error">{` · ${t('subagent-group-failed', { count: group.failed })}`}</Text>}
-            {!expanded && <Text dimColor>{` ${expandHint()}`}</Text>}
           </Text>
         </Box>
       )}

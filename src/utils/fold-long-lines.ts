@@ -1,5 +1,4 @@
 import { t } from '../i18n.js'
-import { primaryComboString } from './keymap.js'
 
 /**
  * Per-line character budget for transcript text.
@@ -83,7 +82,7 @@ export function foldLongLines(text: string, max: number = LONG_LINE_MAX_CHARS): 
         hiddenChars += hidden
         foldedLines++
         out.push(text.slice(lineStart, end))
-        out.push(` ${t('long-line-folded', { n: formatCount(hidden), key: primaryComboString('transcript') })}`)
+        out.push(` ${t('long-line-folded', { n: formatCount(hidden) })}`)
       } else {
         out.push(text.slice(lineStart, lineEnd))
       }

@@ -2163,8 +2163,7 @@ function TranscriptRow({
           ) : (
             <Text dimColor italic color={compactHovered ? 'text' : undefined}>
               <Text color={compactHovered ? 'text' : undefined}>∴</Text>
-              {' '}{t('compact-summary-folded')} · {compactPreview(displayText)}{' '}
-              {t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })}
+              {' '}{t('compact-summary-folded')} · {compactPreview(displayText)}
             </Text>
           )}
         </Box>

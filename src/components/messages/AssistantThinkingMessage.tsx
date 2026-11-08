@@ -13,7 +13,6 @@ import { BRAND, ICE } from '../shimmer.js'
 import { interpolateColor } from '../Spinner/spinnerUtils.js'
 import { isMinimalUiMode } from '../../minimalUiMode.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
-import { primaryComboString } from '../../utils/keymap.js'
 
 
 type Props = {
@@ -93,7 +92,7 @@ export function AssistantThinkingMessage({
   // settled always keeps the plain dim `∴`.
   const label = streaming
     ? `${t('thinking-label')}${durationText === undefined ? '' : ` · ${durationText}`}…`
-    : `${durationText === undefined ? t('thinking-settled-bare') : t('thinking-settled', { duration: durationText })} ${t('hint-expand-ctrl-o', { key: primaryComboString('transcript') })}`
+    : `${durationText === undefined ? t('thinking-settled-bare') : t('thinking-settled', { duration: durationText })}`
   const minimalUi = isMinimalUiMode()
   const pulse = (Math.sin(frame * 0.9) + 1) / 2
   const pulseColor = interpolateColor(BRAND, ICE, pulse)

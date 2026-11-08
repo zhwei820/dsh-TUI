@@ -28,6 +28,12 @@
  *       拽回底部，滚回底部后恢复跟随。
  *   W8  Detail 转录页：o 键载入更早一页（页脚提示）；运行中上滚到历史
  *       后，新输出不把视图拽回底部。
+ *   W10 运行中 live 尾窗：连续思考折成一行、默认不显示思考正文；点击折叠
+ *       行展开、再点收起。
+ *   W11 思考行点击展开/收起：主屏视图历史页逐行切换；侧栏 Detail 转录页
+ *       点击只翻转被点的那一行，Enter 仍是全部展开/收起并清掉逐行翻转；
+ *       无转录源时输出页的思考块同样点击切换。两个视图里 Ctrl+O 不当作 o
+ *       去载入更早一页（普通 o 仍然载入）。
  *
  * 运行：node --import tsx/esm scripts/verify-agent-workbench.tsx
  */
@@ -692,6 +698,83 @@ console.log('--- W10: live thinking folds into one row ---')
     async frame => {
       check('W10 main view shows the main process', await settled(() => frame.screen().includes('MAIN-STEP visible progress')), frame.lines().slice(0, 12).join('|'))
       check('W10 … and no reasoning text by default (folded like the main agent)', !frame.screen().includes('SECRET-THOUGHT'), frame.lines().slice(0, 12).join('|'))
+      check('W10 点击折叠的思考行', await click(frame, '\u2234'), 'no folded thinking row')
+      check('W10 点击后展开思考正文', await settled(() => frame.screen().includes('SECRET-THOUGHT one')), frame.lines().slice(0, 12).join('|'))
+      check('W10 再次点击收起', await click(frame, 'SECRET-THOUGHT one') && await settled(() => !frame.screen().includes('SECRET-THOUGHT one')), frame.lines().slice(0, 12).join('|'))
+    },
+  )
+}
+
+// ── W11: thinking rows toggle by click (history transcript pages) ────────
+console.log('--- W11: click to expand / collapse thinking ---')
+{
+  const reasoningPage = historyPage([
+    ev('assistant.message', { anchor: 'r1', time: NOW - 40_000, blocks: [{ type: 'reasoning', text: 'REASON-ONE body' }] }),
+    ev('assistant.message', { anchor: 'x1', time: NOW - 35_000, blocks: [{ type: 'text', text: 'between the thoughts' }] }),
+    ev('assistant.message', { anchor: 'r2', time: NOW - 30_000, blocks: [{ type: 'reasoning', text: 'REASON-TWO body' }] }),
+    ev('assistant.message', { anchor: 'x2', time: NOW - 25_000, blocks: [{ type: 'text', text: 'after the thoughts' }] }),
+  ], { hasOlder: true, skippedFromStart: 10 })
+  let olderLoads = 0
+  const loader = async (_agentId: string, window?: unknown): Promise<Record<string, unknown>> => {
+    if (window !== undefined) olderLoads += 1
+    return reasoningPage
+  }
+  // Ctrl+O reaches the scene as input 'o' + key.ctrl: it must not page in
+  // older history; a plain o still does (proving the probe can see a load).
+  const ctrlOLeavesOlderAlone = async (frame: Frame, label: string): Promise<void> => {
+    olderLoads = 0
+    await sleep(30) // 固定窗:pacing 等被动 effect 换上新的按键处理器
+    frame.stdin.write('\x0f')
+    await sleep(100) // 固定窗:探针 负向断言：给误触的载入留出发生的时间
+    check(`W11 ${label}：Ctrl+O 不载入更早一页`, olderLoads === 0, String(olderLoads))
+    frame.stdin.write('o')
+    check(`W11 ${label}：普通 o 仍载入更早一页`, await settled(() => olderLoads === 1), String(olderLoads))
+  }
+  const child = makeRow('agent-think', { depth: 1 })
+
+  const { AgentTranscriptScene } = (await import('../src/screens/AgentTranscriptScene.js')) as unknown as { AgentTranscriptScene: React.ComponentType<Record<string, unknown>> }
+  await withTerminal(
+    () => React.createElement(AgentTranscriptScene, { subagent: child, source: { kind: 'chat', returnFocus: 'prompt' }, onExit: () => {}, loadTranscript: loader as never, messages: [] }),
+    async frame => {
+      check('W11 主屏：历史思考默认折叠', await settled(() => frame.screen().includes('after the thoughts')) && !frame.screen().includes('REASON-'), frame.lines().slice(0, 14).join('|'))
+      check('W11 主屏：点击第一行思考展开它', await click(frame, '\u2234') && await settled(() => frame.screen().includes('REASON-ONE body')), frame.lines().slice(0, 14).join('|'))
+      check('W11 主屏：另一行仍折叠', !frame.screen().includes('REASON-TWO body'))
+      check('W11 主屏：再次点击收起', await click(frame, 'REASON-ONE body') && await settled(() => !frame.screen().includes('REASON-ONE body')), frame.lines().slice(0, 14).join('|'))
+      await ctrlOLeavesOlderAlone(frame, '主屏')
+    },
+  )
+
+  const { SubagentDetailScene } = (await import('../src/components/SubagentDetailScene.js')) as unknown as { SubagentDetailScene: React.ComponentType<Record<string, unknown>> }
+  await withTerminal(
+    () => React.createElement(SubagentDetailScene, { subagent: child, onBack: () => {}, loadTranscript: loader as never }),
+    async frame => {
+      check('W11 Detail：转录页思考默认折叠', await settled(() => frame.screen().includes('after the thoughts')) && !frame.screen().includes('REASON-'), frame.lines().slice(0, 14).join('|'))
+      check('W11 Detail：点击只展开被点的一行', await click(frame, '\u2234') && await settled(() => frame.screen().includes('REASON-ONE body')) && !frame.screen().includes('REASON-TWO body'), frame.lines().slice(0, 14).join('|'))
+      await sleep(30) // 固定窗:pacing 等被动 effect 换上新的按键处理器
+      frame.stdin.write('\r')
+      check('W11 Detail：Enter 全部展开（清掉逐行翻转）', await settled(() => frame.screen().includes('REASON-ONE body') && frame.screen().includes('REASON-TWO body')), frame.lines().slice(0, 14).join('|'))
+      check('W11 Detail：全展开时点击一行只收起它', await click(frame, 'REASON-TWO body') && await settled(() => !frame.screen().includes('REASON-TWO body')) && frame.screen().includes('REASON-ONE body'), frame.lines().slice(0, 14).join('|'))
+      await ctrlOLeavesOlderAlone(frame, 'Detail')
+    },
+  )
+
+  // No transcript source: the Output page's folded reasoning block.
+  const outChild = makeRow('agent-out', {
+    outputEvents: [
+      { kind: 'thinking', text: 'OUT-THOUGHT first line', at: NOW, settled: true },
+      { kind: 'thinking', text: 'OUT-THOUGHT second line', at: NOW, settled: true },
+      { kind: 'text', text: 'out visible answer', at: NOW, settled: true },
+    ],
+  })
+  await withTerminal(
+    () => React.createElement(SubagentDetailScene, { subagent: outChild, onBack: () => {} }),
+    async frame => {
+      await settled(() => frame.screen().includes(t('subagent-tab-summary')))
+      await sleep(30) // 固定窗:pacing 等被动 effect 换上新的按键处理器
+      frame.stdin.write('\x1b[C')
+      check('W11 Detail 输出页：思考块默认折叠', await settled(() => frame.screen().includes('out visible answer')) && !frame.screen().includes('OUT-THOUGHT second line'), frame.lines().slice(0, 14).join('|'))
+      check('W11 Detail 输出页：点击展开', await click(frame, '\u2234') && await settled(() => frame.screen().includes('OUT-THOUGHT second line')), frame.lines().slice(0, 14).join('|'))
+      check('W11 Detail 输出页：再次点击收起', await click(frame, 'OUT-THOUGHT second line') && await settled(() => !frame.screen().includes('OUT-THOUGHT second line')), frame.lines().slice(0, 14).join('|'))
     },
   )
 }

@@ -1169,11 +1169,11 @@ const dict = {
   // 按行折叠的溢出提示：卡片正文行预算（capLines）、终端卡多行命令折叠
   // （foldTerminalCommand）、分屏 diff 隐藏行（SplitDiffView）。按字符折叠
   // 的行内标记见 long-line-folded。
-  'lines-folded-expand': { zh: '… +{{n}} 行（{{key}} 展开）', en: '… +{{n}} lines ({{key}} to expand)' },
+  'lines-folded-expand': { zh: '… +{{n}} 行', en: '… +{{n}} lines' },
   // 工具卡折叠量（行/字符）与展开态的「只是预览」说明。
   'tool-card-lines-unit': { zh: '{{n}} 行', en: '{{n}} lines' },
   'tool-card-chars-unit': { zh: '{{n}} 字符', en: '{{n}} chars' },
-  'tool-card-lines-hidden': { zh: '… 已折叠 {{parts}}（{{key}} 展开）', en: '… folded {{parts}} ({{key}} to expand)' },
+  'tool-card-lines-hidden': { zh: '… 已折叠 {{parts}}', en: '… folded {{parts}}' },
   'tool-card-source-truncated': { zh: '原始数据已折叠：以上是预览，全文保留在会话日志里', en: 'Source folded: the above is a preview; the session log keeps the full text' },
   'tool-card-full-unavailable': { zh: '以上是整理后的视图，没有保留可展开的原始全文', en: 'Formatted view above; no raw full text was kept to expand' },
   'tool-card-window-shown': { zh: '… 只显示前 {{shown}}/{{total}} 行（全文仍保留）', en: '… showing the first {{shown}}/{{total}} lines (the full text is kept)' },
@@ -1396,10 +1396,9 @@ const dict = {
   'hint-ext-dialog-input': { zh: '**Enter** 确认 · Esc 取消', en: '**Enter** to confirm · Esc to cancel' },
   'hint-adjust-done': { zh: '**←/→** 调整 · Enter/Esc 完成', en: '**←/→** to adjust · Enter/Esc to done' },
   'hint-history-search': { zh: '↑/↓ 选择 · **Enter** 确认 · Esc 取消', en: '↑/↓ to navigate · **Enter** to select · Esc to cancel' },
-  'hint-expand-ctrl-o': { zh: '（{{key}} 展开）', en: '({{key}} to expand)' },
   // 转录里的超长单行（utils/fold-long-lines.ts）：行尾内联标记。鼠标点整行
-  // （工具卡点卡面）即可展开/收起，键盘走 transcript 键（默认 ctrl+o）—— 两种都写进文案。
-  'long-line-folded': { zh: '… 已折叠 {{n}} 字符（点击或 {{key}} 展开）', en: '… {{n}} chars folded (click or {{key}} to expand)' },
+  // （工具卡点卡面）即可展开/收起；折叠提示只写点击，不再列 transcript 键。
+  'long-line-folded': { zh: '… 已折叠 {{n}} 字符（点击展开）', en: '… {{n}} chars folded (click to expand)' },
 
   // ── components/FileActionsPanel.tsx（点击文件路径弹出的操作菜单）──
   'file-actions-title': { zh: '文件操作', en: 'File actions' },

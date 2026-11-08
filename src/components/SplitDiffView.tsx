@@ -18,7 +18,6 @@ import { useTheme } from './design-system/ThemeProvider.js'
 import type { ToolBackground } from '../tuiDisplayPrefs.js'
 import { revealLinesOf } from './smoothReveal.js'
 import { getGraphemeSegmenter } from '../utils/intl.js'
-import { primaryComboString } from '../utils/keymap.js'
 import { isPatchDiff, parseFilePatch, patchHeader, patchHeaderText, type ParsedPatch, type PatchLine } from './diffPatch.js'
 
 /**
@@ -767,10 +766,10 @@ export function SplitDiffView({
         ))
       })}
       {hidden > 0 && (
-        <Text dimColor>{t('lines-folded-expand', { n: hidden, key: primaryComboString('transcript') })}</Text>
+        <Text dimColor>{t('lines-folded-expand', { n: hidden })}</Text>
       )}
       {clippedChars > 0 && (
-        <Text dimColor>{t('tool-card-lines-hidden', { parts: t('tool-card-chars-unit', { n: clippedChars }), key: primaryComboString('transcript') })}</Text>
+        <Text dimColor>{t('tool-card-lines-hidden', { parts: t('tool-card-chars-unit', { n: clippedChars }) })}</Text>
       )}
       {paintedRows < totalVisualRows && (
         <Text dimColor>{t('tool-card-window-shown-wrapped', { shown: paintedRows, total: totalVisualRows })}</Text>
