@@ -2,8 +2,10 @@
 # package.json — see docs/getting-started.md («从源码开发») and docs/contributing.md.
 #
 #   make install          build this checkout and install it into the local dsh
-#                         profile (`dsh plugin --profile dsh-tui add <tarball>`);
-#                         a missing dsh is installed first (make install-dsh)
+#                         profile (`dsh plugin --profile dsh-tui add <tarball>`)
+#                         and (re)install the global dsh-tui / dst launcher from the
+#                         same tarball (through the npm/pnpm that owns the one on
+#                         PATH); a missing dsh is installed first (make install-dsh)
 #   make install DSH_HOME=/path/to/home   install into another DSH home
 #   make uninstall        remove the profile plugin and the global launcher
 #                         (dsh itself stays; make uninstall-dsh removes it)
@@ -144,14 +146,15 @@ ensure-dsh:
 		$(MAKE) --no-print-directory install-dsh; \
 		command -v $(DSH) >/dev/null 2>&1 || { echo "make: '$(DSH)' still not on PATH after install; check npm's global bin directory" >&2; exit 1; }; }
 
-install: ensure-dsh pack ## Install dsh if missing, then build, pack and install this checkout into the local dsh profile
+install: ensure-dsh pack ## Install dsh if missing, then build, pack and (re)install this checkout into the dsh profile and as the global dsh-tui launcher
 	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); \
 		echo "Installing $$tarball into profile '$(DSH_PROFILE)' ($${DSH_HOME:-~/.dsh})"; \
-		$(DSH) plugin --profile $(DSH_PROFILE) add "$$PWD/$$tarball"
-	@echo "Done. Start it with: $(DSH) --profile $(DSH_PROFILE)  (or dsh-tui, see make install-launcher)"
+		$(DSH) plugin --profile $(DSH_PROFILE) add "$$PWD/$$tarball"; \
+		NPM="$(NPM)" PNPM="$(PNPM)" sh scripts/global-launcher.sh install "$$PWD/$$tarball"
+	@echo "Done. Start it with: dsh-tui  (or $(DSH) --profile $(DSH_PROFILE))"
 
-install-launcher: pack ## Also install the dsh-tui / dst launcher globally from the same tarball
-	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); $(NPM) install -g "$$PWD/$$tarball"
+install-launcher: pack ## Reinstall only the global dsh-tui / dst launcher from the same tarball
+	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); NPM="$(NPM)" PNPM="$(PNPM)" sh scripts/global-launcher.sh install "$$PWD/$$tarball"
 
 # Undoes `make install` and `make install-launcher`; each step is skipped when there is
 # nothing to remove. DeepSeek Harness itself (make uninstall-dsh) and the user data under
@@ -168,12 +171,7 @@ uninstall: ## Remove the TUI plugin from the dsh profile and the global dsh-tui 
 		echo "Removing $(PKG_NAME) from profile '$(DSH_PROFILE)' ($$home)"; \
 		$(DSH) plugin --profile $(DSH_PROFILE) remove $(PKG_NAME); \
 	fi
-	@if $(NPM) ls -g --depth=0 $(PKG_NAME) >/dev/null 2>&1; then \
-		echo "Removing the global dsh-tui / dst launcher"; \
-		$(NPM) uninstall -g $(PKG_NAME); \
-	else \
-		echo "Global launcher not installed; nothing to remove"; \
-	fi
+	@NPM="$(NPM)" PNPM="$(PNPM)" sh scripts/global-launcher.sh remove
 
 uninstall-dsh: ## Uninstall the global DeepSeek Harness (npm uninstall -g @deepseek-ai/dsh)
 	$(NPM) uninstall -g @deepseek-ai/dsh

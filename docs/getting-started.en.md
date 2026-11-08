@@ -447,11 +447,14 @@ to origin with `--ff-only`, leaving unpushed commits, local changes or divergenc
 compile plus build gates), `make smoke`, `make ci GROUP=<name>`, and `make install`, which
 installs this checkout into the local dsh — it compiles, packs, then runs
 `dsh plugin --profile dsh-tui add <tarball>` into the `dsh-tui` profile under `DSH_HOME`
-(default `~/.dsh`); start it with `dsh --profile dsh-tui`. `make install-launcher` also
-installs the `dsh-tui` / `dst` launcher globally from the same tarball, and `make uninstall`
-removes the plugin from the profile and the global launcher (each step is skipped when
-there is nothing to remove; dsh itself and the user data under `~/.dsh-tui` stay —
-`make uninstall-dsh` removes dsh). When `dsh` is missing, `make install` first runs
+(default `~/.dsh`) — and then reinstalls the global `dsh-tui` / `dst` launcher from the same
+tarball, so start it with `dsh-tui` (or `dsh --profile dsh-tui`). The launcher on `PATH` is
+reinstalled through the npm or pnpm that owns it (npm when there is none): a stale launcher
+installs its own version into an empty profile, so a newer profile alone is not enough.
+`make install-launcher` reinstalls only the launcher. `make uninstall` removes the plugin from
+the profile and the npm/pnpm launcher on `PATH` (each step is skipped when there is nothing to
+remove; a launcher installed some other way is reported, not deleted; dsh itself and the user
+data under `~/.dsh-tui` stay — `make uninstall-dsh` removes dsh). When `dsh` is missing, `make install` first runs
 `make install-dsh`, which installs `@deepseek-ai/dsh` globally at the validated version from
 `src/dsh-adapter/contract.ts` (`npm install -g @deepseek-ai/dsh@<version>`).
 

@@ -377,8 +377,11 @@ pnpm smoke
 改动或分叉时原样不动；强制对齐记录的 commit 用 `make submodule-sync`）、`make build` / `make check`（编译 / 编译加构建门禁）、`make smoke`、
 `make ci GROUP=<组名>`，以及把当前检出装进本机 dsh 的 `make install`——编译、打包，再执行
 `dsh plugin --profile dsh-tui add <tarball>`，装到 `DSH_HOME`（默认 `~/.dsh`）下的
-`dsh-tui` profile，之后用 `dsh --profile dsh-tui` 启动；`make install-launcher` 另从同一
-tarball 全局安装 `dsh-tui` / `dst` 启动器，`make uninstall` 从 profile 移除插件并卸掉全局启动器（各自不存在时跳过；保留 dsh 本身与 `~/.dsh-tui` 下的用户数据，卸 dsh 用 `make uninstall-dsh`）。本机没有 `dsh` 时，`make install` 会先执行
+`dsh-tui` profile，再从同一 tarball 重装全局 `dsh-tui` / `dst` 启动器，之后用 `dsh-tui`（或
+`dsh --profile dsh-tui`）启动。PATH 上已有启动器时经它所属的 npm 或 pnpm 重装，没有则用 npm 安装——
+旧启动器会在 profile 为空时按它自己的版本自举安装，只更新 profile 不够。`make install-launcher` 只重装启动器；
+`make uninstall` 从 profile 移除插件并卸掉 PATH 上 npm/pnpm 装的启动器（各自不存在时跳过；其它方式装的启动器只报告路径、不删；
+保留 dsh 本身与 `~/.dsh-tui` 下的用户数据，卸 dsh 用 `make uninstall-dsh`）。本机没有 `dsh` 时，`make install` 会先执行
 `make install-dsh`，按 `src/dsh-adapter/contract.ts` 的验证线版本全局安装
 `@deepseek-ai/dsh`（`npm install -g @deepseek-ai/dsh@<版本>`）。
 
