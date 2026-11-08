@@ -11,6 +11,7 @@ import {
   type TranscriptLoader,
 } from '../components/messages/subagentTranscript.js'
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
+import { SubagentWorkingRow } from '../components/SubagentWorkingRow.js'
 import { ExitButton, MainAgentButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
 import { decorColor, isMinimalUiMode } from '../minimalUiMode.js'
@@ -315,7 +316,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
 
       {/* Body: the transcript column, plus the workbench rail on wide
        * terminals. */}
-      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (subagent.cwd !== undefined ? 1 : 0))}>
+      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (subagent.cwd !== undefined ? 1 : 0) - (isRunning ? 1 : 0))}>
         <Box flexDirection="column" flexGrow={1} minWidth={panelEnabled ? 44 : 0}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {loadTranscript === undefined ? (
@@ -449,6 +450,14 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
           />
         )}
       </Box>
+
+      {/* The main turn's working line while the child runs, so a child that
+          is thinking or waiting on the model does not read as stuck. */}
+      {isRunning && (
+        <Box paddingX={1}>
+          <SubagentWorkingRow subagent={subagent} />
+        </Box>
+      )}
 
       {/* Composer, when there is a send path. Keyed by the target agent: a
        *  sibling switch remounts the editor, so a draft never moves to

@@ -4,6 +4,7 @@ import type { SubagentOutputLine, SubagentState } from '../dsh-adapter/subagents
 import { AgentMessageLeafRow, AssistantTextLeafRow, PromptLeafRow, ThinkingLeafRow, ToolLeafRow } from './messages/TranscriptLeaves.js'
 import { AgentMessageFlowRow } from './messages/AgentMessageFlow.js'
 import { AgentMessageComposer, type ComposerKeyHandler } from './AgentMessageComposer.js'
+import { SubagentWorkingRow } from './SubagentWorkingRow.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView } from './messages/agentTeam.js'
 import { subagentDetailMemory } from './subagentDetailMemory.js'
 import {
@@ -581,7 +582,7 @@ export function SubagentDetailScene({
       {activePage === 'output' && loadTranscript === undefined && subagent.outputEvents.length >= OUTPUT_WINDOW_CAP && (
         <Text dimColor>{t('subagent-transcript-retained', { count: subagent.outputEvents.length })}</Text>
       )}
-      <Box flexDirection="column" paddingX={1} maxHeight={(panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)) - (subagent.cwd !== undefined ? 1 : 0)}>
+      <Box flexDirection="column" paddingX={1} maxHeight={(panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)) - (subagent.cwd !== undefined ? 1 : 0) - (isRunning ? 1 : 0)}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {activePage === 'summary' && (
             <Box flexDirection="column">
@@ -838,6 +839,12 @@ export function SubagentDetailScene({
         </Box>
       )}
 
+      {/* Working line while the child runs (same as the main turn's). */}
+      {isRunning && (
+        <Box paddingX={1}>
+          <SubagentWorkingRow subagent={subagent} />
+        </Box>
+      )}
       <Divider color="subtle" title="" />
       {/* Footer hint */}
       <Box marginTop={0} flexDirection="row">
