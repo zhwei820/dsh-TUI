@@ -97,5 +97,18 @@ const base = { model: 'deepseek-v4', effort: 'high', cwd: '~/work/project', skip
   check('W3 classic splash has no welcome box', !lines.join('\n').includes('Welcome to dsh-TUI'))
 }
 
+// W4 — one-shot: the prefs file, the hidden header, and the host callback.
+{
+  const { readWelcomeSeen, markWelcomeSeen } = await import('../src/welcomePrefs.js')
+  const dir = mkdtempSync(join(tmpdir(), 'dshtui-welcome-prefs-'))
+  check('W4 a fresh install has not seen the welcome', readWelcomeSeen(dir) === false)
+  check('W4 marking it persists', markWelcomeSeen(dir) && readWelcomeSeen(dir) === true)
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(join(dir, 'welcome.json'), '{not json')
+  check('W4 a corrupt file reads as not seen', readWelcomeSeen(dir) === false)
+  const lines = await renderHeader(100, { ...base, welcome: false })
+  check('W4 welcome off → no header at all', !lines.join('\n').includes('Welcome to dsh-TUI') && !lines.some(line => line.includes('╭')))
+}
+
 console.log(failed === 0 ? '\nALL PASS' : `\n${failed} FAILED`)
 process.exit(failed === 0 ? 0 : 1)

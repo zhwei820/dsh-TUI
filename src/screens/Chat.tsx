@@ -89,6 +89,7 @@ import { resolveBindingGeneration, type PromptDraftCache } from '../components/p
 import type { InjectController } from '../dsh-adapter/inject-channel.js'
 import { PromptEditorLayer, usePromptEditorOpen } from '../components/PromptEditor.js'
 import { GoalTodoPanel } from '../components/GoalTodoPanel.js'
+import { RunningAgentsPanel } from '../components/RunningAgentsPanel.js'
 import { useSidePanel } from '../components/sidePanel/useSidePanel.js'
 import { jobsFocusStore } from '../components/sidePanel/jobsFocusStore.js'
 import { SidePanelLayout } from '../components/sidePanel/SidePanelLayout.js'
@@ -442,6 +443,8 @@ export function Chat({
   openHomeOnBoot,
   launchpadOnBoot,
   classicSplash,
+  welcomeBox,
+  onWelcomeShown,
   promptSuggestions,
   onboardingOnBoot,
   starPrompt,
@@ -590,6 +593,11 @@ export function Chat({
   /** Classic DSH splash (whale + wordmark) over the welcome box; the
    *  host passes the `launchpad` setting (see LogoHeader). */
   classicSplash?: boolean
+  /** The compact welcome box above the transcript (default on). The host
+   *  shows it on the first launch only and turns it off afterwards. */
+  welcomeBox?: boolean
+  /** The welcome box was actually shown (the host records it, one-shot). */
+  onWelcomeShown?(): void
   /** Prompt suggestion after each turn (the host passes cordis
    *  `promptSuggestions`, on by default; omitted = off): one side call,
    *  Tab to take it. */
@@ -1561,6 +1569,11 @@ export function Chat({
   /** ctrl+r history-search entries (loaded on open, persists). */
   const [historyEntries, setHistoryEntries] = React.useState<readonly HistoryEntry[]>([])
   const [historyFill, setHistoryFill] = React.useState<string | null>(null)
+  // The one-shot welcome box: once it has been on screen, the host records
+  // it so later launches open straight onto the conversation.
+  React.useEffect(() => {
+    if (classicSplash !== true && welcomeBox !== false) onWelcomeShown?.()
+  }, [])
   // Prompt suggestion: when a turn settles, one side call
   // proposes the user's likely next message — shown under the input, taken
   // with Tab on an empty input. Pure UI state; a new turn or typing drops it.
@@ -7188,6 +7201,7 @@ export function Chat({
           // (see suppressLogoIntroRef).
           skipIntro={suppressLogoIntroRef.current || channel.rows.length > 30}
           classic={classicSplash === true}
+          welcome={welcomeBox !== false}
         />
         {/* The startup loaded-context panel: before the first message the
             transcript is empty, so the inventory of what this conversation
@@ -7329,6 +7343,9 @@ export function Chat({
             activityPreset={activitySlot ? channel.activityFrames : undefined}
           />
         )}
+        {/* Running subagents: a clickable roster under the main agent while
+            any of them runs (click → that agent's detail scene). */}
+        <RunningAgentsPanel subagents={channel.subagents ?? []} onOpen={setSubagentDetailId} />
         {/* 分栏且 todo Panel 已启用时，Goal/Todo 由右栏 Panel 承载，
             底部 chrome 不再挂载（窄屏 / inline / 未启用时保留现状）。 */}
         {!(sidePanel.split && sidePanel.enabledPanelIds.includes('todo'))

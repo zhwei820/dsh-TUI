@@ -82,6 +82,8 @@ const LEGACY_STATUS_BAR = {
   cwd: true,
   cache: true,
   cost: true,
+  tokens: false,
+  gitBranch: false,
   contextBar: true,
   shortcutHint: false,
 }
@@ -171,13 +173,13 @@ check('DEFAULT_STATUS_BAR keeps the intended compact defaults', () => {
     compact: true,
     model: false,
     thinking: false,
-    cwd: false,
+    cwd: true,
     contextUsage: true,
     cache: false,
-    cost: false,
-    tokens: false,
+    cost: true,
+    tokens: true,
     tps: false,
-    gitBranch: false,
+    gitBranch: true,
     sessionTitle: false,
     sessionId: false,
     goal: true,
@@ -327,8 +329,10 @@ check('compact StatusLine renders the enabled shortcuts hint exactly once', () =
 const quiet = await renderStatus({ statusBar: { ...DEFAULT_STATUS_BAR } })
 check('default StatusLine is the quiet footer', () => {
   assert.ok(quiet.includes('ctx 77% (206k/266k)'), `missing context readout in:\n${quiet}`)
+  assert.ok(quiet.includes('12.3k→6.8k tokens'), `missing cumulative tokens in:\n${quiet}`)
   assert.equal((quiet.match(/\? for shortcuts/g) ?? []).length, 1, `missing shortcut hint in:\n${quiet}`)
-  for (const marker of ['display-model-probe', 'display-project', 'cache 2.4%', '77.4%']) {
+  assert.ok(quiet.includes('display-project') && quiet.includes('feat/display-settings-probe'), `missing folder/branch in:\n${quiet}`)
+  for (const marker of ['display-model-probe', 'cache 2.4%', '77.4%']) {
     assert.ok(!quiet.includes(marker), `unexpected ${JSON.stringify(marker)} in:\n${quiet}`)
   }
 })
@@ -428,7 +432,8 @@ check('full StatusLine renders context bar and deterministic trajectory wake', (
 const costProbe = {
   provider: 'deepseek',
   mainCost: {
-    'deepseek-v4-flash': {
+    // The one priced id (deepseekPricing.ts: V4-Flash ids were retired).
+    'deepseek-flash': {
       peak: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0 },
       idle: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     },

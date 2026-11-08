@@ -2248,6 +2248,7 @@ export function LogoHeader({
   working = false,
   skipIntro = false,
   classic = false,
+  welcome = true,
 }: {
   model: string
   effort?: string | undefined
@@ -2256,6 +2257,9 @@ export function LogoHeader({
    *  default compact welcome box. Follows the `launchpad` setting:
    *  turning the launchpad on restores the whole classic start. */
   classic?: boolean
+  /** Show the welcome box (default header). The host turns it off after the
+   *  first launch (`~/.dsh-tui/welcome.json`); off renders no header. */
+  welcome?: boolean
   /** Big-text face pin (settings `dsh-tui.splashFont`; `undefined` leaves
    *  `LogoV2` on its date rotation). Passed through to LogoV2. */
   fontId?: string | undefined
@@ -2278,7 +2282,7 @@ export function LogoHeader({
   // The minimal UI drops the whole splash (whale art AND wordmark) — only the
   // transcript and a bare status bar remain.
   if (isMinimalUiMode()) return null
-  if (!classic) return <WelcomeBox model={model} effort={effort} cwd={cwd} />
+  if (!classic) return welcome ? <WelcomeBox model={model} effort={effort} cwd={cwd} /> : null
   return (
     <Box flexDirection="column" marginBottom={1}>
       <LogoV2 model={model} effort={effort} cwd={cwd} fontId={fontId} whale={whale} whaleIdle={whaleIdle} whaleGirl={whaleGirl} brand={brand} starred={starred} onStarClick={onStarClick} working={working} skipIntro={skipIntro} />
