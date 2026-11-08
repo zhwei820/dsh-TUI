@@ -71,6 +71,11 @@ const channel: any = {
   subscribe(cb: () => void) { listeners.add(cb); return () => listeners.delete(cb) },
   submit() {}, cancel() {}, clear() {}, notify() {}, listModels: () => Promise.resolve([]), listSessions: () => [],
   setResumeTarget() {}, loadOlder() {}, mcpStatus: () => [], commandCompletions: () => [],
+  // A send path (DSH's direct continuable prompt): the view mounts its composer.
+  subagentControl: {
+    interrupt: () => true,
+    message: { via: 'direct-continuable', steer: true, listTargets: () => [], submit: async () => ({ ok: true, intentId: 'i', messageId: 'm', state: 'queued' }), messages: () => [] },
+  },
 }
 const bump = () => { channel.version++; for (const cb of listeners) cb() }
 
@@ -93,8 +98,26 @@ stdin.write(`\x1b[<0;${col};${row + 1}M\x1b[<0;${col};${row + 1}m`)
 check('A2 clicking a row opens that agent\'s conversation (one transcript, like the main agent)', await settled(() => screen().includes('⤢ Agent(task beta)')
   && !screen().includes('agents running')), screen().split('\n').slice(0, 6).join(' | '))
 check('A2 … with no Summary/Output/Tools tab strip', !screen().includes('Summary') && !screen().includes('Tools'))
+check('A2 … and the follow-up input box at the bottom', screen().includes('Send to task beta') && screen().includes('Enter queue'), screen().split('\n').slice(-6).join(' | '))
+// The composer holds focus on open: the first Esc leaves the input (as its
+// hint says), the second leaves the view.
 stdin.write('\x1b')
-check('A2 Esc returns to the conversation', await settled(() => screen().includes('agents running')))
+await new Promise(resolve => setTimeout(resolve, 120)) // 固定窗:pacing 两次 Esc 之间的按键步间（连写会被解析成转义前缀）
+stdin.write('\x1b')
+check('A2 Esc (leave input, then leave view) returns to the conversation', await settled(() => screen().includes('agents running')))
+
+// A4: the side panel's agents tab asks the host through agentViewStore;
+// Chat opens the same conversation view, composer included.
+{
+  const { agentViewStore } = await import('../src/components/sidePanel/agentViewStore.js')
+  agentViewStore.request('alpha', 'agents-dashboard', true)
+  check('A4 a side-panel open shows the same conversation view with its input box',
+    await settled(() => screen().includes('⤢ Agent(task alpha)') && screen().includes('Send to task alpha')), screen().split('\n').slice(-6).join(' | '))
+  stdin.write('\x1b')
+  await new Promise(resolve => setTimeout(resolve, 120)) // 固定窗:pacing 同上
+  stdin.write('\x1b')
+  await settled(() => !screen().includes('⤢ Agent(task alpha)'))
+}
 
 // A3
 for (const sub of channel.subagents) { sub.status = 'completed'; sub.completedAt = Date.now() }

@@ -691,7 +691,7 @@ console.log('--- W10: live thinking folds into one row ---')
   )
 }
 
-// ── W5: side-panel Detail composer key routing ────────────────────────────
+// ── W5: side-panel open routes to the main-screen conversation ──────────
 console.log('--- W5: side-panel detail composer ---')
 {
   const [{ SidePanelColumn }, { useSidePanel }, prefs, { ThemeProvider }] = await Promise.all([
@@ -754,35 +754,24 @@ console.log('--- W5: side-panel detail composer ---')
       await settled(() => controller?.split === true)
       controller?.openPanel('agents', { focus: true })
       await settled(() => frame.screen().includes('panel child'))
+      // Opening the agent from the panel no longer pages a tabbed detail
+      // (with a hidden `i` composer) inside the column: it asks the host for
+      // the main-screen conversation, where the composer is always mounted
+      // (verify-running-agents A4 / verify-agent-view-ui cover that view).
+      const { agentViewStore } = await import('../src/components/sidePanel/agentViewStore.js')
+      const before = agentViewStore.get()?.nonce ?? 0
       await key(frame, '\r')
-      const composeTitle = t('agent-message-compose-title', { name: 'panel child' })
-      check('W5 侧栏 Detail 挂出 composer', await settled(() => frame.screen().includes(composeTitle)), frame.lines().slice(0, 6).join('|'))
-      await key(frame, 'i')
-      await sleep(30) // 固定窗:pacing 聚焦是 state 翻转，没有可读的屏幕变化
-      for (const ch of 'hi there') await key(frame, ch)
-      check('W5 i 聚焦后打字进 composer 草稿', await settled(() => frame.screen().includes('hi there')), frame.lines().filter(l => l.includes(composeTitle) || l.includes('there')).join('|'))
-      // The first Esc only leaves the editor (no visible change), the second
-      // one is the Detail's own Esc back to the dashboard — neither may hand
-      // the focus to chat.
-      await key(frame, '\x1b')
-      await sleep(80) // 固定窗:pacing 单独 Esc 要等 50ms 解析窗才成键
-      await key(frame, '\x1b')
-      check('W5 Esc 先让出编辑焦点、再回 Dashboard，焦点留在侧栏', await settled(() => !frame.screen().includes(composeTitle) && frame.screen().includes('1 ' + t('subagent-count-running'))) && controller?.focus === 'panel', String(controller?.focus))
-      // Back into the editor, then the host moves focus to chat (a click on
-      // the chat column does the same) while the composer still holds it.
-      await key(frame, '\r')
-      await settled(() => frame.screen().includes(composeTitle))
-      await key(frame, 'i')
-      await sleep(30) // 固定窗:pacing 同上
-      for (const ch of 'abc') await key(frame, ch)
-      check('W5 重新聚焦后草稿可编辑', await settled(() => frame.screen().includes('abc')))
+      check('W5 侧栏选中子代理：请求主屏对话视图（不再进分页详情）', await settled(() => {
+        const request = agentViewStore.get()
+        return request !== null && request.nonce > before && request.agentId === 'agent-p1' && request.source === 'agents-dashboard' && request.panel === true
+      }), JSON.stringify(agentViewStore.get()))
+      check('W5 侧栏留在 Dashboard、焦点仍在侧栏', frame.screen().includes('1 ' + t('subagent-count-running')) && controller?.focus === 'panel', String(controller?.focus))
       controller?.focusChat()
       await settled(() => frame.screen().includes('chat-anchor focus=chat'))
       for (const ch of 'zq') await key(frame, ch)
       await key(frame, '\r')
       await sleep(60) // 固定窗:探针 负向断言：给错误投递留出发生的时间
       check('W5 聊天里的键到了聊天', chatTyped.includes('zq'), JSON.stringify(chatTyped))
-      check('W5 聊天打字不进侧栏 composer', !frame.screen().includes('abczq'), frame.lines().filter(l => l.includes('abc')).join('|'))
       check('W5 聊天 Enter 不把草稿发给子代理', submitted.length === 0, JSON.stringify(submitted))
     },
     WIDE,

@@ -266,7 +266,7 @@ try {
   check('open: error badge cleared once visible (running re-lights info)',
     panelStore.get('agents')?.badge?.level === 'info', JSON.stringify(panelStore.get('agents')?.badge ?? null))
 
-  // --- 4. Enter opens the focused card's detail ---------------------------
+  // --- 4. Enter opens the focused card's conversation (main view) ----------
   // 粘贴键先投递给活动面板（与 btw 同一条宿主路由）：面板只看字符的 `v`
   // 快捷键必须排除修饰键，否则 Ctrl+V/Alt+V/Cmd+V 会请求主屏视图而不是
   // 无操作。Cmd+V 在 kitty 协议下是 CSI-u `\x1b[118;9u`（key.super）。
@@ -276,106 +276,52 @@ try {
   await writeKey('\x1b[118;9u')
   check('keys: Ctrl+V/Alt+V/Cmd+V in the dashboard do not open the main view',
     agentViewStore.get() === null, JSON.stringify(agentViewStore.get()))
+  // Opening a card no longer pages a tabbed detail inside the panel: it asks
+  // the host for the agent's main-screen conversation (one transcript, the
+  // follow-up composer), and the panel itself stays on the dashboard.
+  const opened = async (agentId: string): Promise<boolean> => {
+    const before = agentViewStore.get()?.nonce ?? 0
+    return settled(() => {
+      const request = agentViewStore.get()
+      return request !== null && request.nonce > before && request.agentId === agentId
+        && request.source === 'agents-dashboard' && request.panel === true
+    })
+  }
+  const pressOpens = async (key: string, agentId: string): Promise<boolean> => {
+    const before = agentViewStore.get()?.nonce ?? 0
+    await writeKey(key)
+    return settled(() => {
+      const request = agentViewStore.get()
+      return request !== null && request.nonce > before && request.agentId === agentId
+        && request.source === 'agents-dashboard' && request.panel === true
+    })
+  }
   // 守卫只拦字母/粘贴组合：Cmd+Enter 仍按 Enter 选中当前卡（isPanelPlainReturn
   // 不转发 super）。单键判定，不依赖两次按键之间的 React 提交。
-  await writeKey('\x1b[13;9u')
-  await settled(() => has('Agent(AAA1'))
   check('keys: Cmd+Enter still opens the focused card (guard keeps modifier keys)',
-    has('Agent(AAA1'), (lines().find(l => l.includes('Agent(')) ?? '').trim())
-  await writeKey('\x1b')
-  await settled(() => has('AAA1') && !has('/3'))
+    await pressOpens('\x1b[13;9u', 'agent-run-1'), JSON.stringify(agentViewStore.get()))
+  check('open: the panel stays on the dashboard (no paged detail)', has('AAA2') && !has('/3'))
   // paste 重映射到命名键（ctrl+down）时，守卫也必须把它当粘贴组合拦下。
-  // 焦点卡的「open in main view」行是唯一随焦点渲染的文本：守卫缺失时
-  // ctrl+↓ 会把它移到下一张卡。守卫生效时没有正向状态可等，先给上限等待，
-  // 再用 Enter 的落点确认焦点确实没动。
   const actionRow = findRow('open in main view')
   setKeymapOverrides({ paste: ['ctrl+down'] })
   await writeKey('\x1b[1;5B')
   const pasteMoved = await settled(() => findRow('open in main view') !== actionRow)
   resetKeymapOverrides()
-  await writeKey('\r')
-  await settled(() => has('Agent(AAA1'))
   check('keys: a remapped paste combo (ctrl+down) does not move the roster focus',
-    pasteMoved === false && has('Agent(AAA1') && !has('Agent(AAA2'),
-    (lines().find(l => l.includes('Agent(')) ?? '').trim())
-  await writeKey('\x1b')
-  await settled(() => has('AAA1') && !has('/3'))
-  // 修饰键+方向键仍移焦点：焦点卡的 action 行随焦点换位；等它真的换位
-  // （React 已提交）再按 Enter，不依赖下一次按键读到的闭包。
+    pasteMoved === false && await pressOpens('\r', 'agent-run-1'), JSON.stringify(agentViewStore.get()))
+  // 修饰键+方向键仍移焦点：焦点卡的 action 行随焦点换位。
   const topRow = findRow('open in main view')
   await writeKey('\x1b[1;9B')
   const movedDown = await settled(() => findRow('open in main view') !== topRow)
   check('keys: Cmd+downArrow still moves the roster focus (guard keeps modifier keys)', movedDown)
-  await writeKey('\r')
-  await settled(() => has('Agent(AAA2'))
-  check('keys: Cmd+downArrow then Enter opens the second card', has('Agent(AAA2'),
-    (lines().find(l => l.includes('Agent(')) ?? '').trim())
-  await writeKey('\x1b')
-  await settled(() => has('AAA1') && !has('/3'))
-  // Cmd+↑ 用普通 ↓（既有行为）先把焦点移离 0，再要求 Cmd+↑ 把它移回；
-  // 这样 up 断言的成立不依赖 down 用例是否通过。
-  const topRowAgain = findRow('open in main view')
-  await writeKey('\x1b[B')
-  const setupMoved = await settled(() => findRow('open in main view') !== topRowAgain)
+  check('keys: Cmd+downArrow then Enter opens the second card', await pressOpens('\r', 'agent-done-2'), JSON.stringify(agentViewStore.get()))
+  const secondRow = findRow('open in main view')
   await writeKey('\x1b[1;9A')
-  const movedBack = await settled(() => findRow('open in main view') === topRowAgain)
-  check('keys: Cmd+upArrow still moves the roster focus back (guard keeps modifier keys)', setupMoved && movedBack)
-  await writeKey('\r')
-  await settled(() => has('1/3') && has('Agent(AAA1'))
-  check('keys: Enter opens the focused card detail (usePanelInput dispatch)', has('1/3') && has('Agent(AAA1'),
-    (lines().find(l => l.includes('/3')) ?? '').trim())
-  check('detail: the dashboard list is replaced by the paged scene', !has('AAA2'))
-
-  // --- 5. ←/→ page the detail --------------------------------------------
-  await writeKey('\x1b[C')
-  await settled(() => has('2/3'))
-  check('keys: rightArrow pages the detail forward', has('2/3'))
-  await writeKey('\x1b[C')
-  await settled(() => has('3/3'))
-  await writeKey('\x1b[C')
-  await settled(() => has('1/3'))
-  check('keys: rightArrow wraps 3/3 → 1/3', has('1/3'))
-  await writeKey('\x1b[D')
-  await settled(() => has('3/3'))
-  check('keys: leftArrow pages the detail backward (wraps to 3/3)', has('3/3'))
-  // 同上：修饰键+方向键仍归面板翻页（Cmd+←/→ 不能被粘贴守卫一并吞掉）。
-  // CSI 1;9C / 1;9D 是 kitty 的 super 位方向键编码（形状同 xterm
-  // modifyCursorKeys）；连按两次证明不是碰巧停在原地。
-  await writeKey('\x1b[1;9C')
-  await settled(() => has('1/3'))
-  check('keys: Cmd+rightArrow still pages the detail (guard keeps modifier keys)', has('1/3'))
-  await writeKey('\x1b[1;9C')
-  await settled(() => has('2/3'))
-  check('keys: Cmd+rightArrow still pages the detail forward again', has('2/3'))
-  await writeKey('\x1b[1;9D')
-  await settled(() => has('1/3'))
-  check('keys: Cmd+leftArrow still pages the detail backward', has('1/3'))
-
-  // --- 6. Esc in the detail: back to the dashboard, focus STAYS in the panel
-  await writeKey('\x1b')
-  await settled(() => has('AAA1') && !has('/3'))
-  check('esc: detail → dashboard (the panel consumed the key)', has('AAA1') && !has('/3'))
-  check('esc: focus is still in the panel (chat did NOT take it back)',
-    exposedFocus === 'panel' && exposedSplit && exposedActive === 'agents',
-    'focus=' + exposedFocus + ' split=' + String(exposedSplit) + ' active=' + exposedActive)
-
-  // --- 7. the route survives switching panels away and back ---------------
-  await writeKey('\r')
-  await settled(() => has('1/3'))
-  await writeKey('\x1b[C')
-  await settled(() => has('2/3'))
-  openTodo?.()
-  await settled(() => state().includes('active=todo'))
-  check('route: switching to another panel hides the agents panel', !has('2/3'))
-  openAgents?.()
-  await settled(() => state().includes('active=agents') && has('2/3'))
-  check('route: dashboard → detail page survives a panel switch (enabled mount policy)', has('2/3'),
-    (lines().find(l => l.includes('/3')) ?? '').trim())
+  const movedBack = await settled(() => findRow('open in main view') !== secondRow)
+  check('keys: Cmd+upArrow still moves the roster focus back (guard keeps modifier keys)', movedBack)
+  check('keys: Enter opens the focused card (usePanelInput dispatch)', await pressOpens('\r', 'agent-run-1'), JSON.stringify(agentViewStore.get()))
 
   // --- 8. Esc on the dashboard YIELDS to the host -------------------------
-  await writeKey('\x1b')
-  await settled(() => has('AAA1') && !has('/3'))
-  check('esc: detail → dashboard again', has('AAA1') && !has('/3'))
   await writeKey('\x1b')
   await settled(() => exposedFocus === 'chat')
   check('esc: dashboard yields — focus returns to chat (panel stays open)',
@@ -383,12 +329,10 @@ try {
     'focus=' + exposedFocus + ' split=' + String(exposedSplit) + ' active=' + exposedActive)
   check('esc: the dashboard is still rendered (sidebar not closed)', has('AAA1'))
 
-  // --- 9. ↑/↓ move the focus lane; x interrupts the running row -----------
+  // --- 9. ↑/↓ move the focus lane --------------------------------------------
   // 名册先长过视口：焦点高亮是样式、读不出文本，但 ↓/↑ 同时 scrollBy(±3)，
   // 位移才是可以从屏幕判定的「面板确实吃到了这个键」。
   setSubagents([A1, A2, A3, A4, A5, A6, ...Array.from({ length: 14 }, (_, index) => agent('agent-extra-' + index, 'AAA' + (index + 7), 'completed', { completedAt: NOW - 1000 }))])
-  // 全新挂载（scroll=0 / focusIndex=0）：上面段落已经在面板里滚过、进出过
-  // detail，滚动与焦点车道是会保留的内状态，不能带进滚动契约的断言里。
   await app.unmount()
   await mountApp()
   await settled(() => state().includes('split=1') && has('AAA1'))
@@ -398,48 +342,27 @@ try {
   await writeKey('\x1b[B')
   await settled(() => !lines().some(line => /\bAAA1\b/.test(line)))
   check('keys: downArrow is consumed by the panel (roster scrolls)', !lines().some(line => /\bAAA1\b/.test(line)), lines().filter(line => /AAA[1-9]/.test(line)).join('|'))
-  await writeKey('\r')
-  await settled(() => has('1/3'))
-  check('keys: Enter after downArrow opens the SECOND card detail', has('AAA2') && has('1/3'),
-    (lines().find(l => l.includes('/3')) ?? '').trim())
-  await writeKey('\x1b') // back to the dashboard, focus lane stays on AAA2
-  await settled(() => has('AAA3') && !has('/3'))
+  check('keys: Enter after downArrow opens the SECOND card', await pressOpens('\r', 'agent-done-2'), JSON.stringify(agentViewStore.get()))
   await writeKey('\x1b[A')
   await settled(() => lines().some(line => /\bAAA1\b/.test(line)))
   check('keys: upArrow is consumed by the panel (roster scrolls back)', lines().some(line => /\bAAA1\b/.test(line)))
-  await writeKey('\r')
-  await settled(() => has('AAA1') && has('1/3'))
-  check('keys: Enter after upArrow returns to the first card', has('AAA1') && has('1/3'))
-  await writeKey('\x16')
-  await writeKey('\x1b[118;9u')
-  await writeKey('x')
-  await settled(() => interrupted.length > 0)
-  check('keys: x interrupts the running subagent from the detail', interrupted.join(',') === 'agent-run-1', interrupted.join(','))
-  check('keys: Ctrl+V/Cmd+V in the detail do not open the main view',
-    agentViewStore.get() === null, JSON.stringify(agentViewStore.get()))
-  // 守卫只排除修饰键：无修饰键的 v 仍然打开主屏视图（不能把快捷键一起关掉）。
-  await writeKey('v')
-  await settled(() => agentViewStore.get()?.source === 'agent-detail')
-  check('keys: plain v in the detail still opens the main view (guard is modifier-only)',
-    agentViewStore.get()?.source === 'agent-detail', JSON.stringify(agentViewStore.get()))
+  check('keys: Enter after upArrow returns to the first card', await pressOpens('\r', 'agent-run-1'), JSON.stringify(agentViewStore.get()))
 
-  // --- 10. a real SGR click on a card opens its detail --------------------
-  await writeKey('\x1b')
-  await settled(() => has('AAA3') && !has('/3'))
+  // --- 10. a real SGR click on a card opens its conversation ----------------
   const cell = findCell('AAA3')
   check('click: target card on screen', cell !== null)
   if (cell !== null) {
+    const clickOpened = opened(A3.agentId)
     await writeKey('\x1b[<0;' + (cell.col + 1) + ';' + (cell.row + 1) + 'M')
     await writeKey('\x1b[<0;' + (cell.col + 1) + ';' + (cell.row + 1) + 'm')
-    await settled(() => has('AAA3') && has('/3'))
-    check('click: SGR press on a dashboard card opens that detail', has('/3'), (lines().find(l => l.includes('/3')) ?? '').trim())
+    check('click: SGR press on a dashboard card opens that agent\'s conversation', await clickOpened, JSON.stringify(agentViewStore.get()))
   }
 
   // --- 11. a roster gap falls back to the dashboard -----------------------
   setSubagents([])
   await settled(() => has('No subagents in the current session'))
   check('route: a missing subagent falls back to the dashboard (empty state)',
-    has('No subagents in the current session') && !has('/3'))
+    has('No subagents in the current session'))
 
   // --- 12. the guard is modifier-only: plain v still opens the view -------
   setSubagents([A1])
