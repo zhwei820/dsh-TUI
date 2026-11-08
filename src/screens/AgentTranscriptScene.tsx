@@ -1,6 +1,6 @@
 import React from 'react'
 import { Box, Text, useInput, ScrollBox, type ScrollBoxHandle, useTerminalSize } from '../ui.js'
-import type { SubagentState } from '../dsh-adapter/subagents.js'
+import type { SubagentOutputLine, SubagentState } from '../dsh-adapter/subagents.js'
 import { AgentMessageLeafRow, AssistantTextLeafRow, PromptLeafRow, ThinkingLeafRow, ToolLeafRow } from '../components/messages/TranscriptLeaves.js'
 import {
   mergeLiveWindow,
@@ -275,7 +275,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
         <Box flexGrow={1} />
         <Box flexShrink={0}><ExitButton onClick={onExit} /></Box>
       </Box>
-      <Text dimColor wrap="truncate-end">{`${t('agent-view-title')} · ${sourceLabel(source)} · ${t('agent-view-back')}: Esc${headerWidth < 44 ? '' : ` · ↑/↓ ${t('subagent-hint-scroll')} · o ${t('subagent-transcript-load-older', { count: TRANSCRIPT_OLDER_CHUNK })}`}`}</Text>
+      {/* The `o` hint only when older records actually remain: an always-on
+          "load 400 older" read as "the start (the task) is not here". */}
+      <Text dimColor wrap="truncate-end">{`${t('agent-view-title')} · ${sourceLabel(source)} · ${t('agent-view-back')}: Esc${headerWidth < 44 ? '' : ` · ↑/↓ ${t('subagent-hint-scroll')}${transcript.status === 'ready' && transcript.hasOlder ? ` · o ${t('subagent-transcript-load-older', { count: Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) })}` : ''}`}`}</Text>
 
       {/* Body: the transcript column, plus the workbench rail on wide
        * terminals. */}
@@ -293,15 +295,18 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
               {fallbackTail.length === 0 && messages.length === 0 && (
                 <Text dimColor>{t('subagent-no-output')}</Text>
               )}
-              {fallbackTail.map((line, index) => (
+              {/* Reasoning folds like the main agent's: a run of thinking
+                  lines is one folded `∴` row; the main process stays visible. */}
+              {foldTailThinking(fallbackTail).map((entry, index) => entry.kind === 'thinking' ? (
+                <ThinkingLeafRow key={`tail-think-${index}`} thinking={entry.text} marginTopOnTurn={false} verbose={false} />
+              ) : (
                 <Text
                   key={`tail-${index}`}
                   wrap="wrap"
-                  dimColor={line.kind === 'thinking' || line.kind === 'system'}
-                  italic={line.kind === 'thinking'}
-                  color={line.kind === 'error' ? 'error' : undefined}
+                  dimColor={entry.line.kind === 'system'}
+                  color={entry.line.kind === 'error' ? 'error' : undefined}
                 >
-                  {line.text}{!line.settled && isRunning ? ' ▍' : ''}
+                  {entry.line.text}{!entry.line.settled && isRunning ? ' ▍' : ''}
                 </Text>
               ))}
               {messages.map(message => (
@@ -428,6 +433,22 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
       )}
     </Box>
   )
+}
+
+/** The retained output tail with each run of thinking lines folded into one
+ *  entry (rendered as a single collapsed thinking row). */
+function foldTailThinking(lines: readonly SubagentOutputLine[]): Array<{ kind: 'thinking'; text: string } | { kind: 'line'; line: SubagentOutputLine }> {
+  const out: Array<{ kind: 'thinking'; text: string } | { kind: 'line'; line: SubagentOutputLine }> = []
+  for (const line of lines) {
+    const last = out.at(-1)
+    if (line.kind === 'thinking') {
+      if (last !== undefined && last.kind === 'thinking') last.text = `${last.text}\n${line.text}`
+      else out.push({ kind: 'thinking', text: line.text })
+    } else {
+      out.push({ kind: 'line', line })
+    }
+  }
+  return out
 }
 
 /** One label/value metadata line of the workbench panel. */

@@ -662,6 +662,35 @@ console.log('--- W9: detail transcript shows the delegated prompt ---')
   )
 }
 
+// ── W10: live reasoning folds like the main agent's ──────────────────────
+console.log('--- W10: live thinking folds into one row ---')
+{
+  const { mergeLiveWindow } = await import('../src/components/messages/subagentTranscript.js')
+  const live = makeRow('agent-live', {
+    status: 'running', completedAt: undefined,
+    outputEvents: [
+      { kind: 'thinking', text: 'SECRET-THOUGHT one', at: NOW, settled: true },
+      { kind: 'thinking', text: 'SECRET-THOUGHT two', at: NOW, settled: true },
+      { kind: 'text', text: 'MAIN-STEP visible progress', at: NOW, settled: true },
+      { kind: 'thinking', text: 'SECRET-THOUGHT three', at: NOW, settled: false },
+    ],
+  })
+  const merged = mergeLiveWindow([], live as never, false) as Array<{ kind: string; text?: string; line?: { kind: string } }>
+  check('W10 consecutive thinking lines fold into one thinking row, text stays a live line',
+    merged.map(row => row.kind === 'live' ? `live:${row.line?.kind}` : row.kind).join(',') === 'thinking,live:text,thinking',
+    merged.map(row => row.kind).join(','))
+  check('W10 the folded row keeps the full reasoning (for an expanded view)', merged[0]?.text === 'SECRET-THOUGHT one\nSECRET-THOUGHT two')
+
+  const { AgentTranscriptScene } = (await import('../src/screens/AgentTranscriptScene.js')) as unknown as { AgentTranscriptScene: React.ComponentType<Record<string, unknown>> }
+  await withTerminal(
+    () => React.createElement(AgentTranscriptScene, { subagent: live, source: { kind: 'chat', returnFocus: 'prompt' }, onExit: () => {}, messages: [] }),
+    async frame => {
+      check('W10 main view shows the main process', await settled(() => frame.screen().includes('MAIN-STEP visible progress')), frame.lines().slice(0, 12).join('|'))
+      check('W10 … and no reasoning text by default (folded like the main agent)', !frame.screen().includes('SECRET-THOUGHT'), frame.lines().slice(0, 12).join('|'))
+    },
+  )
+}
+
 // ── W5: side-panel Detail composer key routing ────────────────────────────
 console.log('--- W5: side-panel detail composer ---')
 {

@@ -302,8 +302,29 @@ export function mergeLiveWindow(leaves: readonly TranscriptLeaf[], subagent: Sub
       ...(call.error !== undefined ? { errorText: call.error } : {}),
     } })
   })
+  // Live reasoning folds like the main agent's: a run of consecutive
+  // thinking lines becomes ONE thinking leaf (the shared row shows it as a
+  // single folded `∴` line unless the view expands thinking); the main
+  // process — text and tool lines — stays line by line.
+  let thinkingRun: { key: string; lines: string[] } | undefined
+  let runIndex = 0
+  const flushThinking = (): void => {
+    if (thinkingRun === undefined) return
+    rows.push({ kind: 'thinking', key: thinkingRun.key, text: thinkingRun.lines.join('\n') })
+    thinkingRun = undefined
+  }
+  const pushLive = (line: SubagentOutputLine): void => {
+    if (line.kind === 'thinking') {
+      thinkingRun ??= { key: `live-think-${runIndex++}`, lines: [] }
+      thinkingRun.lines.push(line.text)
+      return
+    }
+    flushThinking()
+    rows.push({ kind: 'live', line })
+  }
   if (!hasHistory) {
-    for (const line of subagent.outputEvents) rows.push({ kind: 'live', line })
+    for (const line of subagent.outputEvents) pushLive(line)
+    flushThinking()
     return rows
   }
   const seen = new Set<string>()
@@ -313,8 +334,9 @@ export function mergeLiveWindow(leaves: readonly TranscriptLeaf[], subagent: Sub
   }
   for (const line of subagent.outputEvents) {
     if (line.text.trim() !== '' && seen.has(capLike(line.text))) continue
-    rows.push({ kind: 'live', line })
+    pushLive(line)
   }
+  flushThinking()
   return rows
 }
 
