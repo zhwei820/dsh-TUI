@@ -4,7 +4,7 @@ import type { SubagentOutputLine, SubagentState } from '../dsh-adapter/subagents
 import { AgentMessageLeafRow, AssistantTextLeafRow, PromptLeafRow, ThinkingLeafRow, ToolLeafRow } from './messages/TranscriptLeaves.js'
 import { AgentMessageFlowRow } from './messages/AgentMessageFlow.js'
 import { AgentMessageComposer, type ComposerKeyHandler } from './AgentMessageComposer.js'
-import { SubagentWorkingRow } from './SubagentWorkingRow.js'
+import { SubagentEndedRow, SubagentWorkingRow, subagentEnded } from './SubagentWorkingRow.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView } from './messages/agentTeam.js'
 import { subagentDetailMemory } from './subagentDetailMemory.js'
 import {
@@ -317,6 +317,7 @@ export function SubagentDetailScene({
   // page once, picking up what streamed in live.
   const transcriptActive = activePage === 'transcript'
   const { transcript, loadOlder: loadOlderTranscript } = useSubagentTranscript(loadTranscript, subagent.agentId, transcriptActive, isRunning, messages)
+  const shownCwd = subagent.cwd ?? (transcript.status === 'ready' ? transcript.cwd : undefined)
   React.useEffect(() => {
     if (transcriptActive) setExpandedLeaf(null)
   }, [transcriptActive, subagent.agentId, isRunning])
@@ -552,8 +553,8 @@ export function SubagentDetailScene({
         + (subagent.completedAt ? ` · ${t('subagent-completed')} ${formatTimestamp(subagent.completedAt)}` : '')}
         {` · id ${subagent.agentId.slice(0, 8)}`}
       </Text>
-      {subagent.cwd !== undefined && (
-        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(subagent.cwd)}`}</Text>
+      {shownCwd !== undefined && (
+        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(shownCwd)}`}</Text>
       )}
       {subagent.error && (
         <Box marginTop={0}>
@@ -582,7 +583,7 @@ export function SubagentDetailScene({
       {activePage === 'output' && loadTranscript === undefined && subagent.outputEvents.length >= OUTPUT_WINDOW_CAP && (
         <Text dimColor>{t('subagent-transcript-retained', { count: subagent.outputEvents.length })}</Text>
       )}
-      <Box flexDirection="column" paddingX={1} maxHeight={(panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)) - (subagent.cwd !== undefined ? 1 : 0) - (isRunning ? 1 : 0)}>
+      <Box flexDirection="column" paddingX={1} maxHeight={(panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)) - (shownCwd !== undefined ? 1 : 0) - (isRunning || subagentEnded(subagent) ? 1 : 0)}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {activePage === 'summary' && (
             <Box flexDirection="column">
@@ -843,6 +844,11 @@ export function SubagentDetailScene({
       {isRunning && (
         <Box paddingX={1}>
           <SubagentWorkingRow subagent={subagent} />
+        </Box>
+      )}
+      {subagentEnded(subagent) && (
+        <Box paddingX={1}>
+          <SubagentEndedRow subagent={subagent} onReturn={onReturnToMain ?? onBack} canContinue={compose !== undefined} />
         </Box>
       )}
       <Divider color="subtle" title="" />

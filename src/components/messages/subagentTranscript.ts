@@ -176,6 +176,8 @@ export interface ReadyTranscript {
   readonly orphanResults: ReadonlyMap<string, ToolResultEvent>
   /** The initial task while older pages (which hold it) are not loaded. */
   readonly task?: string
+  /** The child's directory as its log states it (newest page). */
+  readonly cwd?: string
 }
 
 /** The newest page of a child's transcript, folded. */
@@ -185,7 +187,7 @@ export function foldNewestPage(agentId: string, page: SubagentTranscriptView, me
   const messagesFrom = foldTranscriptLeaves(page.events, leaves, messages, { olderPagesRemain: page.hasOlder, orphans })
   // The newest page can itself repeat one anchor (text, tool, text of one
   // message): its rows carry unique render keys from the start.
-  return { status: 'ready', agentId, leaves: uniqueRenderKeys(leaves), parentAgentId: page.parentAgentId, hasOlder: page.hasOlder, skippedFromStart: page.skippedFromStart, ...(page.sourceCursor === undefined ? {} : { sourceCursor: page.sourceCursor }), ...(page.task === undefined ? {} : { task: page.task }), loadingOlder: false, messagesFrom, orphanResults: orphans }
+  return { status: 'ready', agentId, leaves: uniqueRenderKeys(leaves), parentAgentId: page.parentAgentId, hasOlder: page.hasOlder, skippedFromStart: page.skippedFromStart, ...(page.sourceCursor === undefined ? {} : { sourceCursor: page.sourceCursor }), ...(page.task === undefined ? {} : { task: page.task }), ...(page.cwd === undefined ? {} : { cwd: page.cwd }), loadingOlder: false, messagesFrom, orphanResults: orphans }
 }
 
 /** One older page folded in front of a loaded transcript: its agent

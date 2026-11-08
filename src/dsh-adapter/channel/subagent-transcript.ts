@@ -86,6 +86,8 @@ export interface ChildPersistenceHandle {
     readonly id?: unknown
     readonly parentSession?: unknown
     readonly isSeeded?: unknown
+    /** The child's validated absolute starting directory. */
+    readonly cwd?: unknown
   }
   /** Exact fork-inherited prefix length stored with the log (0 unseeded). */
   readonly inheritedEventCount?: unknown
@@ -292,10 +294,15 @@ export async function readChildTranscriptPage(
     const lane: AgentEvent[] = []
     const uuids: string[] = []
     const pageCalls = new Set<string>()
+    // The child's directory: the newest `working-directory/change` on this
+    // page, else the header's starting cwd — but only when the page reaches
+    // back to the log's start (an unread older page could hold a move).
+    let movedTo: string | undefined
     for (const event of events) {
       const messageId = durableMessageId(event)
       if (messageId !== undefined) uuids.push(messageId)
       for (const translated of translator.translateEvent(event)) {
+        if (translated.type === 'session.cwd') movedTo = translated.cwd
         if (translated.type === 'tool.call') pageCalls.add(translated.callId)
         if (translated.type === 'tool.result' && !pageCalls.has(translated.callId)) {
           // Its call sits on an older page, so the translator never saw it
@@ -330,9 +337,12 @@ export async function readChildTranscriptPage(
         if (prompt !== undefined && prompt.type === 'user.message' && prompt.text.trim() !== '') { task = prompt.text; break }
       }
     }
+    const startCwd = typeof header.cwd === 'string' && header.cwd !== '' && skippedFromStart === 0 ? header.cwd : undefined
+    const cwd = movedTo ?? startCwd
     return {
       events: lane,
       ...(task === undefined ? {} : { task }),
+      ...(cwd === undefined ? {} : { cwd }),
       // The parent is a verified fact (roster + stored lineage), never inferred.
       parentAgentId: capture.sessionId,
       uuids,

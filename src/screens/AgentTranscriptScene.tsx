@@ -11,7 +11,7 @@ import {
   type TranscriptLoader,
 } from '../components/messages/subagentTranscript.js'
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
-import { SubagentWorkingRow } from '../components/SubagentWorkingRow.js'
+import { SubagentEndedRow, SubagentWorkingRow, subagentEnded } from '../components/SubagentWorkingRow.js'
 import { ExitButton, MainAgentButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
 import { decorColor, isMinimalUiMode } from '../minimalUiMode.js'
@@ -141,6 +141,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
   const agentId = subagent.agentId
   // Settlement makes the disk copy final: the isRunning flip reloads once.
   const { transcript, loadOlder } = useSubagentTranscript(loadTranscript, agentId, true, isRunning, messages)
+  // Live first (session header + its moves); a child with no live session
+  // (idle, or discovered after a restart) takes what its own log states.
+  const shownCwd = subagent.cwd ?? (transcript.status === 'ready' ? transcript.cwd : undefined)
   React.useEffect(() => { setExpandedLeaf(null) }, [agentId, isRunning])
 
   // ── workbench neighbourhood: the loaded transcript's parent fact wins
@@ -310,13 +313,13 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
 
       {/* The child's working directory; truncated from the left so the
           deepest folders stay readable. */}
-      {subagent.cwd !== undefined && (
-        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(subagent.cwd)}`}</Text>
+      {shownCwd !== undefined && (
+        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(shownCwd)}`}</Text>
       )}
 
       {/* Body: the transcript column, plus the workbench rail on wide
        * terminals. */}
-      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (subagent.cwd !== undefined ? 1 : 0) - (isRunning ? 1 : 0))}>
+      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (shownCwd !== undefined ? 1 : 0) - (isRunning || subagentEnded(subagent) ? 1 : 0))}>
         <Box flexDirection="column" flexGrow={1} minWidth={panelEnabled ? 44 : 0}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {loadTranscript === undefined ? (
@@ -456,6 +459,12 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
       {isRunning && (
         <Box paddingX={1}>
           <SubagentWorkingRow subagent={subagent} />
+        </Box>
+      )}
+      {/* Ended: say so and offer the way back to the main agent. */}
+      {subagentEnded(subagent) && (
+        <Box paddingX={1}>
+          <SubagentEndedRow subagent={subagent} onReturn={onReturnToMain ?? onExit} canContinue={compose !== undefined} />
         </Box>
       )}
 

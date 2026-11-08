@@ -1,4 +1,7 @@
 import React from 'react'
+import { Box, NoSelect, Text } from '../ui.js'
+import { t } from '../i18n.js'
+import { decorColor } from '../minimalUiMode.js'
 import type { SubagentState } from '../dsh-adapter/subagents.js'
 import type { SpinnerMode } from './Spinner/spinnerMode.js'
 import { WorkingSpinner, useThinkingStatus } from './WorkingSpinner.js'
@@ -57,5 +60,45 @@ export function SubagentWorkingRow({ subagent }: { readonly subagent: SubagentSt
       pauseStartTimeRef={pauseStartTimeRef}
       thinkingStatus={thinkingStatus}
     />
+  )
+}
+
+/** A settled run: completed, failed or cancelled (not a discovered history row). */
+export function subagentEnded(subagent: Pick<SubagentState, 'status'>): boolean {
+  return subagent.status === 'completed' || subagent.status === 'failed' || subagent.status === 'cancelled'
+}
+
+/**
+ * The ended counterpart of the working line: says plainly that this child
+ * has finished and offers the way back. The whole row is a button to the
+ * main agent's chat; `canContinue` adds that a continuable child still takes
+ * messages below. A button, not transcript text, so drag-select skips it.
+ */
+export function SubagentEndedRow({ subagent, onReturn, canContinue = false }: {
+  readonly subagent: SubagentState
+  onReturn(): void
+  readonly canContinue?: boolean
+}): React.ReactNode {
+  const [hovered, setHovered] = React.useState(false)
+  const failed = subagent.status === 'failed'
+  const cancelled = subagent.status === 'cancelled'
+  const glyph = failed || cancelled ? '×' : '✓'
+  const tint = decorColor(failed ? 'error' as const : cancelled ? 'warning' as const : 'success' as const)
+  const ended = t(failed ? 'subagent-ended-failed' : cancelled ? 'subagent-ended-cancelled' : 'subagent-ended-completed')
+  return (
+    <NoSelect>
+      <Box
+        onClick={onReturn}
+        onMouseEnter={(): void => setHovered(true)}
+        onMouseLeave={(): void => setHovered(false)}
+        backgroundColor={hovered ? 'userMessageBackgroundHover' : undefined}
+      >
+        <Text wrap="truncate-end">
+          <Text color={tint} bold>{`${glyph} ${ended}`}</Text>
+          <Text>{` · ${t('subagent-ended-return')}`}</Text>
+          {canContinue && <Text dimColor>{` · ${t('subagent-ended-can-continue')}`}</Text>}
+        </Text>
+      </Box>
+    </NoSelect>
   )
 }

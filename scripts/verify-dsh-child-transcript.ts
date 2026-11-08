@@ -629,6 +629,32 @@ const rosterService = (ids: readonly string[]) => ({
   check('C4 without sessionPersistence the capability is absent (no tab)', withoutPersistence.subagentControl?.history === undefined)
 }
 
+// ── Section Y: the child's working directory, as its own log states it ────
+{
+  const read = async (header: Record<string, unknown>, events: readonly unknown[]) => {
+    const memory = createMemoryPersistence()
+    memory.sessions.set(CHILD, { header: { version: 4, id: CHILD, createdAt: 1, isSeeded: false, ...header }, events: events as never, inheritedEventCount: 0 })
+    const { deps } = makeDeps({ subagents: () => rosterService([CHILD]), persistence: () => memory.source })
+    const page = await readChildTranscriptPage(deps, CHILD)
+    assert.ok(page !== null)
+    return page
+  }
+  const small = new Log()
+  small.user('u-1', 'go')
+  small.assistant('a-1', [text('ok')])
+  check('Y1 a page covering the whole log states the header cwd', (await read({ cwd: '/work/repo' }, small.events)).cwd === '/work/repo')
+  const moved = new Log()
+  moved.user('u-1', 'go')
+  moved.add('working-directory/change', { cwd: '/work/repo/pkg' })
+  moved.assistant('a-1', [text('ok')])
+  check('Y2 the newest working-directory/change wins over the header', (await read({ cwd: '/work/repo' }, moved.events)).cwd === '/work/repo/pkg')
+  check('Y3 no header cwd and no move: no cwd (never guessed)', (await read({}, small.events)).cwd === undefined)
+  const long = new Log()
+  for (let i = 0; i < 900; i += 1) long.user(`u-${i}`, `m ${i}`)
+  const paged = await read({ cwd: '/work/repo' }, long.events)
+  check('Y4 a paged-from-the-middle log does not claim the start cwd (an unread page could hold a move)', paged.skippedFromStart > 0 && paged.cwd === undefined)
+}
+
 // ── Section S: source hygiene (the banned paths stay banned) ───────────────
 {
   const source = readFileSync(join(here, '..', 'src', 'dsh-adapter', 'channel', 'subagent-transcript.ts'), 'utf8')

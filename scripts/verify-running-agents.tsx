@@ -98,7 +98,9 @@ stdin.write(`\x1b[<0;${col};${row + 1}M\x1b[<0;${col};${row + 1}m`)
 check('A2 clicking a row opens that agent\'s conversation (one transcript, like the main agent)', await settled(() => screen().includes('⤢ Agent(task beta)')
   && !screen().includes('agents running')), screen().split('\n').slice(0, 6).join(' | '))
 check('A2 … with no Summary/Output/Tools tab strip', !screen().includes('Summary') && !screen().includes('Tools'))
-check('A2 … and the follow-up input box at the bottom', screen().includes('Send to task beta') && screen().includes('Enter queue'), screen().split('\n').slice(-6).join(' | '))
+// The agent is mid-run (starting) and the control steers: plain Enter
+// interjects into its current turn (Ctrl+Enter queues behind it).
+check('A2 … and the follow-up input box at the bottom', screen().includes('Send to task beta') && screen().includes('Enter steer'), screen().split('\n').slice(-6).join(' | '))
 // The composer holds focus on open: the first Esc leaves the input (as its
 // hint says), the second leaves the view.
 stdin.write('\x1b')

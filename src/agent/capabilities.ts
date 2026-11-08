@@ -344,6 +344,10 @@ export interface SubagentTranscriptPage {
   readonly skippedFromStart: number
   /** Opaque cursor when the native source has no absolute record count. */
   readonly sourceCursor?: string
+  /** The child's working directory as its own log states it (the newest
+   *  move on this page, or its start when the page covers the whole log).
+   *  Absent = the page cannot prove one. */
+  readonly cwd?: string
   /** The child's initial task (the delegating agent's prompt) when the page
    *  starts AFTER it (older pages remain): the views pin it above the
    *  transcript until the oldest page, which holds it in place, is loaded. */
