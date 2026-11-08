@@ -353,6 +353,8 @@ for (const multiline of [true, false]) {
 // footer visible for both a checked choice and a typed answer.
 Object.assign(channel, {
   contextBarEnabled: true,
+  // The three-row footer: model field + segmented bar are opt-in now.
+  statusBar: { model: true, contextBar: true },
   contextOccupancy: { usedTokens: 120, contextWindow: 1000, source: 'backend' },
   contextSegments: { system: 0, prompt: 0, assistant: 0, thinking: 0, tools: 0 },
 })

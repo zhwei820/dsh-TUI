@@ -2138,6 +2138,8 @@ for (const [fullscreen, columns, service] of [
     const chatProps = {
       channel: channel as never, questionStore: new QuestionStore(), approvalStore: new ApprovalStore(),
       onExit: () => undefined, fullscreen: options.fullscreen ?? false, trajectorySeen: true,
+      // Pane budgets are pinned against the classic header's geometry.
+      classicSplash: true,
       kernelEntries: kernelEntriesOf(listBackends()),
       onPluginInstall: (args: string, sink: PluginInstallSink) => {
         const parsed = parsePluginArgs(args)
@@ -2859,6 +2861,8 @@ for (const [fullscreen, columns, service] of [
     const chatProps = {
       channel: channel as never, questionStore: new QuestionStore(), approvalStore: new ApprovalStore(),
       onExit: () => undefined, fullscreen: options.fullscreen ?? false, trajectorySeen: true,
+      // Pane budgets are pinned against the classic header's geometry.
+      classicSplash: true,
       kernelEntries: kernelEntriesOf(listBackends()),
       onPluginManage: (args: string, sink: PluginManageSink) => {
         const parsed = parsePluginArgs(args)

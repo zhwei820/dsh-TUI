@@ -99,7 +99,9 @@ function makeChannel({ externalGoal = false, goal = undefined } = {}) {
 const mount = (io, channel, fullscreen) => render(
   fullscreen
     ? React.createElement(AlternateScreen, null, React.createElement(Chat, { channel, fullscreen: true, questionStore: new QuestionStore(), onExit() {} }))
-    : React.createElement(Chat, { channel, fullscreen: false, questionStore: new QuestionStore(), onExit() {} }),
+    // classicSplash: the inline scrollback geometry these checks pin was
+    // measured under the classic header (see the report on inline drift).
+    : React.createElement(Chat, { channel, fullscreen: false, questionStore: new QuestionStore(), onExit() {}, classicSplash: true }),
   { stdout: io.stdout, stderr: io.stderr, stdin: io.stdin, exitOnCtrlC: false, patchConsole: false },
 )
 const type = async (io, text) => {

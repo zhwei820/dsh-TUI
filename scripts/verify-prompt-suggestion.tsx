@@ -90,7 +90,7 @@ const screen = () => lines().join('\n')
 
 await render(
   <AlternateScreen>
-    <Chat channel={channel} questionStore={new QuestionStore()} />
+    <Chat channel={channel} questionStore={new QuestionStore()} promptSuggestions />
   </AlternateScreen>,
   { stdout: new Out() as any, stdin, stderr: new Err() as any, exitOnCtrlC: false, patchConsole: false },
 )

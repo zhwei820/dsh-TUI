@@ -599,7 +599,12 @@ await sleep(800)
   // 序列前缀，无可观测条件。
   await sleep(120)
   stdin.write('\x1b')
-  const listShown = await settled(() => plainText(stdout.frames.slice(-30)).includes('消息 09'))
+  // Wait for the picker's own title: the transcript row `消息 09` is already
+  // on screen under the compact welcome header, so it proves nothing.
+  const listShown = await settled(() => {
+    const tail = plainText(stdout.frames.slice(-30))
+    return tail.includes('选择一条消息，将对话回退到该处') && tail.includes('消息 09')
+  })
   check('rewind picker opens on double-Esc', listShown)
 
   // Enter on the newest message → the plugin decision resolves → mode list.

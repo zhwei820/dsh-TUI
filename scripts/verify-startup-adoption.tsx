@@ -361,7 +361,8 @@ async function screenCase(surface: 'composer' | 'launchpad' | 'launchpad-failed'
     stdin.write('\r')
     // The composer consumes the line; the landing page keeps it under the
     // help overlay it opens.
-    const helpRan = surface !== 'composer' ? () => screen().includes('for this help') : () => !screen().includes('/help')
+    // (The welcome box quotes `/help for help`; the consumed draft is the `❯ /help` row.)
+    const helpRan = surface !== 'composer' ? () => screen().includes('for this help') : () => !screen().includes('❯ /help')
     check(label('a local command runs while starting'), await settled(helpRan) && notReadyCount() === beforeHelp, screen())
     // 固定窗:pacing whatever /help opened settles before Esc closes it.
     await sleep(200)

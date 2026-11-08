@@ -81,7 +81,7 @@ const ctx = {
   get: () => undefined,
   logger: { warn: () => undefined, info: () => undefined, debug: () => undefined },
 } as never
-const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' })
+const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } })
 
 const COLS = 100
 const ROWS = 30
@@ -102,8 +102,10 @@ const stdin = new FakeStdin()
 const stdout = new FakeStdout()
 const screen = (): string => viewportLines(term, ROWS).join('\n')
 // Startup tips may quote "commands"; only the suggestion-card title is a menu.
+// Borderless list: an open menu has a selected `❯ name` row (the composer's
+// own row reads `❯ /…`, with the slash).
 const commandMenuOpen = (): boolean => viewportLines(term, ROWS)
-  .some(line => line.trimStart().startsWith(`╭─ ${t('sugg-commands-title')} · `))
+  .some(line => /^ {1,4}❯ [a-z][\w-]*(?:\s|$)/u.test(line))
 // Startup tips can also contain "Trajectory"; only its header marks the scene.
 const trajectoryOpen = (): boolean => viewportLines(term, ROWS)
   .some(line => line.trimStart().startsWith(`✦ ${t('traj-title')}`))
@@ -124,6 +126,8 @@ try {
       fullscreen: false,
       kernelEntries: kernelEntriesOf(listBackends()),
       trajectorySeen: true,
+      // The startup tip lives in the classic header.
+      classicSplash: true,
     }),
     { stdout: stdout as never, stdin: stdin as never, stderr: stdout as never, exitOnCtrlC: false, patchConsole: false },
   )
@@ -247,7 +251,7 @@ const runEffortCase = async (label: string, levels: { id: string; label: string 
     effort: { levels: () => levels, current: () => current, set: id => { sets.push(id); return Promise.resolve() } },
   })
   session.submit = input => { submits.push(input); return Promise.resolve({ accepted: true }) }
-  const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' })
+  const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } })
   const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
   class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
   class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }
@@ -436,7 +440,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
   modeful.subscribe = listener => { listeners.add(listener); return () => { listeners.delete(listener) } }
   const submits: AgentInput[] = []
   modeful.submit = input => { submits.push(input); return Promise.resolve({ accepted: true }) }
-  const channel = createChannel(ctx, modeful, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { mode: true } } as never)
+  const channel = createChannel(ctx, modeful, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { mode: true, model: true, thinking: true } } as never)
   const COLS = 100
   const ROWS = 30
   const term = new XTerm({ cols: COLS, rows: ROWS, scrollback: 0, allowProposedApi: true })
@@ -521,7 +525,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     const submits: AgentInput[] = []
     const session = freshSession({})
     session.submit = input => { submits.push(input); return Promise.resolve({ accepted: true }) }
-    const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' } as never)
+    const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } } as never)
     const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
     class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
     class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }
@@ -567,7 +571,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     set: (id: string | null) => { effortSets.push(id ?? 'null'); return Promise.resolve() },
   }
   const capable = freshSession({ models: modelsCap, effort: effortCap })
-  const channel = createChannel(ctx, capable, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' } as never)
+  const channel = createChannel(ctx, capable, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } } as never)
   const COLS = 100
   const ROWS = 30
   const term = new XTerm({ cols: COLS, rows: ROWS, scrollback: 0, allowProposedApi: true })
@@ -642,7 +646,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
   // its click answers nothing, and the think-level segment stays away (no
   // reasoning effort to show).
   {
-    const channel = createChannel(ctx, freshSession({}), { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' } as never)
+    const channel = createChannel(ctx, freshSession({}), { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } } as never)
     const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
     class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
     class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }
@@ -713,7 +717,7 @@ await runEffortCase('bare /effort with a real range', [{ id: 'low', label: 'Low'
     activity: true, backendLabel: 'Fake Agent',
     // The status bar's activity field is default-off; the done card's resting
     // place is that row, so this block turns it on (a user preference).
-    statusBar: { activity: true },
+    statusBar: { activity: true, model: true, thinking: true },
     publishActivity: (sessionId, view) => activityStore.update(sessionId, view),
     clearActivity: sessionId => activityStore.clear(sessionId),
   } as never)
@@ -783,7 +787,7 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
     logout: () => Promise.resolve(false),
   }
   const authCtx = { on: () => () => undefined, get: (name: string) => name === 'dshAuth' && route !== 'missing' ? { api: oauth } : undefined, logger: { warn: () => undefined, info: () => undefined, debug: () => undefined } } as never
-  const channel = createChannel(authCtx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' })
+  const channel = createChannel(authCtx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } })
   const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
   class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
   class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }
@@ -860,7 +864,7 @@ for (const route of ['missing', 'ready', 'failed'] as const) {
     ...freshSession({}),
     ref: { backendId: FIXTURE_SDK_ID, sessionId: 'b1b1b1b1-b1b1-4b1b-8b1b-b1b1b1b1b1b1' },
   }
-  const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent' })
+  const channel = createChannel(ctx, session, { model: 'fake-model', provider: '', cwd: process.cwd(), activity: false, backendLabel: 'Fake Agent', statusBar: { model: true, thinking: true } })
   const term = new XTerm({ cols: 100, rows: 30, scrollback: 0, allowProposedApi: true })
   class Out extends Writable { columns = 100; rows = 30; isTTY = true; _write(chunk: unknown, _e: BufferEncoding, cb: () => void): void { term.write(String(chunk), cb) } }
   class In extends PassThrough { isTTY = true; setRawMode() { return this }; ref() { return this }; unref() { return this } }

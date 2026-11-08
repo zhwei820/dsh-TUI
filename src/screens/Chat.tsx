@@ -587,8 +587,9 @@ export function Chat({
   /** Classic DSH splash (whale + wordmark) over the welcome box; the
    *  host passes the `launchpad` setting (see LogoHeader). */
   classicSplash?: boolean
-  /** compact prompt suggestion after each turn (cordis
-   *  `promptSuggestions`, on by default): one side call, Tab to take it. */
+  /** Prompt suggestion after each turn (the host passes cordis
+   *  `promptSuggestions`, on by default; omitted = off): one side call,
+   *  Tab to take it. */
   promptSuggestions?: boolean
   /**
    * Offer the first-run guide as this session's first frame.
@@ -1572,7 +1573,9 @@ export function Chat({
       setPromptSuggestion(undefined)
       return
     }
-    if (!was || promptSuggestions === false || typeof channel.suggestNextPrompt !== 'function') return
+    // Opt-in per host: the plugin passes the cordis default (on); embedders
+    // that mount Chat directly (and their scripted LLM fakes) get no extra call.
+    if (!was || promptSuggestions !== true || typeof channel.suggestNextPrompt !== 'function') return
     const controller = new AbortController()
     suggestAbortRef.current?.abort()
     suggestAbortRef.current = controller
