@@ -102,7 +102,7 @@ function makeChannel(options = {}) {
     contextBarEnabled: true,
     // Status footer fields: the assertions below watch the mode label, so
     // enable it explicitly (the compact defaults hide it).
-    statusBar: { mode: true },
+    statusBar: { mode: true, thinking: true, model: true }, // effort/model fields are opt-in footer segments
     agentPreset: 'standard',
     goal: undefined,
     todos: [],

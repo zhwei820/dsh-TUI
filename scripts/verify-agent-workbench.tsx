@@ -324,7 +324,7 @@ console.log('--- W3: workbench panel + sibling switching ---')
     }),
     async frame => {
       check('W3 窄屏（40 列）面板退场', await settled(() => frame.screen().includes('alpha unique marker one')) && !frame.screen().includes('workbench'))
-      check('W3 窄屏顶栏仍显示代理名', frame.lines().slice(0, 3).some(line => line.includes(t('subagent-card-prefix') + 'agent')), frame.lines().slice(0, 3).join('|'))
+      check('W3 窄屏顶栏仍显示代理名', frame.lines().slice(0, 3).some(line => line.includes('Agent(agent')), frame.lines().slice(0, 3).join('|'))
     },
     40,
   )
@@ -448,7 +448,7 @@ console.log('--- W4: dashboard children/peers partition ---')
       async frame => {
         check('metadata ' + cols + ': model, effort and elapsed stay visible', await settled(() => frame.screen().includes('glm-5.3 · max · 12m0s')), frame.lines().slice(0, 4).join('|'))
         check('metadata ' + cols + ': newest two preview rows remain below metadata', frame.screen().includes('PREVIEW-PREV') && frame.screen().includes('LATEST-PREVIEW') && !frame.screen().includes('old stream line'))
-        check('metadata ' + cols + ': panel prefix and zero tools stay omitted', !frame.screen().includes(t('subagent-card-prefix')) && !frame.screen().includes('0 tools'))
+        check('metadata ' + cols + ': panel prefix and zero tools stay omitted', !frame.screen().includes('Agent(') && !frame.screen().includes('0 tools'))
         const longOutput = 'BEGIN-MARK ' + Array.from({ length: 12 }, (_, index) => 'part-' + index).join(' ') + ' END-MARK'
         frame.rerender(React.createElement(SubagentCard, { subagent: { ...agent, output: [longOutput] } as never, variant: 'panel' }))
         check('metadata ' + cols + ': latest two visual rows keep the tail of one long line', await settled(() => frame.screen().includes('END-MARK')) && !frame.screen().includes('BEGIN-MARK') && frame.lines().filter(line => /part-|END-MARK/.test(line)).length === 2 && frame.screen().includes('glm-5.3 · max · 12m0s'), frame.lines().slice(0, 5).join('|'))

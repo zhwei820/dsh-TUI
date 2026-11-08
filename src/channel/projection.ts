@@ -1103,6 +1103,7 @@ export function createChannelProjection(state: ProjectionState, deps: ChannelPro
         cacheKnown: turnLedger.cacheKnown,
         retries: turnFailedAttempts.size,
         durationMs: Math.max(0, event.time - turnLedger.startedAt),
+        endedAt: event.time,
         ...(turnLedger.model === undefined ? {} : { model: turnLedger.model }),
         ...(turnLedger.model === undefined || turnLedger.model === lastNotedTurnModel ? {} : { noteModel: true }),
         ...(state.reasoningEffort === undefined ? {} : { effort: state.reasoningEffort }),

@@ -83,7 +83,7 @@ function check(name: string, condition: boolean, detail = ''): void {
 /** The prompt top-border row: the line containing the `╭` corner. */
 function borderRow(): { y: number; text: string } | undefined {
   const lines = viewportLines(term, ROWS)
-  const y = lines.findIndex(line => line.includes('╭'))
+  const y = lines.findLastIndex(line => line.includes('╭')) // the prompt box is the LAST frame (the welcome box sits above it)
   return y === -1 ? undefined : { y, text: lines[y]! }
 }
 

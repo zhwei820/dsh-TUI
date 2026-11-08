@@ -196,7 +196,7 @@ const questions = new QuestionStore()
 // scrollback — exactly the layout the issue was reported in.
 let fullscreen = true
 const tree = (): React.ReactElement => {
-  const chat = React.createElement(Chat, { channel, questionStore: questions, approvalStore: approvalSource, fullscreen })
+  const chat = React.createElement(Chat, { channel, questionStore: questions, approvalStore: approvalSource, fullscreen, classicSplash: true /* panel budgets pinned on the classic header */ })
   return fullscreen ? React.createElement(AlternateScreen, null, chat) : chat
 }
 const app = await render(tree(), { stdout, stdin, stderr: new FakeStderr(), exitOnCtrlC: false, patchConsole: false })

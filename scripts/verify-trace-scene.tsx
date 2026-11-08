@@ -356,6 +356,8 @@ function makeChannel(overrides: Record<string, unknown> = {}): Record<string, un
   const rowsOf = (): number => term.buffer.active.length
   const instance = await render(
     React.createElement(Chat, {
+      // Startup-tip fixtures live in the classic header.
+      classicSplash: true,
       channel: makeChannel({
         traceEvents: () => LIVE_EVENTS,
         working: true,
@@ -490,6 +492,8 @@ function makeChannel(overrides: Record<string, unknown> = {}): Record<string, un
   }
   const instance = await render(
     React.createElement(Chat, {
+      // Startup-tip fixtures live in the classic header.
+      classicSplash: true,
       channel: channel as never,
       questionStore: new QuestionStore() as never,
       onExit: () => {},
@@ -646,6 +650,8 @@ function makeChannel(overrides: Record<string, unknown> = {}): Record<string, un
     },
   }
   const tree = React.createElement(Chat, {
+    // Startup-tip fixtures live in the classic header.
+    classicSplash: true,
     channel: makeChannel({
       traceEvents: () => EVENTS,
       statusBar: {
@@ -746,6 +752,8 @@ function makeChannel(overrides: Record<string, unknown> = {}): Record<string, un
     const { stdout, stdin, screen, term } = makeHarness(cols, 34, 200)
     const instance = await renderWithTip(
       React.createElement(Chat, {
+        // Startup-tip fixtures live in the classic header.
+        classicSplash: true,
         channel: makeChannel({
           traceEvents: () => EVENTS,
           statusBar: {

@@ -532,6 +532,9 @@ export interface TurnUsageSummary {
   readonly retries: number
   /** turn.start → turn.end wall-clock span (ms). */
   readonly durationMs: number
+  /** turn.end wall-clock time (epoch ms; the event's own stamp, so replay
+   *  shows when the turn really ended). Absent on older payloads. */
+  readonly endedAt?: number
   /** Model id the turn's last request ran on, when the backend reported
    * one; absent rather than guessed from the session model. */
   readonly model?: string

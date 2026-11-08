@@ -73,6 +73,9 @@ function makeChannel() {
     { id: 3, kind: 'assistant', text: '已经检查。', streaming: false },
   ]
   const channel: any = {
+    // Folded streaming rows show only the header now; `full` keeps the
+    // reasoning text on screen so the show/hide toggle has something to hide.
+    thinkingFold: 'full',
     version: 0,
     rows,
     status: 'idle',

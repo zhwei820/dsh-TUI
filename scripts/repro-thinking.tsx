@@ -169,7 +169,8 @@ lines.forEach((line, y) => {
   // spinner 状态行以 "… · thinking)" 收尾；裸词 'thinking' 不能当指纹——
   // 启动 tip 是 Math.random 抽的，100 条里 4 条文案含 'thinking'
   // （如“工具卡/thinking/摘要点击展开”），抽中即误报（约 4%/次的假 flaky）。
-  if (/·\s*thinking\)/.test(line)) spinnerRows++
+  // The interrupt hint now closes the parens (`· thinking · esc to interrupt)`).
+  if (/·\s*thinking(?:\s*·[^)]*)?\)/.test(line)) spinnerRows++
   if (/tthinking/.test(line)) problems.push(`row ${y}: 叠字残影 "tthinking" → ${JSON.stringify(line)}`)
   // 孤立 't'：两侧为空白/行首行尾（灌入文本与全部 tip 文案均不含孤立
   // ASCII 't'，出现即残影）

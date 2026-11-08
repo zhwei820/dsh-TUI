@@ -5,6 +5,7 @@ import { localizedDescription } from '../commands.js'
 import { t } from '../i18n.js'
 import { primaryComboString } from '../utils/keymap.js'
 import { modLabel } from '../utils/modifiers.js'
+import { useOverlayListRows } from './OverlayAbove.js'
 
 /**
  * The `?` help menu with a three-column shortcut layout, trimmed to the keys
@@ -37,6 +38,12 @@ export function HelpMenu({
    */
   onCommandPick?: (name: string) => void
 }): React.ReactNode {
+  // The overlay's measured room above the composer (1 row for the margin
+  // under the menu). The caller's fixed viewport assumed a tall startup
+  // header; with the compact welcome box the composer sits higher on an
+  // empty session, and a taller viewport would lose its column headers to
+  // the overlay's top clip.
+  const overlayRows = useOverlayListRows(1)
   const chrome = commands.filter(command => !command.skill)
   const primaryShortcuts = (
     <Box flexDirection="column" width={26} flexShrink={0}>
@@ -122,9 +129,10 @@ export function HelpMenu({
   if (viewportHeight === undefined) return content
 
   const compact = viewportWidth !== undefined && viewportWidth < 72
+  const height = Math.max(3, Math.min(viewportHeight, overlayRows))
 
   return (
-    <Box height={viewportHeight} flexDirection="column">
+    <Box height={height} flexDirection="column">
       {compact ? (
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1} flexShrink={1} paddingX={2}>
           {/* Below 72 columns the two fixed shortcut columns would consume
