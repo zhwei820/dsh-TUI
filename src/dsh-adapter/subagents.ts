@@ -230,6 +230,13 @@ export class SubagentActivityStore {
     if (session !== undefined && session !== null) this.sessionToAgent.set(session, agentId)
     const state = this.states.get(agentId)
     if (state && typeof session === 'string') state.sessionId = session
+    // The child's starting directory is its session header's validated cwd;
+    // a later `working-directory/change` (onSessionEvent) is newer and wins.
+    const headerCwd = (session as { readonly header?: { readonly cwd?: unknown } } | null | undefined)?.header?.cwd
+    if (state && state.cwd === undefined && typeof headerCwd === 'string' && headerCwd !== '') {
+      state.cwd = headerCwd
+      this.notify()
+    }
   }
 
   getSubagentIdBySession(session: unknown): string | undefined { return this.sessionToAgent.get(session) }
@@ -367,6 +374,17 @@ export class SubagentActivityStore {
         }
         break
       }
+      case 'working-directory/change': {
+        // The child moved (DSH 0.2.1+ `dsh-working-directory`, matched by
+        // name like the main translator does); the header keeps the start.
+        const state = this.states.get(agentId)
+        const cwd = (data as { cwd?: unknown }).cwd
+        if (state && typeof cwd === 'string' && cwd !== '' && cwd !== state.cwd) {
+          state.cwd = cwd
+          this.notify()
+        }
+        break
+      }
       case 'assistant/attempt': {
         const stream = this.streams.get(agentId)
         const attempt = stream?.attempt
@@ -497,6 +515,10 @@ export class SubagentActivityStore {
     const at = typeof time === 'number' ? new Date(time) : new Date()
     const peak = isPeakHour(at)
     addUsageToCostBuckets(entry.buckets, delta, peak)
+    // The per-child ledger behind the agent views' token/price line: same
+    // durable usage, same seq de-dup, kept across the child's runs.
+    state.spend ??= emptyCostBuckets()
+    addUsageToCostBuckets(state.spend, delta, peak)
     if (!isDeepSeekOfficialProvider(provider) || priceForModel(model) === undefined) {
       addUsageToCostBuckets(this.costUnpriced, delta, peak)
     }
@@ -572,7 +594,7 @@ export class SubagentActivityStore {
     this.notify()
   }
 
-  snapshot(): SubagentState[] { return Array.from(this.states.values()).map(state => ({ ...state, output: [...state.output], outputEvents: [...state.outputEvents], toolCalls: state.toolCalls.map(tool => ({ ...tool })), tokens: state.tokens ? { ...state.tokens } : undefined, settledRuns: state.settledRuns?.map(run => ({ ...run })) })) }
+  snapshot(): SubagentState[] { return Array.from(this.states.values()).map(state => ({ ...state, output: [...state.output], outputEvents: [...state.outputEvents], toolCalls: state.toolCalls.map(tool => ({ ...tool })), tokens: state.tokens ? { ...state.tokens } : undefined, spend: state.spend ? cloneCostBuckets(state.spend) : undefined, settledRuns: state.settledRuns?.map(run => ({ ...run })) })) }
   get(agentId: string): SubagentState | undefined { return this.snapshot().find(state => state.agentId === agentId) }
   subscribe(listener: () => void): () => void { this.listeners.add(listener); return () => this.listeners.delete(listener) }
   private notify(): void { for (const listener of this.listeners) listener() }

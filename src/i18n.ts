@@ -2102,6 +2102,8 @@ const dict = {
   'agent-view-field-mode': { zh: '模式', en: 'mode' },
   'agent-view-field-model': { zh: '模型', en: 'model' },
   'agent-view-field-tokens': { zh: 'token', en: 'tokens' },
+  'agent-view-field-cost': { zh: '费用', en: 'cost' },
+  'agent-view-field-cwd': { zh: '目录', en: 'cwd' },
   'agent-view-field-duration': { zh: '时长', en: 'duration' },
   'agent-view-field-run': { zh: '运行', en: 'run' },
   'agent-view-field-session': { zh: '会话', en: 'session' },

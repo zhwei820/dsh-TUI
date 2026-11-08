@@ -19,7 +19,9 @@
  *
  * @module
  */
-import type { ChatRow, SubagentRow, SubagentToolCall } from '../../adapter/ports/channel-view.js'
+import type { ChatRow, SubagentRow, SubagentState, SubagentToolCall } from '../../adapter/ports/channel-view.js'
+import { estimateSessionCostCny, isDeepSeekOfficialProvider } from '../../deepseekPricing.js'
+import { homeDir } from '../../utils/paths.js'
 
 /** Header name of a delegation, in the transcript's tool-name voice. */
 export const AGENT_LABEL = 'Agent'
@@ -62,6 +64,43 @@ export function formatAgentDuration(ms: number): string {
 export function subagentTokens(row: SubagentRow): number | undefined {
   const total = row.tokens?.total ?? ((row.tokens?.input ?? 0) + (row.tokens?.output ?? 0))
   return total > 0 ? total : undefined
+}
+
+/** A child's cumulative consumption from its per-child ledger (`spend`):
+ *  every token counter summed, and a CNY estimate only for an official
+ *  DeepSeek provider with a listed model — the same gate the status line's
+ *  estimate uses. Priced at the child's CURRENT model (a mid-run model switch
+ *  prices earlier usage at the new rate; the session-wide estimate keeps the
+ *  per-model split). Undefined = no ledger or nothing used yet. */
+export function subagentSpend(agent: Pick<SubagentState, 'spend' | 'provider' | 'model'>): { readonly tokens: number; readonly cny?: number } | undefined {
+  const spend = agent.spend
+  if (spend === undefined) return undefined
+  const sum = (bucket: { input: number; output: number; cacheRead: number; cacheWrite: number }): number =>
+    bucket.input + bucket.output + bucket.cacheRead + bucket.cacheWrite
+  const tokens = sum(spend.peak) + sum(spend.idle)
+  if (tokens <= 0) return undefined
+  const priced = agent.provider !== undefined && isDeepSeekOfficialProvider(agent.provider) && agent.model !== undefined && agent.model !== ''
+  const cny = priced ? estimateSessionCostCny(spend, agent.model!) : undefined
+  return cny === undefined ? { tokens } : { tokens, cny }
+}
+
+/** `/home/me/repo/pkg` → `~/repo/pkg` (the home prefix only; other paths
+ *  pass through unchanged). */
+export function tildePath(path: string): string {
+  const home = homeDir()
+  if (home === '' || home === '/') return path
+  if (path === home) return '~'
+  return path.startsWith(`${home}/`) || path.startsWith(`${home}\\`) ? `~${path.slice(home.length)}` : path
+}
+
+/** `¥0.05`; a nonzero sub-cent amount shows `<¥0.01` instead of `¥0.00`. */
+export function formatCny(cny: number): string {
+  return cny > 0 && cny < 0.01 ? '<¥0.01' : `¥${cny.toFixed(2)}`
+}
+
+/** `12.3k tok · ¥0.05` (the price is omitted when unpriced). */
+export function formatSubagentSpend(spend: { readonly tokens: number; readonly cny?: number }): string {
+  return `${formatTokenCount(spend.tokens)} tok${spend.cny === undefined ? '' : ` · ${formatCny(spend.cny)}`}`
 }
 
 /** The backend's own tool-use count wins over the locally kept records. */

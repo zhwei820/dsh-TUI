@@ -13,7 +13,7 @@ import {
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
 import { ExitButton, MainAgentButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
-import { agentTitle } from '../components/Chat/subagentCardModel.js'
+import { agentTitle, formatCny, formatSubagentSpend, formatTokenCount, subagentSpend, tildePath } from '../components/Chat/subagentCardModel.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView, AgentViewSource } from '../components/messages/agentTeam.js'
 import { agentNeighbourhood, type AgentParentFact } from '../components/messages/agentTeam.js'
 
@@ -264,9 +264,13 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
   const hasHistory = loadTranscript !== undefined && transcript.status === 'ready'
   // Narrow terminals keep the agent's name: read-only and the short id are
   // repeated below the header, so they are the first to go.
+  // Cumulative tokens + price (the per-child ledger): a header badge on wide
+  // terminals; narrow ones lead the hint line with it so the name survives.
+  const spend = subagentSpend(subagent)
+  const spendText = spend === undefined ? '' : formatSubagentSpend(spend)
   const headerBadges = headerWidth < 64
     ? (liveBadge === '' ? '' : ` · ${liveBadge}`)
-    : `${liveBadge === '' ? '' : ` · ${liveBadge}`}${compose === undefined ? ` · ${t('agent-view-readonly')}` : ''} · id ${agentId.slice(0, 8)}`
+    : `${liveBadge === '' ? '' : ` · ${liveBadge}`}${spendText === '' ? '' : ` · ${spendText}`}${compose === undefined ? ` · ${t('agent-view-readonly')}` : ''} · id ${agentId.slice(0, 8)}`
   const fallbackTail = subagent.outputEvents
   const retained = fallbackTail.length >= OUTPUT_WINDOW_CAP
 
@@ -283,11 +287,17 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
       </Box>
       {/* The `o` hint only when older records actually remain: an always-on
           "load 400 older" read as "the start (the task) is not here". */}
-      <Text dimColor wrap="truncate-end">{`${t('agent-view-title')} · ${sourceLabel(source)} · ${t('agent-view-back')}: Esc${headerWidth < 44 ? '' : ` · ↑/↓ ${t('subagent-hint-scroll')}${transcript.status === 'ready' && transcript.hasOlder ? ` · o ${t('subagent-transcript-load-older', { count: Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) })}` : ''}`}`}</Text>
+      <Text dimColor wrap="truncate-end">{`${headerWidth < 64 && spendText !== '' ? `${spendText} · ` : ''}${t('agent-view-title')} · ${sourceLabel(source)} · ${t('agent-view-back')}: Esc${headerWidth < 44 ? '' : ` · ↑/↓ ${t('subagent-hint-scroll')}${transcript.status === 'ready' && transcript.hasOlder ? ` · o ${t('subagent-transcript-load-older', { count: Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) })}` : ''}`}`}</Text>
+
+      {/* The child's working directory; truncated from the left so the
+          deepest folders stay readable. */}
+      {subagent.cwd !== undefined && (
+        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(subagent.cwd)}`}</Text>
+      )}
 
       {/* Body: the transcript column, plus the workbench rail on wide
        * terminals. */}
-      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6))}>
+      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (subagent.cwd !== undefined ? 1 : 0))}>
         <Box flexDirection="column" flexGrow={1} minWidth={panelEnabled ? 44 : 0}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {loadTranscript === undefined ? (
@@ -492,6 +502,7 @@ function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, swit
     : subagent.completedAt !== undefined ? subagent.completedAt - subagent.startedAt : undefined
   const shownDuration = subagent.reportedDurationMs ?? elapsed
   const toolsCount = subagent.reportedToolUses ?? subagent.toolCalls.length
+  const spend = subagentSpend(subagent)
   const keptTools = subagent.toolCalls.slice(-WORKBENCH_TOOL_ROWS)
   const hiddenTools = Math.max(0, subagent.toolCalls.length - keptTools.length)
   const shownSiblings = siblings.slice(0, WORKBENCH_SIBLING_ROWS)
@@ -517,7 +528,8 @@ function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, swit
       <PanelMetaRow label={t('agent-view-field-status')} value={subagent.status} />
       <PanelMetaRow label={t('agent-view-field-mode')} value={subagent.mode} />
       <PanelMetaRow label={t('agent-view-field-model')} value={subagent.model ?? subagent.provider} />
-      <PanelMetaRow label={t('agent-view-field-tokens')} value={subagent.tokens === undefined ? undefined : String(subagent.tokens.total ?? ((subagent.tokens.input ?? 0) + (subagent.tokens.output ?? 0)))} />
+      <PanelMetaRow label={t('agent-view-field-tokens')} value={spend !== undefined ? formatTokenCount(spend.tokens) : subagent.tokens === undefined ? undefined : String(subagent.tokens.total ?? ((subagent.tokens.input ?? 0) + (subagent.tokens.output ?? 0)))} />
+      <PanelMetaRow label={t('agent-view-field-cost')} value={spend?.cny === undefined ? undefined : formatCny(spend.cny)} />
       <PanelMetaRow label={t('agent-view-field-duration')} value={shownDuration === undefined ? undefined : panelFormatDuration(shownDuration)} />
       <PanelMetaRow label={t('agent-view-field-run')} value={subagent.runId === undefined ? undefined : subagent.runId.slice(0, 8)} />
       <PanelMetaRow label={t('agent-view-field-session')} value={subagent.sessionId === undefined ? undefined : subagent.sessionId.slice(0, 8)} />
