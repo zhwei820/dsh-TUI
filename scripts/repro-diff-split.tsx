@@ -145,7 +145,7 @@ async function renderAt(cols, tool, diffLayout = 'auto', toolBackground = 'none'
   check('窄屏不出现 │ 分隔', !s.includes('│'))
   const bodyRow = lines.findIndex(line => line.includes('# tail'))
   if (bodyRow >= 0) {
-    // Claude Code style: the +/- rows carry the diff tint on their text (the
+    // compact style: the +/- rows carry the diff tint on their text (the
     // card itself stays unpainted at the `none` level — see the line end).
     check('默认 none 档：统一式增删行文本带 diff 底色', [0x27392c, 0x3e2a2c].includes(bgAt(lines[bodyRow]!.indexOf('# tail'), bodyRow)),
       `bg=${bgAt(lines[bodyRow]!.indexOf('# tail'), bodyRow).toString(16)}`)

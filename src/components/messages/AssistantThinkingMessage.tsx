@@ -27,10 +27,10 @@ type Props = {
   /** Show the full text (Ctrl+O, per-row expansion, or live click toggle). */
   verbose: boolean
   /** True while the reasoning block is still streaming — the leading mark
-   *  twinkles (Claude Code's star) and settles to `∴` once the step ends. */
+   *  twinkles (the star) and settles to `∴` once the step ends. */
   streaming?: boolean
   /** Streaming folded mode (thinkingFold=preview): the one header line
-   *  alone, Claude Code style — the block never resizes mid-stream. */
+   *  alone, compact style — the block never resizes mid-stream. */
   preview?: boolean
   /** Thinking wall-clock duration once the reasoning block settled (ms). */
   durationMs?: number
@@ -45,7 +45,7 @@ type Props = {
 }
 
 /**
- * Thinking block in the Claude Code visual language: settled rows fold to
+ * Thinking block in the compact visual language: settled rows fold to
  * `∴` + `thinking-settled` (with the recorded duration) + the ctrl+o expand
  * hint; streaming rows show one twinkling header line (`thinking-label`),
  * or the full reasoning text when expanded (click / Ctrl+O / thinkingFold

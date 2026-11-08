@@ -120,6 +120,7 @@ export const CHANNEL_UI_EFFECTS = Object.freeze({
   'renameSession': 'mutate',
   'setSessionColor': 'mutate',
   'recapRecent': 'mutate',
+  'suggestNextPrompt': 'mutate',
   'deleteSession': 'mutate',
   'renameSessionTo': 'mutate',
   'compact': 'mutate',

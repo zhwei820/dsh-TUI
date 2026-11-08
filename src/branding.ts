@@ -1,21 +1,20 @@
 /**
  * 品牌档案：开屏与主题的整套外观。
  *
- * 默认 `deepseek`（雾蓝 + `DEEPSEEK`/`HARNESS` + 鲸鱼/鲸鱼娘）。另有两套手动
- * 皮肤：`claude`（橙色 + `CLAUDE`/`CODE` + Claude 娘，立绘见
- * `assets/claude-girl/`）与 `codex`（薰衣草紫 + `CODEX`/`HARNESS` + 标语
+ * 默认 `deepseek`（雾蓝 + `DEEPSEEK`/`HARNESS` + 鲸鱼/鲸鱼娘）。另有一套手动
+ * 皮肤 `codex`（薰衣草紫 + `CODEX`/`HARNESS` + 标语
  * "Build anything with Codex"，立绘槽固定淡紫恶魔精灵 `assets/codex-girl/`
  * ——点击切红色按钮变体几秒，图像协议不可用时回落字符画）。启动页与对话页的
  * 主题跟着换：ThemeProvider 在品牌未被显式锁定时把默认档替换成该品牌的主题对
  * （显式 `DSH_TUI_THEME` / 会话内 `/theme` 手选永远优先）。
  *
- * 设置项 `dsh-tui.brand`（`auto` | `deepseek` | `claude` | `codex`，默认
+ * 设置项 `dsh-tui.brand`（`auto` | `deepseek` | `codex`，默认
  * `auto` = `deepseek`，`/settings` 可实时改）；`auto` 只为兼容旧配置保留。
  * `DSH_TUI_BRAND` 环境变量优先级最高（预览/测试缝）。
  */
 
 /** One backend look: splash words, tagline, and (when branded) a theme pair. */
-export type Brand = 'deepseek' | 'claude' | 'codex'
+export type Brand = 'deepseek' | 'codex'
 
 // 设置值类型住在端口的显示偏好词汇表里（ports 目录不许 import 到目录外），
 // 这里转出去：设置链（Config / channel / /settings 面板）只认这一个入口。
@@ -25,7 +24,7 @@ import { isLightThemeActive } from './theme.js'
 import type { ThemeName } from './theme.js'
 
 /** 设置项的合法值表（注册与归一化共用一份）。 */
-export const BRAND_SETTING_VALUES: readonly BrandSetting[] = ['auto', 'deepseek', 'claude', 'codex']
+export const BRAND_SETTING_VALUES: readonly BrandSetting[] = ['auto', 'deepseek', 'codex']
 
 /**
  * 归一化不可信来源的设置值：合法值原样通过，其余（含未设置）回落 `auto`。
@@ -42,8 +41,8 @@ export function normalizeBrandSetting(value: unknown): BrandSetting {
  */
 export function resolveBrand(setting: BrandSetting | undefined): Brand {
   const forced = process.env.DSH_TUI_BRAND
-  if (forced === 'claude' || forced === 'deepseek' || forced === 'codex') return forced
-  if (setting === 'claude' || setting === 'deepseek' || setting === 'codex') return setting
+  if (forced === 'deepseek' || forced === 'codex') return forced
+  if (setting === 'deepseek' || setting === 'codex') return setting
   return 'deepseek'
 }
 
@@ -57,15 +56,7 @@ export interface BrandSplashWords {
 /** 各品牌的开屏标题词（大字重解字距见 `splashFonts.withTagline`）。 */
 export const BRAND_SPLASH_WORDS: Readonly<Record<Brand, BrandSplashWords>> = Object.freeze({
   deepseek: Object.freeze({ top: 'DEEPSEEK', bottom: 'HARNESS', plain: 'DeepSeek Harness' }),
-  claude: Object.freeze({ top: 'CLAUDE', bottom: 'CODE', plain: 'Claude Code' }),
   codex: Object.freeze({ top: 'CODEX', bottom: 'HARNESS', plain: 'Codex' }),
-})
-
-/** claude 品牌按终端深浅落的两套内置主题（theme.ts 注册：墨黑 / 暖纸张，
- *  共用同一套陶土橙强调色——切明暗不丢品牌识别）。 */
-export const CLAUDE_BRAND_THEMES: Readonly<{ dark: 'claude-dark'; light: 'claude-paper' }> = Object.freeze({
-  dark: 'claude-dark',
-  light: 'claude-paper',
 })
 
 /** codex 品牌双主题（theme.ts 注册）：黑白基底 + 薰衣草紫点缀（用户定稿
@@ -80,7 +71,6 @@ export const CODEX_BRAND_THEMES: Readonly<{ dark: 'codex-lavender'; light: 'code
 /** 带品牌主题的档位 → 主题对（ThemeProvider 的品牌默认档查这里；deepseek
  *  用系统默认 light/dark，不在表内）。 */
 export const BRAND_THEMES: Readonly<Partial<Record<Brand, { readonly dark: string; readonly light: string }>>> = Object.freeze({
-  claude: CLAUDE_BRAND_THEMES,
   codex: CODEX_BRAND_THEMES,
 })
 
@@ -89,7 +79,7 @@ export const BRAND_THEMES: Readonly<Partial<Record<Brand, { readonly dark: strin
  * 没有品牌主题对（用系统默认 light/dark），返回 `undefined`，调用方沿用解析档。
  *
  * 判据是**解析后色板的明暗**（`isLightThemeActive`），不是主题名的字面量：浅色
- * 内置名不止 `light` 一个（`pink-day`、`claude-paper`、`codex-paper`），自定义与
+ * 内置名不止 `light` 一个（`pink-day`、`codex-paper`），自定义与
  * 运行时主题更是任意名字——只认 `'light'` 会让持久化选了 `pink-day` 的用户在品牌
  * 后端下看到深色版。
  * @param brand - 当前品牌档（`resolveBrand` 的结果）。
@@ -106,7 +96,6 @@ export function brandThemeFor(brand: Brand, themeName: ThemeName): string | unde
 export const BRAND_TAGLINE: Readonly<Record<Brand, { readonly zh: string; readonly en: string }>> = Object.freeze({
   deepseek: Object.freeze({ zh: '', en: '' }),
   codex: Object.freeze({ zh: '用 Codex 构建一切', en: 'Build anything with Codex' }),
-  claude: Object.freeze({ zh: '创造精彩，守护关键。', en: "Create what's exciting.\nMaintain what's essential." }),
 })
 
 /** `/settings` 里 `dsh-tui.brand` 的选项（结构与 `SPLASH_FONT_OPTIONS` 同形）。 */
@@ -117,13 +106,12 @@ export const BRAND_SETTING_OPTIONS: readonly {
 }[] = [
   { value: 'auto', label: 'Default (DeepSeek)', descriptions: { zh: '默认（DeepSeek）' } },
   { value: 'deepseek', label: 'DeepSeek (mist blue)', descriptions: { zh: 'DeepSeek（雾蓝）' } },
-  { value: 'claude', label: 'Claude Code (orange)', descriptions: { zh: 'Claude Code（橙）' } },
   { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
 ]
 
 // ── 品牌的运行时镜像（ThemeProvider 在 Chat 外层，拿不到 channel prop） ──────
 // 与 theme.ts 的 autoBase 镜像同一思路：plugin 在首帧渲染前 `setActiveBrand`
-// 铺好初值（避免蓝→橙闪一下），Chat 在品牌变化时跟进更新；
+// 铺好初值（避免蓝→紫闪一下），Chat 在品牌变化时跟进更新；
 // ThemeProvider 用 useSyncExternalStore 订阅，切档即时生效。
 
 let activeBrand: Brand = 'deepseek'

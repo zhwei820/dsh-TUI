@@ -142,7 +142,7 @@ const channel = {
 }
 
 await render(
-  React.createElement(PageMargin, null, React.createElement(Chat, { channel, questionStore: new QuestionStore() })),
+  React.createElement(PageMargin, null, React.createElement(Chat, { channel, questionStore: new QuestionStore(), classicSplash: true /* the idle whale is the classic header */ })),
   { stdout, stdin, stderr, exitOnCtrlC: false, patchConsole: false },
 )
 

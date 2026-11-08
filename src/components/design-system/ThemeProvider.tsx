@@ -289,8 +289,8 @@ export function ThemeProvider({
   }, [active, redetectAutoBase, runtimeThemeSnapshot])
 
   // ── 品牌默认档（branding.ts）───────────────────────────────────────────
-  // Claude 后端（claude 品牌）时把默认主题档替换成 Claude 双主题（claude-dark
-  // / claude-paper，按解析档深浅自动落位）——启动页
+  // codex 品牌时把默认主题档替换成 Codex 双主题（codex-lavender
+  // / codex-paper，按解析档深浅自动落位）——启动页
   // 与对话页跟着后端整体换色。锁定判定（用户表达过明确意愿时不覆盖）：
   // - 显式 `theme` prop / `DSH_TUI_THEME`：锁；
   // - 会话内 `/theme` 手选：锁（setTheme 置位）；
@@ -310,7 +310,7 @@ export function ThemeProvider({
     if (brandThemeLockRef.current) return resolved
     // 品牌双主题按**解析后色板**的深浅落位：浅色（含 `pink-day` 这类浅底内置名、
     // 浅色自定义主题，以及浅色终端下的 `auto`）→ 浅色版，深色 → 深色版——两套
-    // 共用同一强调色，切明暗不丢品牌识别（claude 陶土橙、codex 薰衣草紫）。
+    // 共用同一强调色，切明暗不丢品牌识别（codex 薰衣草紫）。
     return brandThemeFor(brand, resolved) ?? resolved
   })()
   // 模块级镜像必须**在渲染期**写入（不是 effect）：markdown 把主题色烤进

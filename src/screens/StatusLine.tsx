@@ -5,7 +5,6 @@ import { formatTokens } from '../terminal-utils/format.js'
 import { t } from '../i18n.js'
 import { applyPluginFieldsOrder, formatContextUsage, DEFAULT_STATUS_BAR, normalizeStatusBar, type StatusBarConfig } from '../tuiDisplayPrefs.js'
 import { estimateSessionCostSnapshotCny, isDeepSeekOfficialProvider, isPeakHour } from '../deepseekPricing.js'
-import { getActiveBrand } from '../branding.js'
 import { ActivityLine, contextPressurePct, type ActivityLineValue } from '../components/ActivityLine.js'
 import { formatClock } from '../trajectory/format.js'
 import { GoalStatusChip } from '../components/GoalTodoPanel.js'
@@ -221,6 +220,7 @@ export function StatusLine({
   channel,
   selectionActive = false,
   helpOpen = false,
+  promptSuggestion,
   backendMode,
   modelPicker,
   effortPicker,
@@ -231,6 +231,9 @@ export function StatusLine({
   channel: Channel
   selectionActive?: boolean
   helpOpen?: boolean
+  /** The next-turn prompt suggestion (Chat): shown on the hint row as
+   *  `↹ Tab: …` while idle — Tab on an empty input takes it. */
+  promptSuggestion?: string | undefined
   /** Plugin footer fields (`tuiStatus.setField`), already normalized by the
    *  adapter. They join the existing left/right groups in three slots —
    *  `left-tail` (left group's end), `right-head` (right group's start), and
@@ -650,7 +653,7 @@ const selectionBadge = formatSelectionBadge(channel.selection)
     ...inSlot('right-tail'),
   ]
 
-  // Claude Code's under-the-input line: a non-default session mode wins
+  // the under-the-input line: a non-default session mode wins
   // (`⏸ plan mode on (shift+tab to cycle)`), else `? for shortcuts`. While
   // working the interrupt key rides the spinner line (Chat), so this row
   // stays free for selection/hover readouts.
@@ -670,15 +673,22 @@ const selectionBadge = formatSelectionBadge(channel.selection)
   const modeHint = !selectionActive && !channel.working && activeMode !== undefined && channel.minimalUi !== true
     ? t('statusline-hint-mode', { glyph: activeMode.glyph, name: activeMode.name })
     : ''
+  // A fresh prompt suggestion outranks the mode line and `? for shortcuts`:
+  // it is transient (gone on the next keystroke or turn) and actionable.
+  const suggestionHint = !selectionActive && !channel.working && promptSuggestion !== undefined && promptSuggestion !== ''
+    ? t('statusline-hint-suggestion', { text: promptSuggestion })
+    : ''
   const hint = selectionActive
     ? t('statusline-hint-select')
     : channel.working
       ? ''
-      : modeHint !== ''
-        ? modeHint
-        : statusBar.shortcutHint && !helpOpen
-          ? t('statusline-hint-shortcuts')
-          : ''
+      : suggestionHint !== ''
+        ? suggestionHint
+        : modeHint !== ''
+          ? modeHint
+          : statusBar.shortcutHint && !helpOpen
+            ? t('statusline-hint-shortcuts')
+            : ''
   const activity = projectedActivity
   const showActivity =
     statusBar.activity &&
@@ -693,15 +703,13 @@ const selectionBadge = formatSelectionBadge(channel.selection)
   // arithmetic or its right edge falls 2 columns short of the status row's
   // (the v0.8.0 paddingX 2→1 tightening left the old `columns - 4` stale).
   const barWidth = columns - 2
-  // 空段的深色兜底：deepseek 档冷灰、claude 档暖墨（品牌档见 branding.ts）。
+  // 空段的深色兜底：冷灰。
   // 明暗问色板而不是比主题名：浅色主题不一定叫 `light`（pink-day、用户/插件
   // 色板也可以是浅色），只有真彩/ANSI 的深色默认档才需要显式的 free 段色。
   const barColors: { freeFill: Color; freeText: Color } | undefined =
     isLightThemeActive(themeName)
       ? undefined
-      : getActiveBrand() === 'claude'
-        ? { freeFill: '#24221F', freeText: '#B8B2A8' }
-        : { freeFill: '#2E3440', freeText: '#8D95A6' }
+      : { freeFill: '#2E3440', freeText: '#8D95A6' }
   const barVisible =
     statusBar.contextBar &&
     channel.contextBarEnabled &&
@@ -726,7 +734,7 @@ const selectionBadge = formatSelectionBadge(channel.selection)
   const trailer: React.ReactNode = detail !== null
     ? detail
     : hint !== ''
-      ? <Text color={modeHint !== '' && activeMode !== undefined ? activeMode.colour : 'inactiveShimmer'}>{hint}</Text>
+      ? <Text wrap="truncate-end" color={hint === suggestionHint ? 'suggestion' : modeHint !== '' && hint === modeHint && activeMode !== undefined ? activeMode.colour : 'inactiveShimmer'}>{hint}</Text>
       : null
 
   const compactFields = [...leftFields, ...rightFields]

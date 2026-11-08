@@ -1,5 +1,5 @@
 /**
- * Pure model for the transcript subagent card (Claude Code visual language):
+ * Pure model for the transcript subagent card (compact visual language):
  *
  *   ● Agent(description)                 single card, running
  *     ⎿  Read(src/auth.ts)

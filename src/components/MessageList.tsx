@@ -23,6 +23,7 @@ import { getTerminalFlushTick } from '../ink/flush-tick.js'
 import { TurnInterruptedRow } from './TurnInterruptedRow.js'
 import { TurnUsageRow } from './TurnUsageRow.js'
 import { LogoV2 } from './LogoV2.js'
+import { WelcomeBox } from './WelcomeBox.js'
 import type { Brand } from '../branding.js'
 import { StreamingMarkdown } from './StreamingMarkdown.js'
 import { MessageMetadata } from './messages/MessageMetadata.js'
@@ -2233,10 +2234,15 @@ export function LogoHeader({
   onStarClick,
   working = false,
   skipIntro = false,
+  classic = false,
 }: {
   model: string
   effort?: string | undefined
   cwd: string
+  /** Classic DSH splash (pixel whale + wordmark, `LogoV2`) instead of the
+   *  default compact welcome box. Follows the `launchpad` setting:
+   *  turning the launchpad on restores the whole classic start. */
+  classic?: boolean
   /** Big-text face pin (settings `dsh-tui.splashFont`; `undefined` leaves
    *  `LogoV2` on its date rotation). Passed through to LogoV2. */
   fontId?: string | undefined
@@ -2259,6 +2265,7 @@ export function LogoHeader({
   // The minimal UI drops the whole splash (whale art AND wordmark) — only the
   // transcript and a bare status bar remain.
   if (isMinimalUiMode()) return null
+  if (!classic) return <WelcomeBox model={model} effort={effort} cwd={cwd} />
   return (
     <Box flexDirection="column" marginBottom={1}>
       <LogoV2 model={model} effort={effort} cwd={cwd} fontId={fontId} whale={whale} whaleIdle={whaleIdle} whaleGirl={whaleGirl} brand={brand} starred={starred} onStarClick={onStarClick} working={working} skipIntro={skipIntro} />

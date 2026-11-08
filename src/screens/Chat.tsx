@@ -438,6 +438,8 @@ export function Chat({
   renderScene,
   openHomeOnBoot,
   launchpadOnBoot,
+  classicSplash,
+  promptSuggestions,
   onboardingOnBoot,
   starPrompt,
 }: {
@@ -582,6 +584,12 @@ export function Chat({
    * first sentence gets typed, not a tutorial that retires itself.
    */
   launchpadOnBoot?: boolean
+  /** Classic DSH splash (whale + wordmark) over the welcome box; the
+   *  host passes the `launchpad` setting (see LogoHeader). */
+  classicSplash?: boolean
+  /** compact prompt suggestion after each turn (cordis
+   *  `promptSuggestions`, on by default): one side call, Tab to take it. */
+  promptSuggestions?: boolean
   /**
    * Offer the first-run guide as this session's first frame.
    *
@@ -1549,6 +1557,37 @@ export function Chat({
   /** ctrl+r history-search entries (loaded on open, persists). */
   const [historyEntries, setHistoryEntries] = React.useState<readonly HistoryEntry[]>([])
   const [historyFill, setHistoryFill] = React.useState<string | null>(null)
+  // Prompt suggestion: when a turn settles, one side call
+  // proposes the user's likely next message — shown under the input, taken
+  // with Tab on an empty input. Pure UI state; a new turn or typing drops it.
+  const [promptSuggestion, setPromptSuggestion] = React.useState<string | undefined>(undefined)
+  const suggestAbortRef = React.useRef<AbortController | null>(null)
+  const wasWorkingRef = React.useRef(channel.working)
+  React.useEffect(() => {
+    const was = wasWorkingRef.current
+    wasWorkingRef.current = channel.working
+    if (channel.working) {
+      suggestAbortRef.current?.abort()
+      suggestAbortRef.current = null
+      setPromptSuggestion(undefined)
+      return
+    }
+    if (!was || promptSuggestions === false || typeof channel.suggestNextPrompt !== 'function') return
+    const controller = new AbortController()
+    suggestAbortRef.current?.abort()
+    suggestAbortRef.current = controller
+    void channel.suggestNextPrompt({ signal: controller.signal })
+      .then(text => {
+        if (!controller.signal.aborted && suggestAbortRef.current === controller) setPromptSuggestion(text)
+      })
+      .catch(() => {})
+  }, [channel, channel.working, promptSuggestions])
+  React.useEffect(() => () => { suggestAbortRef.current?.abort() }, [])
+  const dropPromptSuggestion = React.useCallback(() => {
+    suggestAbortRef.current?.abort()
+    suggestAbortRef.current = null
+    setPromptSuggestion(undefined)
+  }, [])
   /** Monotonic token: only the latest rewind decision may land (a slow
    *  plugin answering after the user moved on must not open a confirm for
    *  a row they are no longer looking at). */
@@ -5935,7 +5974,7 @@ export function Chat({
   // draws the user's `/activity` preset, so the compaction row borrows the same
   // indicator instead of answering with the classic dot.
   const activitySlot = channel.activityEnabled && !channel.minimalUi
-  // Claude Code keeps the interrupt key on the working line itself; an
+  // The interrupt key rides the working line itself; an
   // interrupt already requested says so instead of promising a dead key.
   const interruptHint = t(channel.cancelPending ? 'statusline-hint-interrupting' : 'statusline-hint-working')
 
@@ -7120,6 +7159,7 @@ export function Chat({
           // A remount after a whole screen closed also settles instantly
           // (see suppressLogoIntroRef).
           skipIntro={suppressLogoIntroRef.current || channel.rows.length > 30}
+          classic={classicSplash === true}
         />
         {/* The startup loaded-context panel: before the first message the
             transcript is empty, so the inventory of what this conversation
@@ -7413,6 +7453,8 @@ export function Chat({
           selectionActive={promptSelectionActive}
           fillText={historyFill}
           onFillConsumed={() => setHistoryFill(null)}
+          promptSuggestion={promptSuggestion}
+          onPromptSuggestionUsed={dropPromptSuggestion}
           onRewindRequest={openRewind}
           onBackgroundRequest={backgroundToAgentView}
           // The 🏠 at the head of the input row opens the same session screen
@@ -7446,6 +7488,7 @@ export function Chat({
         />
         <StatusLine
           channel={channel}
+          promptSuggestion={promptSuggestion}
           activity={workingActivity}
           selectionActive={selectionActive}
           helpOpen={helpOpen}

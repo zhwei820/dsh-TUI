@@ -27,7 +27,6 @@ export const IGNITION_TIMELINE = {
 import { parseRGB, type RGBColor } from '../components/Spinner/spinnerUtils.js'
 import { getTheme, isLightThemeActive, type ThemeName } from '../theme.js'
 import { rgbString } from './motion.js'
-import { getActiveBrand } from '../branding.js'
 
 /** 扫光全长（ms），仅用于把墙钟时间折算成动画秒数，不创建任何定时器。 */
 export const SWEEP_TOTAL_MS = 1000
@@ -60,20 +59,6 @@ const FALLBACK_LIGHT: IgnitionColors = {
   ignitionDim: { r: 240, g: 240, b: 242 },
 }
 
-/**
- * claude 品牌（cc 内核 / cc-bridge 调校）的兜底对：暖橙系，浅底取更深的橙
- * ——亮橙在浅底上没有对比度；暗底带色取暖褐。品牌在档时接管点火取色
- * （见 {@link ignitionColors}），与 `usedSegmentColor` 同一口径。
- */
-const FALLBACK_DARK_CLAUDE: IgnitionColors = {
-  ignition: { r: 232, g: 145, b: 63 },
-  ignitionDim: { r: 38, g: 30, b: 22 },
-}
-const FALLBACK_LIGHT_CLAUDE: IgnitionColors = {
-  ignition: { r: 196, g: 96, b: 20 },
-  ignitionDim: { r: 240, g: 240, b: 242 },
-}
-
 /** 匹配 `#rgb` / `#rrggbb` / `#rrggbbaa`（`customTheme` 的 `HEX_RE` 接受的全部 hex 形式）。 */
 const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
@@ -103,13 +88,10 @@ function parseThemeColor(color: string | undefined): RGBColor | null {
 /**
  * The active palette's ignition pair. A palette without the keys keeps the
  * pre-theme pair for its background lightness, so light/dark still differ.
- * 品牌在档时品牌对直接接管（与 `usedSegmentColor` 同一口径：切后端整屏换色，
- * 与当前主题声明了什么无关）。
  * @param themeName - Theme to resolve (built-in, `auto`, or user theme name).
  */
 export function ignitionColors(themeName: ThemeName): IgnitionColors {
   const onLight = isLightThemeActive(themeName)
-  if (getActiveBrand() === 'claude') return onLight ? FALLBACK_LIGHT_CLAUDE : FALLBACK_DARK_CLAUDE
   const theme = getTheme(themeName)
   const fallback = onLight ? FALLBACK_LIGHT : FALLBACK_DARK
   return {

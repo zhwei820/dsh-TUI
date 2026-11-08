@@ -4,7 +4,7 @@ import { getLang, subscribeLang, t } from '../i18n.js'
 
 /**
  * The dim "interrupted" row shown when the user stops a turn, hung under the
- * `⎿` gutter like Claude Code's `⎿  Interrupted · What should … do instead?`.
+ * `⎿` gutter like the `⎿  Interrupted · What should … do instead?`.
  */
 export function TurnInterruptedRow({ backendLabel }: { backendLabel?: string } = {}): React.ReactNode {
   React.useSyncExternalStore(subscribeLang, getLang)

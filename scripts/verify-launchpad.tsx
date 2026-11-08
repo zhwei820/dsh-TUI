@@ -640,7 +640,7 @@ check('A7 输入框前缀是 ❯（行首不是 /）', await settled(() => base.
 base.close()
 
 // Shadow 品牌词比默认词对窄：预算必须跟着实际大字走，否则少算十行、吞掉输入。
-for (const brand of ['claude', 'codex'] as const) {
+for (const brand of ['codex'] as const) {
   for (const fullscreen of [true, false]) {
     const query = 'SHADOW-INPUT-PROBE'
     const probe = await openLaunchpad([], {
@@ -1124,7 +1124,7 @@ for (const columns of [120, 48]) {
       && resolveSplashArtForm({ brand: 'deepseek', whaleGirl: false, mascotSkin: 'whaleGirl' }) === 'mascot'
       && resolveSplashArtForm({ brand: 'deepseek', whaleGirl: false, mascotSkin: 'whale' }) === 'whale'
       && resolveSplashArtForm({ brand: 'deepseek', whaleGirl: true, mascotSkin: undefined }) === 'portrait'
-      && resolveSplashArtForm({ brand: 'claude', whaleGirl: false, mascotSkin: undefined }) === 'portrait'
+      && resolveSplashArtForm({ brand: 'codex', whaleGirl: false, mascotSkin: undefined }) === 'portrait'
       && resolveSplashArtForm({ brand: undefined, whaleGirl: false, mascotSkin: undefined }) === 'whale')
   const budget = (artRows: number, cornerRows: number, rows: number) =>
     resolveLaunchpadLayout(COLS, rows, { whale: true, font: FONT, params: true, artRows, cornerRows })
@@ -2457,7 +2457,7 @@ const PALETTE_COMMANDS: readonly CommandCompletion[] = [
 ]
 
 async function checkPaletteCardGeometry(columns: number, label: string): Promise<void> {
-  // Borderless list (Claude Code style): the palette is N contiguous rows
+  // Borderless list: the palette is N contiguous rows
   // straight above the input box, no frame and no title row. Geometry is
   // pinned against the input box's own frame instead.
   const ev: Ev[] = []
@@ -2477,7 +2477,7 @@ async function checkPaletteCardGeometry(columns: number, label: string): Promise
   // Rows close inside the box's right edge with ≥1 column to spare (the
   // old right `│` slot): crowding = content overflow (flex shrink → ghost row).
   const crowded = card.filter(line => stringWidth(line.trimEnd()) > boxRight - 1)
-  check(`PK1@${columns} ${label}：无边框、无标题行（Claude Code 列表）`,
+  check(`PK1@${columns} ${label}：无边框、无标题行（简洁列表）`,
     !lines.some(line => line.includes('╭─ 命令')) && card.length > 0 && !card.some(line => line.includes('│')),
     JSON.stringify(card))
   check(`PK2@${columns} ${label}：列表紧贴输入框（最后一行下一行就是输入框顶边）`,

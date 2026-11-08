@@ -181,7 +181,7 @@ const instance = await render(
   <Chat fullscreen channel={channel} questionStore={new QuestionStore()} approvalStore={new ApprovalStore()} />,
   { stdout: new FakeStdout(), stdin, stderr: new FakeStderr(), exitOnCtrlC: false, patchConsole: false },
 )
-await settle(() => screenText().includes('Explore the uncharted'))
+await settle(() => screenText().includes('Welcome to dsh-TUI'))
 
 // 1. /settings opens the screen with the section and its seeded values.
 // The Enter that follows needs the slash-completion overlay to be key-ready,
@@ -241,7 +241,7 @@ assert(settingsHostCalls - quietCalls < 50, 'idle screen settles (no render loop
 // pre-existing
 // renderer behavior, not this screen's doing).
 stdin.write('\x1b')
-assert(await settled(() => screenText().includes('Explore the uncharted')), 'Esc leaves the settings screen directly')
+assert(await settled(() => screenText().includes('Welcome to dsh-TUI')), 'Esc leaves the settings screen directly')
 assert(!screenText().includes('Discarded'), 'auto-save leaves nothing to discard')
 assert(mutations.length === 2, 'exiting wrote nothing extra')
 

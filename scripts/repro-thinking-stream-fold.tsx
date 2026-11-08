@@ -1,7 +1,7 @@
 /**
  * repro-thinking-stream-fold — 流式 thinking 行折叠/全文切换回归。
  *
- * Claude Code 视觉：thinkingFold=preview 时流式思考只显示一行标题（星形
+ * 简洁视觉：thinkingFold=preview 时流式思考只显示一行标题（星形
  * 闪烁 + 思考…），点击展开全文，再点收回到标题行；头行始终可见。
  *
  * 场景：fullscreen Chat + streaming reasoning 行（thinkingFold=preview），

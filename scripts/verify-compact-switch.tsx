@@ -309,7 +309,7 @@ const toasts = (channel: { notifications: readonly { text: string }[] }) =>
 {
   const { order, compaction, channel } = assemble({ kind: 'resolve' })
   channel.compact()
-  const done = await settle(() => channel.notifications.some(item => item.text.includes('已压缩')))
+  const done = await settle(() => channel.notifications.some(item => item.text.includes('压缩完成')))
   check('scene7: compaction completed', done, toasts(channel))
   const switchResult = await channel.switchModel('fake-provider', 'model-b')
   check('scene7: switch succeeds', switchResult === true, JSON.stringify(order))

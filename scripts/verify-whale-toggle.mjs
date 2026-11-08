@@ -103,7 +103,9 @@ const WHALE_OUTLINE = '\x1b[38;2;20;38;96m'
 async function renderHeader({ columns, whale, ready, expect }) {
   const stdout = new FakeOutput(columns)
   const stderr = new FakeOutput(columns)
-  const props = { model: 'whale-model-probe', cwd: '/whale/cwd' }
+  // classic: the whale header is the classic splash (the default is the
+  // compact welcome box; `launchpad` on restores this path).
+  const props = { model: 'whale-model-probe', cwd: '/whale/cwd', classic: true }
   if (whale !== undefined) props.whale = whale
   const instance = await render(
     React.createElement(

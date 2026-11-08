@@ -25,6 +25,7 @@ import TuiSettingsSectionsRuntime, { getHostSettingsSections, getLocalSettingsSe
 import { ALL_SIDE_PANELS, DEFAULT_PAGE_MARGIN, DEFAULT_STATUS_BAR, SIDE_PANEL_ID_PATTERN, isTemporarySidePanelId, isPageMarginMode, normalizePageMargin, normalizePluginFieldsOrder, normalizeSidePanelPanels, parsePageMarginSpec, parsePluginFieldsOrder, parseSidePanelPanels } from '../src/tuiDisplayPrefs.ts'
 import { SPLASH_FONTS, SPLASH_FONT_OPTIONS, normalizeSplashFont } from '../src/components/splashFonts.ts'
 import { normalizeBrandSetting } from '../src/branding.ts'
+import { normalizeThinkingLanguage } from '../src/dsh-adapter/thinking-language.ts'
 import { getLang, isLang } from '../src/i18n.ts'
 import { SHORTCUT_ACTIONS, setKeymapOverrides, resetKeymapOverrides, effectiveComboString, parseComboDraft, draftComboConflicts } from '../src/utils/keymap.ts'
 import { SETTING_GROUPS, SHORTCUT_FIELD_META, settingField } from '../src/settings/definitions.ts'
@@ -291,6 +292,8 @@ if (modernSchema) for (const registry of ['service', 'local']) for (const entryI
       // Plugin footer field list (statusBar.pluginFieldsOrder): its parse and
       // format callbacks validate/canonicalize through these two helpers.
       parsePluginFieldsOrder, normalizePluginFieldsOrder,
+      // thinkingLanguage's format shows the effective cordis.yml value.
+      normalizeThinkingLanguage,
       bootedFullscreen: true, terminalImagesDisabledByEnv: false,
       readEffortPref: () => undefined, // Do not read the developer's persisted preferences.
     })
@@ -365,7 +368,7 @@ if (modernSchema) for (const registry of ['service', 'local']) for (const entryI
     // 份；漏声明时那一行永远只显示「（未设置）」）。
     const costField = section.fields.find(field => field.path.length === 2 && field.path[0] === 'statusBar' && field.path[1] === 'cost')
     assert.ok(costField, `${registry}: the production section exposes statusBar.cost`)
-    assert.equal(form.field(costField).text, 'true', 'unset statusBar.cost shows the effective on')
+    assert.equal(form.field(costField).text, 'false', 'unset statusBar.cost shows the effective default (off in the quiet footer)')
     // sidePanel.panels（issue #1662）：Config 默认值就是 `*`，未设置时生产 format
     // 也给出 `*`（勾选器据此显示「全部已注册面板」）；`*` 可保存、`*,todo` 被拒绝、
     // 空串仍是 clear。

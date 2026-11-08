@@ -132,7 +132,7 @@ async function renderHeader({ columns = 120, fontId, ready }) {
   const stdout = new FakeOutput(columns)
   const stderr = new FakeOutput(columns)
   // 关掉鲸鱼：本脚本测的是大字字面，鲸鱼的半块字符会掩盖"哪款字体上屏"的断言。
-  const props = { model: 'splash-font-probe', cwd: '/splash/cwd', whale: false, whaleIdle: false, skipIntro: true }
+  const props = { model: 'splash-font-probe', cwd: '/splash/cwd', whale: false, whaleIdle: false, skipIntro: true, classic: true }
   if (fontId !== undefined) props.fontId = fontId
   const instance = await render(
     React.createElement(

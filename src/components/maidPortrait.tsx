@@ -31,18 +31,9 @@ export const MAID_ASSETS: PortraitAssets = {
   happy: 'whale-girl-happy.png',
 }
 
-/** Claude 娘（claude 品牌，见 `branding.ts`）：取自 cc-bridge 的开发期占位
- * 素材（1024×1024 透明底×2）。授权注记：那边的 assets/README 标注授权未
- * 确认——本仓库自用没问题，再分发前需确认或替换。 */
-export const CLAUDE_GIRL_ASSETS: PortraitAssets = {
-  dir: 'claude-girl',
-  normal: 'claude-girl.png',
-  happy: 'claude-girl-happy.png',
-}
-
 /** 恶魔精灵（codex 品牌，见 `branding.ts`）：用户提供的淡紫像素立绘 ×2
  * （628×628 透明底，Lanczos 自 1254² 重采样）——常态 = 淡紫恶魔精灵头像，
- * 点击后切「按下红色按钮的紫月龙裔少女」几秒（与鲸鱼娘/claude 娘同一套
+ * 点击后切「按下红色按钮的紫月龙裔少女」几秒（与鲸鱼娘同一套
  * reactMaid 交互）。 */
 export const CODEX_GIRL_ASSETS: PortraitAssets = {
   dir: 'codex-girl',
@@ -51,8 +42,8 @@ export const CODEX_GIRL_ASSETS: PortraitAssets = {
 }
 
 /** 品牌档 → 立绘资产集（LogoV2 的立绘槽选这一份；deepseek 走鲸鱼娘）。 */
-export function portraitAssetsOf(brand: 'deepseek' | 'claude' | 'codex'): PortraitAssets {
-  return brand === 'claude' ? CLAUDE_GIRL_ASSETS : brand === 'codex' ? CODEX_GIRL_ASSETS : MAID_ASSETS
+export function portraitAssetsOf(brand: 'deepseek' | 'codex'): PortraitAssets {
+  return brand === 'codex' ? CODEX_GIRL_ASSETS : MAID_ASSETS
 }
 
 /** 一台机器上的两张立绘都解好、并补齐到**同一像素画布**上——几何完全一致，
@@ -76,7 +67,7 @@ const loadCache = new Map<string, Promise<MaidPortraits | undefined>>()
  * 同一张透明画布**（取两者较大的宽高）——所以它们的像素尺寸与单元格盒
  * 完全一致。资产候选同时覆盖两种目录深度：`lib/types/components`（发布
  * 形态）比 `src/components`（仓库形态）深一层。
- * @param assets - 资产集（默认鲸鱼娘；claude 品牌传 `CLAUDE_GIRL_ASSETS`）。
+ * @param assets - 资产集（默认鲸鱼娘；品牌档见 `portraitAssetsOf`）。
  * @returns 两张 RGBA 源；任一张缺失/解码失败时整体 `undefined`。
  */
 export function loadMaidPortraits(assets: PortraitAssets = MAID_ASSETS): Promise<MaidPortraits | undefined> {
@@ -171,7 +162,7 @@ function trimTransparent(source: TerminalImageSource, pad = 4): TerminalImageSou
 /**
  * 两张立绘，终端图像能力确认后解码（一次把两张都备好，点击换图不等待）。
  * @param enabled - `useTerminalImages()` 的结果；为假时根本不解码。
- * @param assets - 资产集（默认鲸鱼娘；claude 品牌传 `CLAUDE_GIRL_ASSETS`）。
+ * @param assets - 资产集（默认鲸鱼娘；品牌档见 `portraitAssetsOf`）。
  * @returns 两张 RGBA 源；未就绪/不可用时为 `undefined`。
  */
 export function useMaidPortraits(enabled: boolean, assets: PortraitAssets = MAID_ASSETS): MaidPortraits | undefined {

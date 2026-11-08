@@ -290,7 +290,7 @@ console.log('--- B: MessageList integration ---')
 // ---------------------------------------------------------------------------
 console.log('--- C: component contracts ---')
 
-// C1: the folded streaming row is one header line (Claude Code style — no
+// C1: the folded streaming row is one header line (no
 // text ticker to lag behind the reveal); the expanded body paints the slice.
 {
   resetRevealForTest()

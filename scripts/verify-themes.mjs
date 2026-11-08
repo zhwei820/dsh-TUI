@@ -182,7 +182,7 @@ check('palette: every built-in covers the full Theme contract', () => {
       // The three slots upstream deliberately keeps empty: the user turn gets no
       // fill, only its label color; an empty caret means the inverse-video block
       // (a theme only declares `cursor` to split the caret off it); an empty
-      // input background is the claude brand pair's transparent prompt box —
+      // input background is the codex brand pair's transparent prompt box —
       // the terminal background shows through there by design.
       if (key === 'userMessageBackground' || key === 'cursor' || key === 'inputBackground') continue
       assert.ok(typeof value === 'string' && value !== '', `${name}.${key} is empty`)
@@ -641,8 +641,6 @@ check('catalog: every built-in reports the base role it borrows', () => {
       'pink-night': 'dark',
       'pink-ansi': 'dark-ansi',
       'pink-day': 'light',
-      'claude-dark': 'dark',
-      'claude-paper': 'light',
       'codex-lavender': 'dark',
       'codex-paper': 'light',
     },
@@ -659,16 +657,14 @@ const { BRAND_THEMES, brandThemeFor } = await import('../src/branding.js')
 const brandPairOf = {
   light: 'light',
   'pink-day': 'light',
-  'claude-paper': 'light',
   'codex-paper': 'light',
   dark: 'dark',
   'dark-ansi': 'dark',
   'pink-night': 'dark',
   'pink-ansi': 'dark',
-  'claude-dark': 'dark',
   'codex-lavender': 'dark',
 }
-for (const brand of ['claude', 'codex']) {
+for (const brand of ['codex']) {
   check(`brand: ${brand} places a theme by its resolved palette, not its name`, () => {
     assert.deepEqual(
       Object.fromEntries(THEME_NAMES.map(name => [name, brandThemeFor(brand, name)])),
@@ -686,11 +682,11 @@ check('brand: a brand pair follows the base auto currently resolves to', () => {
   const previous = getAutoThemeBase()
   try {
     setAutoThemeBase('light')
-    for (const brand of ['claude', 'codex']) {
+    for (const brand of ['codex']) {
       assert.equal(brandThemeFor(brand, AUTO_THEME_NAME), BRAND_THEMES[brand].light)
     }
     setAutoThemeBase('dark')
-    for (const brand of ['claude', 'codex']) {
+    for (const brand of ['codex']) {
       assert.equal(brandThemeFor(brand, AUTO_THEME_NAME), BRAND_THEMES[brand].dark)
     }
   } finally {

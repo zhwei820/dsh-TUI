@@ -104,7 +104,7 @@ function bodyRows(subagent: SubagentRow, expanded: boolean, first: string, rest:
   )
   // Expanded (Ctrl+O) windows drop the OLDEST calls, so the count line goes
   // first; collapsed cards show the recent few with the count after them
-  // (`subagent-more-tool-uses` + `hint-expand-ctrl-o`, Claude Code's order).
+  // (`subagent-more-tool-uses` + `hint-expand-ctrl-o`, the order).
   if (expanded && hidden > 0) rows.push(more())
   for (const tool of tools) {
     rows.push(<BodyRow key={`t${rows.length}`} prefix={prefix()}><ToolCallText tool={tool} /></BodyRow>)
@@ -151,7 +151,7 @@ function OpenViewGlyph({ onOpenView }: { onOpenView: () => void }): React.ReactN
 }
 
 /**
- * Transcript subagent card in the Claude Code visual language (layout and
+ * Transcript subagent card in the compact visual language (layout and
  * line budget: `subagentCardModel.ts`). A lone delegation renders as a tool
  * card — `● Agent(description)` with its recent tool calls under the `⎿`
  * gutter and a `Done (… tool uses · … tokens · …)` line once settled. A

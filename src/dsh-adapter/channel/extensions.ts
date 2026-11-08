@@ -828,6 +828,7 @@ export function attachDshExtensions(
     renameSession: sessionMetadataActions.renameSession,
     setSessionColor: sessionMetadataActions.setSessionColor,
     recapRecent: sessionMetadataActions.recapRecent,
+    suggestNextPrompt: sessionMetadataActions.suggestNextPrompt,
     deleteSession: sessionMetadataActions.deleteSession,
     renameSessionTo: sessionMetadataActions.renameSessionTo,
     compact: manualCompaction.compact,

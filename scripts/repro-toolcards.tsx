@@ -128,7 +128,7 @@ function show(key: string, tool: Record<string, unknown>, options: CardOptions =
 
 // 1. Settled Edit: diff body, red `- ` / green `+ ` lines under the ⎿ gutter.
 check('编辑卡片标题为「Edit /tmp/a.ts」（非 JSON args）', await settled(() => screen().includes('Edit /tmp/a.ts') && !screen().includes('{"file_path"')))
-// The ⎿ gutter now leads with Claude Code's change summary; the +/- rows
+// The ⎿ gutter now leads with the change summary; the +/- rows
 // hang under it on the continuation gutter.
 check('⎿ 首行是增删摘要', await settled(() => lines().some(line => line.startsWith(' ⎿ Updated with 1 addition and 1 removal'))))
 check('删除行挂在续行缩进下', await settled(() => { const r = rowOf('- const a = 1'); return r >= 0 && lines()[r]!.startsWith('   - const a = 1') }))

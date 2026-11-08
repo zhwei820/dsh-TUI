@@ -215,6 +215,8 @@ function makeChannel() {
   }
   const channel = {
     whaleIdle: false,
+    // Prompt chrome on: the composer locator keys off the ⛶ glyph.
+    promptSessionLabel: true,
     version: 0,
     // Keep dashboard and fold markers outside the composer, so whole-screen
     // matches cannot report a draft edit before its own row has rendered.
@@ -565,7 +567,8 @@ async function runCommand(scenario: string, app: Harness, command: string): Prom
   await waitFor(
     scenario,
     `command completion card to own Enter for ${command}`,
-    () => screenHas(app, '命令 · 共') && screenHas(app, `❯ ${command.slice(1)}`),
+    // Borderless list (no `命令 · 共 N 项` title): the selected row is the anchor.
+    () => screenHas(app, `❯ ${command.slice(1)} `),
   )
   app.stdin.write('\r')
 }

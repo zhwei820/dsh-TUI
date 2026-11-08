@@ -146,6 +146,13 @@ export interface Config {
    *  system-prompt section: `off` (default) adds nothing; `zh` / `en` add
    *  the instruction. DSH backend only. Editable live from `/settings`. */
   thinkingLanguage?: 'off' | 'zh' | 'en'
+  /** Ask the model to state its rough plan and key decisions in the visible
+   *  reply (thinking is folded and there is no todo panel). On by default;
+   *  `false` adds nothing to the prompt. DSH backend only. */
+  decisionNotes?: boolean
+  /** compact prompt suggestion after each turn (one tool-less
+   *  side call; Tab on an empty input takes it). On by default. */
+  promptSuggestions?: boolean
   /** Grouping/folding of consecutive background-job cards: `auto` (default)
    *  groups any run of ≥2 adjacent job cards and folds a run of 3+ into its
    *  summary line once every member settled; `always` folds any run of 2+
@@ -343,7 +350,7 @@ export const Config: Schema<Config, RuntimeConfig<Config>> = editableConfig<Conf
   minimal: Schema.boolean().default(false),
   // No `.default()` on purpose (same rule as launchpad): unset keeps the
   // activity FEED on (idle summary, trajectory) while the working line stays
-  // the classic spinner (Claude Code style); only an explicit `true` swaps
+  // the classic spinner; only an explicit `true` swaps
   // the plugin's live line into the spinner slot, `false` detaches both.
   activity: Schema.boolean().required(false),
   activityFrames: Schema.string().required(false),
@@ -352,14 +359,16 @@ export const Config: Schema<Config, RuntimeConfig<Config>> = editableConfig<Conf
   terminalImages: Schema.boolean().default(true),
   // No `.default()` on purpose (same rule as recapOnOpen): an unset key must
   // stay distinguishable from an explicit `false`, and the boot reads
-  // undefined as on (`config.launchpad !== false`).
+  // undefined as OFF (`config.launchpad === true`; compact start).
   launchpad: Schema.boolean(),
   lang: Schema.string().required(false),
   preset: Schema.string().required(false),
-  // Unified by default (Claude Code style); `auto`/`split` stay selectable.
+  // Unified by default; `auto`/`split` stay selectable.
   diffLayout: Schema.union(['auto', 'split', 'unified']).default('unified'),
   thinkingFold: Schema.union(['preview', 'full']).default('preview'),
   thinkingLanguage: Schema.union(['off', 'zh', 'en']).default('off'),
+  decisionNotes: Schema.boolean().default(true),
+  promptSuggestions: Schema.boolean().default(true),
   jobGroupFold: Schema.union(['auto', 'always', 'never']).default('auto'),
   toolBackground: Schema.union(['none', 'subtle', 'strong']).default('none'),
   scrollGutter: Schema.union(['timeline', 'scrollbar', 'hidden']).default('timeline'),

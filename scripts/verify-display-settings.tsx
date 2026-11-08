@@ -323,9 +323,9 @@ check('compact StatusLine renders the enabled shortcuts hint exactly once', () =
   assert.equal((compactWithShortcutHint.match(/\? for shortcuts/g) ?? []).length, 1)
 })
 
-// The shipped defaults: Claude Code's quiet footer.
+// The shipped defaults: the quiet footer.
 const quiet = await renderStatus({ statusBar: { ...DEFAULT_STATUS_BAR } })
-check('default StatusLine is the quiet Claude Code footer', () => {
+check('default StatusLine is the quiet footer', () => {
   assert.ok(quiet.includes('ctx 77% (206k/266k)'), `missing context readout in:\n${quiet}`)
   assert.equal((quiet.match(/\? for shortcuts/g) ?? []).length, 1, `missing shortcut hint in:\n${quiet}`)
   for (const marker of ['display-model-probe', 'display-project', 'cache 2.4%', '77.4%']) {
@@ -362,7 +362,7 @@ check('goal chip respects the statusBar.goal switch', () => {
 })
 
 const working = await renderStatus({ working: true })
-// The interrupt key rides the spinner line now (Claude Code placement), so
+// The interrupt key rides the spinner line now (its default placement), so
 // the status row must not repeat it.
 check('working StatusLine leaves the Esc interrupt hint to the spinner line', () => {
   assert.equal((working.match(/esc to interrupt/g) ?? []).length, 0)

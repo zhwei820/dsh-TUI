@@ -1,9 +1,9 @@
 /**
  * AssistantThinkingMessage live-preview height regression.
  *
- * The preview body is a fixed three-row Yoga box. Render at a narrow, fixed
- * width and verify that the following sentinel remains four rows below the
- * thinking header (one header row plus three body rows).
+ * The folded (preview) streaming row is the header line alone. Render at a
+ * narrow, fixed width and verify that the following sentinel sits directly
+ * below the thinking header, whatever the reasoning length.
  *
  * Run: node --import tsx/esm scripts/verify-thinking-preview.tsx
  */
@@ -21,7 +21,7 @@ const [{ Writable }, React, { Terminal: XTerm }, { render, Box, Text }, { Assist
 
 const COLS = 32
 const ROWS = 12
-const EXPECTED_HEADER_TO_SENTINEL = 4
+const EXPECTED_HEADER_TO_SENTINEL = 1
 
 const cases = [
   ['short thinking', 'brief'],
@@ -69,7 +69,7 @@ async function renderCase(thinking: string): Promise<string[]> {
 
 for (const [name, thinking] of cases) {
   const lines = await renderCase(thinking)
-  const header = lines.findIndex(line => line.includes('Thinking'))
+  const header = lines.findIndex(line => /Thinking|Thought/.test(line))
   const sentinel = lines.findIndex(line => line.includes('preview-sentinel'))
   const distance = sentinel - header
   if (header < 0 || sentinel < 0 || distance !== EXPECTED_HEADER_TO_SENTINEL) {

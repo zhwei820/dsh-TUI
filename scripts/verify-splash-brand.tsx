@@ -1,16 +1,15 @@
 /**
- * claude 品牌档（Claude 后端）契约，见 `src/branding.ts`：
- * ① 信号解析：backendId（'claude' → claude，'dsh'/空/acp:* → deepseek）；
- *    设置项合成（env > 显式锁定 > auto 跟后端）；归一化（垃圾 → auto）；
- * ② 词表：deepseek = DEEPSEEK/HARNESS/'DeepSeek Harness'，claude = CLAUDE/CODE/'Claude Code'；
- * ③ 内置 `claude` 主题：关键锚点色（品牌橙/暖褐衬底/语义色不动）、进 THEME_NAMES、
- *    与 `dark` 是两套身份；ThemeProvider 的品牌默认档：prop/env 显式与
- *    `/theme` 手选锁定，**启动持久化偏好不锁定**（切品牌联动要能压过历史
- *    的 theme.json）；
- * ④ LogoV2 品牌分支：挂真组件读屏——CLAUDE/CODE 两行上屏（deepseek 档照旧
- *    DEEPSEEK/HARNESS）、Claude 娘字符画在**不看 whaleGirl 设置**的情况下占住
- *    立绘槽（协议不可用时的回落路径）、彩蛋日上排钉 CLAUDE、窄终端纯文字档
- *    是 'Claude Code'；
+ * 品牌档契约，见 `src/branding.ts`：
+ * ① 信号解析：设置项合成（env > 显式锁定 > auto = deepseek）；归一化（垃圾与
+ *    已移除的 `claude` → auto）；
+ * ② 词表：deepseek = DEEPSEEK/HARNESS/'DeepSeek Harness'，codex = CODEX/HARNESS/'Codex'；
+ * ③ codex 双主题：关键锚点色、进 THEME_NAMES、与 `dark` 是两套身份；已移除的
+ *    `claude-dark`/`claude-paper` 不再是内置主题；ThemeProvider 的品牌默认档：
+ *    prop/env 显式与 `/theme` 手选锁定，**启动持久化偏好不锁定**（切品牌联动
+ *    要能压过历史的 theme.json）；
+ * ④ LogoV2 品牌分支：挂真组件读屏——CODEX/HARNESS 两行上屏（deepseek 档照旧
+ *    DEEPSEEK/HARNESS）、彩蛋日上排钉 CODEX、窄终端纯文字档是 'Codex'、启动页
+ *    形态整块居中；
  * ⑤ bevel 的静态灰阶已拆除（配色随主题派生——修复"灰色字体"）。
  * Run: node --import tsx/esm scripts/verify-splash-brand.tsx
  */
@@ -37,7 +36,6 @@ const [
   { LogoV2 },
   { paintedWidth, renderBigText },
   { splashFontById, withTagline, SPLASH_FONTS },
-  { CLAUDE_GIRL_ROWS },
   { renderToScreen },
   { cellAt },
   { TerminalSizeContext },
@@ -51,7 +49,6 @@ const [
   import('../src/components/LogoV2.js'),
   import('../src/components/bigfont.js'),
   import('../src/components/splashFonts.js'),
-  import('../src/components/ClaudeGirl.js'),
   import('../src/ink/render-to-screen.js'),
   import('../src/ink/screen.js'),
   import('../src/ink/components/TerminalSizeContext.js'),
@@ -73,55 +70,29 @@ const check = (name: string, ok: boolean, detail = ''): void => {
 check('Codex is an explicit brand setting (lavender tier)', normalizeBrandSetting('codex') === 'codex' && BRAND_SETTING_VALUES.includes('codex'))
 check('Codex title words, without a new font', BRAND_SPLASH_WORDS.codex.top === 'CODEX' && BRAND_SPLASH_WORDS.codex.bottom === 'HARNESS' && BRAND_SPLASH_WORDS.codex.plain === 'Codex' && SPLASH_FONTS.every(font => font.glyphs.X.length === 5 && font.glyphs.X.every(row => row.length === font.glyphWidth)))
 check('resolveBrand：auto / 未设置 = deepseek（不再随后端切换）', resolveBrand('auto') === 'deepseek' && resolveBrand(undefined) === 'deepseek')
-check('resolveBrand：显式锁定生效', resolveBrand('deepseek') === 'deepseek' && resolveBrand('claude') === 'claude' && resolveBrand('codex') === 'codex')
+check('resolveBrand：显式锁定生效', resolveBrand('deepseek') === 'deepseek' && resolveBrand('codex') === 'codex')
+check('已移除的 claude 品牌：旧设置值归一化为 auto、不再是合法值',
+  normalizeBrandSetting('claude') === 'auto' && !(BRAND_SETTING_VALUES as readonly string[]).includes('claude') && resolveBrand('claude' as never) === 'deepseek')
 check('normalizeBrandSetting：合法值透传、垃圾回落 auto',
   BRAND_SETTING_VALUES.every(v => normalizeBrandSetting(v) === v) && normalizeBrandSetting('junk') === 'auto' && normalizeBrandSetting(undefined) === 'auto' && normalizeBrandSetting(42) === 'auto')
 try {
-  process.env.DSH_TUI_BRAND = 'claude'
-  check('DSH_TUI_BRAND=claude 强制生效（显式 deepseek 也被覆盖）', resolveBrand('deepseek') === 'claude')
+  process.env.DSH_TUI_BRAND = 'codex'
+  check('DSH_TUI_BRAND=codex 强制生效（显式 deepseek 也被覆盖）', resolveBrand('deepseek') === 'codex')
   process.env.DSH_TUI_BRAND = 'deepseek'
-  check('DSH_TUI_BRAND=deepseek 强制生效（显式 claude 也被覆盖）', resolveBrand('claude') === 'deepseek')
+  check('DSH_TUI_BRAND=deepseek 强制生效（显式 codex 也被覆盖）', resolveBrand('codex') === 'deepseek')
+  process.env.DSH_TUI_BRAND = 'claude'
+  check('DSH_TUI_BRAND=claude（已移除）被忽略，回落设置项', resolveBrand('codex') === 'codex' && resolveBrand('auto') === 'deepseek')
 } finally {
   delete process.env.DSH_TUI_BRAND
 }
 
 // ── ② 词表 ────────────────────────────────────────────────────────────────
 check('deepseek 词表', BRAND_SPLASH_WORDS.deepseek.top === 'DEEPSEEK' && BRAND_SPLASH_WORDS.deepseek.bottom === 'HARNESS' && BRAND_SPLASH_WORDS.deepseek.plain === 'DeepSeek Harness')
-check('claude 词表', BRAND_SPLASH_WORDS.claude.top === 'CLAUDE' && BRAND_SPLASH_WORDS.claude.bottom === 'CODE' && BRAND_SPLASH_WORDS.claude.plain === 'Claude Code')
+check('词表只剩 deepseek / codex', Object.keys(BRAND_SPLASH_WORDS).sort().join(',') === 'codex,deepseek')
 
-// ── ③ claude 双主题 ───────────────────────────────────────────────────────
-const claudeDark = getTheme('claude-dark')
-const claudePaper = getTheme('claude-paper')
-check('陶土橙品牌槽（dark #D77757 / paper #C96442）',
-  claudeDark.accent === 'rgb(215,119,87)' && claudePaper.accent === 'rgb(201,100,66)',
-  `${claudeDark.accent} / ${claudePaper.accent}`)
-check('面板墨黑阶（dark）/ 纸张阶（paper）',
-  claudeDark.toolCardBackground === 'rgb(36,34,31)' && claudePaper.toolCardBackground === 'rgb(255,253,248)',
-  `${claudeDark.toolCardBackground} / ${claudePaper.toolCardBackground}`)
-check('文字三档黑白灰（dark 奶油白 / paper 墨黑）',
-  claudeDark.text === 'rgb(244,241,234)' && claudeDark.inactive === 'rgb(184,178,168)' && claudePaper.text === 'rgb(37,35,31)',
-  `${claudeDark.text} / ${claudePaper.text}`)
-check('语义状态各自成对（成功/错误）',
-  claudeDark.success === 'rgb(129,150,106)' && claudePaper.success === 'rgb(104,125,81)'
-  && claudeDark.error === 'rgb(217,107,95)' && claudePaper.error === 'rgb(187,81,72)')
-check('输入框边框陶土橙（与开屏品牌色同源）+ 背景透明（治黑块）',
-  claudeDark.promptBorder === 'rgb(215,119,87)' && claudePaper.promptBorder === 'rgb(201,100,66)'
-  && claudeDark.inputBackground === '' && claudePaper.inputBackground === '',
-  `${claudeDark.promptBorder} / ${claudePaper.promptBorder}`)
-check('语法注释/运算符走黑白灰（正文不彩色）',
-  claudeDark.syntaxComment === 'rgb(129,124,116)' && claudeDark.syntaxOperator === 'rgb(184,178,168)'
-  && claudePaper.syntaxComment === 'rgb(150,144,135)',
-  claudeDark.syntaxComment)
-check('品牌橙残留槽位（web 点/子代理名/徽标）',
-  claudeDark.toolDotWeb === 'rgb(215,119,87)' && claudeDark.subagentToolName === 'rgb(215,119,87)' && claudeDark.ide !== getTheme('dark').ide,
-  claudeDark.toolDotWeb)
-check('双主题进 THEME_NAMES 且深浅判定正确',
-  THEME_NAMES.includes('claude-dark') && THEME_NAMES.includes('claude-paper')
-  && isThemeAvailable('claude-dark') && isThemeAvailable('claude-paper')
-  && !isLightThemeActive('claude-dark') && isLightThemeActive('claude-paper'))
-check('与 deepseek 系是两套身份', claudeDark.accent !== getTheme('dark').accent && getTheme('dark').accent === 'rgb(125,161,222)')
-
-// ── ③a codex 双主题（Codex Lavender / Codex Paper，branding.ts）──────────
+// ── ③ codex 双主题（Codex Lavender / Codex Paper，branding.ts）───────────
+check('已移除的 claude 双主题不再是内置主题',
+  !(THEME_NAMES as readonly string[]).includes('claude-dark') && !(THEME_NAMES as readonly string[]).includes('claude-paper'))
 const codexLavender = getTheme('codex-lavender')
 const codexPaper = getTheme('codex-paper')
 check('薰衣草紫品牌槽（lavender #A69BE8 / paper #8A7ED9）',
@@ -150,8 +121,8 @@ check('codex 双主题进 THEME_NAMES 且深浅判定正确',
   THEME_NAMES.includes('codex-lavender') && THEME_NAMES.includes('codex-paper')
   && isThemeAvailable('codex-lavender') && isThemeAvailable('codex-paper')
   && !isLightThemeActive('codex-lavender') && isLightThemeActive('codex-paper'))
-check('与 deepseek/claude 系是三套身份',
-  codexLavender.accent !== getTheme('dark').accent && codexLavender.accent !== claudeDark.accent && codexPaper.accent !== claudePaper.accent)
+check('与 deepseek 系是两套身份',
+  codexLavender.accent !== getTheme('dark').accent && codexPaper.accent !== getTheme('light').accent && getTheme('dark').accent === 'rgb(125,161,222)')
 
 // ── ③b ThemeProvider 品牌默认档 ────────────────────────────────────────────
 // 未强制路径靠 OSC 11 检测的 passive effect settle（renderToScreen 同步卸载，
@@ -196,34 +167,30 @@ setActiveBrand('deepseek')
 check('deepseek 品牌：默认档是 dark', await mountProvider({}) === 'dark')
 setActiveBrand('codex')
 check('codex 品牌：默认档按终端深浅落 codex-lavender', await mountProvider({}) === 'codex-lavender')
-setActiveBrand('claude')
-check('claude 品牌：默认档按终端深浅落 claude-dark', await mountProvider({}) === 'claude-dark')
 check('显式 prop 选择优先于品牌默认档', await mountProvider({ theme: 'light' }) === 'light')
 process.env.DSH_TUI_THEME = 'dark'
 check('DSH_TUI_THEME 显式选择优先于品牌默认档', await mountProvider({}) === 'dark')
 delete process.env.DSH_TUI_THEME
-check('品牌档不落盘：未显式选择时后端品牌即时生效', await mountProvider({}) === 'claude-dark')
+check('品牌档不落盘：未显式选择时品牌即时生效', await mountProvider({}) === 'codex-lavender')
 // 启动持久化偏好不锁品牌（用户明确要「选了后端整个主题就变」——历史
 // theme.json 压住联动就永远切不过去；想固定走 /theme 重选或 dsh-tui.brand）。
 {
   const { writeFileSync, mkdirSync } = await import('node:fs')
   mkdirSync(join(sandboxHome, '.dsh-tui'), { recursive: true })
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'light' }))
-  check('启动持久化偏好不锁品牌但定深浅：theme.json=light + claude 品牌 → claude-paper', await mountProvider({}) === 'claude-paper')
+  check('启动持久化偏好不锁品牌但定深浅：theme.json=light + codex 品牌 → codex-paper', await mountProvider({}) === 'codex-paper')
   // 落位判据是**解析后色板**的明暗，不是主题名的字面量：浅底内置名不止 `light`
   // 一个（`pink-day` 也是），只认 `'light'` 会让粉白天被换成深色档。数据层的
   // 同名钉子在 scripts/verify-themes.mjs（全内置名逐个配对）。
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'pink-day' }))
-  check('浅底内置名不止 light：theme.json=pink-day + claude 品牌 → claude-paper', await mountProvider({}) === 'claude-paper')
+  check('浅底内置名不止 light：theme.json=pink-day + codex 品牌 → codex-paper', await mountProvider({}) === 'codex-paper')
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'pink-night' }))
-  check('深底内置名照旧：theme.json=pink-night + claude 品牌 → claude-dark', await mountProvider({}) === 'claude-dark')
+  check('深底内置名照旧：theme.json=pink-night + codex 品牌 → codex-lavender', await mountProvider({}) === 'codex-lavender')
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'dark' }))
   setActiveBrand('deepseek')
   check('deepseek 品牌照常尊重持久化偏好（theme.json=dark → dark）', await mountProvider({}) === 'dark')
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'light' }))
   check('deepseek 品牌照常尊重持久化偏好（theme.json=light → light）', await mountProvider({}) === 'light')
-  setActiveBrand('codex')
-  check('codex 品牌：持久化偏好不锁品牌但定深浅（theme.json=light → codex-paper）', await mountProvider({}) === 'codex-paper')
   // /theme 会话内手选的锁定语义由 brandThemeLockRef 承担（需要调 setTheme，
   // 读屏脚本够不到；typecheck + ThemeProvider 内注释钉住语义）。
   writeFileSync(join(sandboxHome, '.dsh-tui', 'theme.json'), JSON.stringify({ theme: 'auto' }))
@@ -250,10 +217,10 @@ const view = (child: React.ReactElement): React.ReactElement => (
 const textAt = (line: string): string => line.padEnd(TEXT_LEFT).slice(TEXT_LEFT).trimEnd()
 
 const expectedTitleRows = (top: string, bottom: string): string[] => {
-  // 品牌词（CLAUDE/CODEX 族）走 uniform 解（两行同字距）——与 LogoV2 的品牌
+  // 品牌词（CODEX）走 uniform 解（两行同字距）——与 LogoV2 的品牌
   // 分支同参；这些读屏用例都是钉左形态（无 align prop），两行左缘对齐、
   // 缩进为 0。deepseek 词对用字体表默认的 tight 解。
-  const brandTitle = top === 'CLAUDE' || top === 'CODEX'
+  const brandTitle = top === 'CODEX'
   const font = brandTitle
     ? withTagline(splashFontById('bold'), top, bottom, { uniform: true })
     : withTagline(splashFontById('bold'), top, bottom)
@@ -268,24 +235,9 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
   rows.some((_, index) => expected.every((want, offset) => textAt(rows[index + offset] ?? '') === want))
 
 {
-  const { rows } = rowsOf(view(<LogoV2 {...baseProps} brand="claude" />))
-  check('claude 档：CLAUDE / CODE 两行上屏（含中间空行）', screenHasBlock(rows, expectedTitleRows('CLAUDE', 'CODE')))
-  check('claude 档：不画 DEEPSEEK / HARNESS', !screenHasBlock(rows, expectedTitleRows('DEEPSEEK', 'HARNESS')))
-  check('claude 档欢迎语换成品牌 slogan（创造精彩，守护关键。）',
-    rows.some(line => line.includes('创造精彩，守护关键。')) && !rows.some(line => line.includes('探索未至之境')))
-  // Claude 娘字符画（协议不可用的回落路径）：不看 whaleGirl 设置就占住立绘槽。
-  // 判据取**全表最长**的半块字符连笔（▀▄，大字用 █、文字列用 ASCII，不会撞）
-  // ——它是精灵的一部分，精灵上屏则它必然上屏；比"首非空行的 run"稳。
-  const longestRun = CLAUDE_GIRL_ROWS
-    .flatMap(row => strip(row).split(/\s+/))
-    .reduce((best, part) => (part.length > best.length ? part : best), '')
-  check('claude 档：Claude 娘字符画在立绘槽（whaleGirl=false 也生效）',
-    longestRun.length >= 8 && rows.some(line => line.includes(longestRun)), `连笔 ${longestRun.length} 格`)
-}
-{
   const { rows } = rowsOf(view(<LogoV2 {...baseProps} />))
   check('deepseek 档（缺省 prop）：DEEPSEEK / HARNESS 照旧', screenHasBlock(rows, expectedTitleRows('DEEPSEEK', 'HARNESS')))
-  check('deepseek 档：不画 CLAUDE / CODE', !screenHasBlock(rows, expectedTitleRows('CLAUDE', 'CODE')))
+  check('deepseek 档：不画 CODEX / HARNESS', !screenHasBlock(rows, expectedTitleRows('CODEX', 'HARNESS')))
 }
 {
   const { rows } = rowsOf(view(<LogoV2 {...baseProps} brand="codex" />))
@@ -298,25 +250,6 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
   // 彩蛋日 + codex 品牌：上排钉品牌词 CODEX，下排换彩蛋词。
   const { rows } = rowsOf(view(<LogoV2 {...baseProps} brand="codex" egg={{ id: 'probe-christmas', top: 'DEEPSEEK', bottom: 'MERRY' }} />))
   check('codex 档彩蛋日：上排是 CODEX、下排是 MERRY', screenHasBlock(rows, expectedTitleRows('CODEX', 'MERRY')))
-}
-{
-  // 彩蛋日 + claude 品牌：上排钉品牌词，下排换彩蛋词。
-  const { rows } = rowsOf(view(<LogoV2 {...baseProps} brand="claude" egg={{ id: 'probe-christmas', top: 'DEEPSEEK', bottom: 'MERRY' }} />))
-  check('claude 档彩蛋日：上排是 CLAUDE、下排是 MERRY', screenHasBlock(rows, expectedTitleRows('CLAUDE', 'MERRY')))
-}
-{
-  // 窄终端：鲸鱼与大字都放不下 → 一行纯文字标题，品牌词换成 Claude Code。
-  const narrow = 20
-  const { screen, height } = renderToScreen(
-    <TerminalSizeContext.Provider value={{ columns: narrow, rows: 40 }}>
-      <LogoV2 {...baseProps} brand="claude" />
-    </TerminalSizeContext.Provider>,
-    narrow,
-  )
-  const rows = Array.from({ length: height }, (_, row) =>
-    Array.from({ length: narrow }, (_, column) => cellChar(screen, column, row)).join('').trimEnd(),
-  )
-  check('claude 档窄终端：纯文字标题是 Claude Code', rows.some(line => line.includes('Claude Code') && !line.includes('DeepSeek Harness')), rows.find(line => line.includes('Claude')) ?? '')
 }
 {
   // 深海档窄终端回归：纯文字标题仍是 DeepSeek Harness。
@@ -341,7 +274,7 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
   // E 竖笔靠左）带偏 ±2 列——那是字体形状不是布局；左缘严格对齐 + 块中轴
   // 才是「居中」的正解。
   const { rows, screen } = rowsOf(view(
-    <LogoV2 {...baseProps} brand="claude" chrome="minimal" arrangement="column" align="center" />,
+    <LogoV2 {...baseProps} brand="codex" chrome="minimal" arrangement="column" align="center" />,
   ))
   const spanOfRow = (rowIndex: number): { first: number; last: number } => {
     let first = -1
@@ -355,7 +288,7 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
   }
   const mid = WIDTH / 2
   const titleRows = rows.flatMap((row, index) => (row.includes('█') ? [index] : []))
-  // 按行号连续性分块（CLAUDE 与 CODE 两块各 5 行，中间隔空行），块左缘取
+  // 按行号连续性分块（CODEX 与 HARNESS 两块各 5 行，中间隔空行），块左缘取
   // 段内最左墨迹：C 的顶/底行首列是半块/透明（`·▄▀▀▄▄`，圆弧收角），逐行
   // 左缘会随字形浮动 ±1 列——那是字体形状，不是布局。
   const blocks: { rows: number[]; first: number; last: number }[] = []
@@ -371,23 +304,24 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
     }
   }
   const blockCenter = (block: { first: number; last: number }): number => (block.first + block.last) / 2
-  const [claudeBlock, codeBlock] = blocks
-  // 品牌同字距档：居中形态窄行（CODE）补半差居中在宽行之下——CODE 左缘 =
-  // CLAUDE 左缘 + (CLAUDEInk − CODEInk) / 2；两行的中轴仍都在终端中央。
-  const brandFont = withTagline(splashFontById('bold'), 'CLAUDE', 'CODE', { uniform: true })
-  const centeredIndent = Math.round((paintedWidth(brandFont, 'CLAUDE', brandFont.tagline.topKerning)
-    - paintedWidth(brandFont, 'CODE', brandFont.tagline.bottomKerning)) / 2)
+  const [topBlock, bottomBlock] = blocks
+  // 品牌同字距档：居中形态窄行（CODEX）补半差居中在宽行（HARNESS）之上——
+  // CODEX 左缘 = HARNESS 左缘 + (HARNESSInk − CODEXInk) / 2；两行的中轴仍都在
+  // 终端中央。
+  const brandFont = withTagline(splashFontById('bold'), 'CODEX', 'HARNESS', { uniform: true })
+  const centeredIndent = Math.round((paintedWidth(brandFont, 'HARNESS', brandFont.tagline.bottomKerning)
+    - paintedWidth(brandFont, 'CODEX', brandFont.tagline.topKerning)) / 2)
   check(
-    '启动页形态：CODE 左缘 = CLAUDE + 半差（同字距居中于其下）',
-    blocks.length === 2 && claudeBlock.rows.length === 5 && codeBlock.rows.length === 5
-    && codeBlock.first - claudeBlock.first === centeredIndent,
-    `左缘 ${blocks.map(block => block.first).join('/')} indent ${centeredIndent}（CLAUDE ${claudeBlock?.rows.length ?? '-'} 行 / CODE ${codeBlock?.rows.length ?? '-'} 行）`,
+    '启动页形态：CODEX 左缘 = HARNESS + 半差（同字距居中于其上）',
+    blocks.length === 2 && topBlock.rows.length === 5 && bottomBlock.rows.length === 5
+    && topBlock.first - bottomBlock.first === centeredIndent,
+    `左缘 ${blocks.map(block => block.first).join('/')} indent ${centeredIndent}（CODEX ${topBlock?.rows.length ?? '-'} 行 / HARNESS ${bottomBlock?.rows.length ?? '-'} 行）`,
   )
   check(
-    '启动页形态：CLAUDE 块与 CODE 块的中轴都在终端中央（±1.5 列）',
+    '启动页形态：CODEX 块与 HARNESS 块的中轴都在终端中央（±1.5 列）',
     blocks.length === 2
-    && Math.abs(blockCenter(claudeBlock) - mid) <= 1.5 && Math.abs(blockCenter(codeBlock) - mid) <= 1.5,
-    `CLAUDE ${blocks.length === 2 ? blockCenter(claudeBlock) : '-'} / CODE ${blocks.length === 2 ? blockCenter(codeBlock) : '-'} vs ${mid}`,
+    && Math.abs(blockCenter(topBlock) - mid) <= 1.5 && Math.abs(blockCenter(bottomBlock) - mid) <= 1.5,
+    `CODEX ${blocks.length === 2 ? blockCenter(topBlock) : '-'} / HARNESS ${blocks.length === 2 ? blockCenter(bottomBlock) : '-'} vs ${mid}`,
   )
   // 精灵立绘：全部半块格的总包围盒中心（立绘形状天然不对称，容差 ±2）。
   let spriteFirst = -1
@@ -405,7 +339,7 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
     }
   })
   check(
-    '启动页形态：立绘（Claude 娘）的中轴也在终端中央（±2 列）',
+    '启动页形态：立绘（codex 档字符画回落）的中轴也在终端中央（±2 列）',
     spriteCells > 50 && Math.abs((spriteFirst + spriteLast) / 2 - mid) <= 2,
     `中心 ${(spriteFirst + spriteLast) / 2} vs ${mid}（${spriteCells} 格）`,
   )
@@ -459,8 +393,8 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
 // ── ④b codex 立绘资产（恶魔精灵，用户素材）──────────────────────────────
 {
   const { portraitAssetsOf, CODEX_GIRL_ASSETS, loadMaidPortraits } = await import('../src/components/maidPortrait.js')
-  check('品牌 → 立绘资产映射（deepseek/claude/codex 各一套）',
-    portraitAssetsOf('deepseek').dir === 'whale-girl' && portraitAssetsOf('claude').dir === 'claude-girl' && portraitAssetsOf('codex') === CODEX_GIRL_ASSETS)
+  check('品牌 → 立绘资产映射（deepseek/codex 各一套）',
+    portraitAssetsOf('deepseek').dir === 'whale-girl' && portraitAssetsOf('codex') === CODEX_GIRL_ASSETS)
   const portraits = await loadMaidPortraits(CODEX_GIRL_ASSETS)
   check('codex 立绘真实解码链路（两张变体、同一画布几何）',
     portraits !== undefined
@@ -473,7 +407,7 @@ const screenHasBlock = (rows: string[], expected: readonly string[]): boolean =>
 // ── ⑤ bevel 静态灰阶拆除 ──────────────────────────────────────────────────
 const bevel = SPLASH_FONTS.find(font => font.id === 'bevel')
 check('bevel 不再带静态灰阶 palette（随主题派生）', bevel !== undefined && bevel.palette === undefined)
-check('品牌镜像默认 deepseek、setActiveBrand 生效', getActiveBrand() === 'deepseek' && (setActiveBrand('claude'), getActiveBrand() === 'claude') && (setActiveBrand('deepseek'), true))
+check('品牌镜像默认 deepseek、setActiveBrand 生效', getActiveBrand() === 'deepseek' && (setActiveBrand('codex'), getActiveBrand() === 'codex') && (setActiveBrand('deepseek'), true))
 
 if (failed > 0) {
   console.error(`verify-splash-brand: ${failed} check(s) failed`)

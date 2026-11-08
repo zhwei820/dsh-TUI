@@ -20,7 +20,7 @@ export const UP_ARROW = '\u2191' // ↑
 export const DOWN_ARROW = '\u2193' // ↓
 
 /**
- * Thinking frames: Claude Code's twinkling star, one display cell each, the
+ * Thinking frames: the twinkling star, one display cell each, the
  * same footprint as the settled `∴` so the label never shifts on settle.
  */
 export const THINKING_SPINNER_FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢']

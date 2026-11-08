@@ -69,7 +69,7 @@ function channelFixture() {
     readImage: async () => ({ data: png }),
   })
   const raw = createChannel(ctx as never, agent('boot') as never, {
-    model: MODEL_BEFORE, cwd: '/tmp/probe', provider: 'deepseek', activity: false, whale: false, whaleIdle: false,
+    model: MODEL_BEFORE, cwd: '/tmp/probe', provider: 'deepseek', activity: false, whale: false, whaleIdle: false, promptSessionLabel: true,
   })
   const staged: string[] = []
   const stageImage = raw.stageComposerImage

@@ -84,6 +84,7 @@ import { logMouseDebug } from '../utils/debug.js'
 import { Chat } from '../screens/Chat.js'
 import { openInjectChannel, type InjectChannel, type InjectController } from './inject-channel.js'
 import { normalizeThinkingLanguage, registerThinkingLanguage } from './thinking-language.js'
+import { registerDecisionNotes } from './decision-notes.js'
 import { startSessionMountHeartbeat } from './session-mount-heartbeat.js'
 import { reserveMount, reserveNewSession } from '../sessionMounts.js'
 import { getHostDialogStore, type TuiDialogRuntime } from './dialogs.js'
@@ -1371,13 +1372,19 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
   // restart-to-apply pattern as fullscreen — resolved before the tree mounts
   // from the settings user layer over cordis.yml; a mid-session edit is for
   // the next boot, the running session keeps what it booted with.
-  let bootedLaunchpad = config.launchpad !== false
+  // Off unless explicitly on (compact start: straight into the
+  // chat with the welcome box); `launchpad: true` restores the landing page
+  // and the classic whale header.
+  let bootedLaunchpad = config.launchpad === true
   let rendererSettingsFrozen = false
   // Thinking language (settings `thinkingLanguage`): the section reads this
   // at every assembly, so a /settings edit lands on the next model step.
   // Observational (shadow) runtimes never touch the observed prompt.
   let thinkingLanguage = normalizeThinkingLanguage(config.thinkingLanguage)
   if (!shadow) registerThinkingLanguage(ctx, () => thinkingLanguage)
+  // Decision notes (cordis `decisionNotes`, on unless explicitly false): the
+  // folded thinking's plan / key decisions move into the visible reply.
+  if (!shadow) registerDecisionNotes(ctx, () => config.decisionNotes !== false)
   const terminalImagesDisabledByEnv = isEnvTruthy(process.env.DSH_TUI_DISABLE_TERMINAL_IMAGES)
   // The settings service may come up AFTER this plugin's apply: the cordis
   // inject callback defers until the service registers, so the first
@@ -2188,7 +2195,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
           format(value: unknown): string {
             // Unset in settings.yaml: the effective default is on — same
             // rule as expandEditor's field.
-            return String(typeof value === 'boolean' ? value : config.launchpad !== false)
+            return String(typeof value === 'boolean' ? value : config.launchpad === true)
           },
         },
         {
@@ -2714,6 +2721,8 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     injectControllerRef,
     openHomeOnBoot,
     launchpadOnBoot,
+    classicSplash: bootedLaunchpad,
+    promptSuggestions: config.promptSuggestions !== false,
     onboardingOnBoot,
     // The dsh-tui-extensions row's services (managed dialogs, status line,
     // shortcuts). Soft-consumed: absent the row (stale patch, bare embed),

@@ -70,6 +70,8 @@ const GROUPS = {
     ['verify-onboarding-provider-plan', ['node', '--import', 'tsx/esm', 'scripts/verify-onboarding-provider-plan.ts']],
 // 启动时是否弹引导：已有 key（环境/凭据库）或已登录账号就不弹；缺席/失败/超时照旧弹。
     ['verify-onboarding-account', ['node', '--import', 'tsx/esm', 'scripts/verify-onboarding-account.ts']],
+// 决策说明系统提示段：开启时要求回复里简述计划与关键决策，关闭时为空；段名/次序/实时读取。
+    ['verify-decision-notes', ['node', '--import', 'tsx/esm', 'scripts/verify-decision-notes.ts']],
 // Chat 集成层：两个屏幕在**真实 Chat** 里的编排契约（/setup 开向导、提交落点、
 // 开整屏界面的动作要先收掉当前屏、覆盖层不收、记账 skipped/done、最小模式、
 // 首启横幅不 stale）。这三类缺陷是单独挂组件的回归测不到的——先有 bug 才有它。
@@ -232,6 +234,8 @@ const GROUPS = {
     // 女仆娘立绘（whaleGirl 设置 + 头部换画/阶梯契约）与 99h/999 次"求 star"
     // 开屏弹窗（挂真实 Chat：弹一次/记账/Esc 关且关后不抢键/忙时不弹不记账）：
     ["verify-whale-girl", ['node', '--import', 'tsx/esm', 'scripts/verify-whale-girl.tsx']],
+// 简洁风格欢迎框：默认头部（问候 / 帮助 / cwd / 模型）圆角框收口、窄屏截断；classic 走经典鲸鱼头。
+    ["verify-welcome-box", ['node', '--import', 'tsx/esm', 'scripts/verify-welcome-box.tsx']],
 // 标题女仆娘立绘透明回归：假 Windows Terminal（DA1→Sixel）下立绘以
 // transparent 放置、无衬底色——只画她自己的像素，壁纸从周围透出来。
     ["verify-maid-portrait-transparent", ['node', '--import', 'tsx/esm', 'scripts/verify-maid-portrait-transparent.tsx']],
@@ -239,9 +243,12 @@ const GROUPS = {
 // 曾以 120ms/卡片持续驱动 React commit，N 张相位错开合成 ~30ms
 // 均匀帧 cadence。
     ["verify-subagent-settle", ['node', '--import', 'tsx/esm', 'scripts/verify-subagent-settle.tsx']],
-// 对话流子代理卡片（Claude Code 视觉）：单卡 Agent(desc) 头 + 最近工具 + `+N more`、
+// 对话流子代理卡片（简洁视觉）：单卡 Agent(desc) 头 + 最近工具 + `+N more`、
 // Done/Initializing/Error 状态行、并行组 Running N agents… 树形分支、Ctrl+O 展开全部工具。
     ["verify-subagent-card", ['node', '--import', 'tsx/esm', 'scripts/verify-subagent-card.tsx']],
+// 推荐回复（简洁风格）：解析契约、回合结束请求一次、提示行 ↹ Tab 显示（输入框内不放占位）、
+// Tab 填入、新回合/打字撤掉。
+    ["verify-prompt-suggestion", ['node', '--import', 'tsx/esm', 'scripts/verify-prompt-suggestion.tsx']],
 // 子代理流投影批处理：chunk 风暴的 snapshot+行投影必须按 16ms 帧
 // 对齐合并（token 率 100-300/s 下的全量深拷贝热路径），且生命周期
 // 事件（tool/call、subagent/end）保持同步立即可见。

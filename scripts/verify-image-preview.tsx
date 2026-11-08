@@ -797,6 +797,10 @@ function makeChannel() {
     pending: [],
     commandList: LOCAL_COMMANDS,
     commandCompletions: () => [],
+    // Prompt chrome on: the prompt row is located by its ⛶ glyph.
+    promptSessionLabel: true,
+    // The footer's model field (opt-in) carries the `model-00` ready anchor.
+    statusBar: { model: true },
     notifications: [],
     contextSegments: { system: 0, prompt: 0, assistant: 0, thinking: 0, tools: 0 },
     subscribe: () => () => {},
@@ -944,7 +948,9 @@ for (const columns of [32, 80]) {
   const app = await render(
     <ThemeProvider theme="dark">
       <PageMargin>
-        <Chat channel={makeChannel() as never} questionStore={new QuestionStore()} onExit={() => {}} fullscreen={false} />
+        {/* classicSplash: the tall classic header is what pushes this
+            frame into scrollback (the welcome box alone fits 18 rows). */}
+        <Chat channel={makeChannel() as never} questionStore={new QuestionStore()} onExit={() => {}} fullscreen={false} classicSplash />
       </PageMargin>
     </ThemeProvider>,
     { stdin: stdin as never, stdout: stdout as never, stderr: new FakeStderr() as never, exitOnCtrlC: false, patchConsole: false },
@@ -991,6 +997,9 @@ for (const columns of [32, 80]) {
         extensionStatus={statusStore}
         onExit={() => {}}
         fullscreen
+        // The reopen check reads the classic logo glyphs around the card
+        // (the welcome box would add its own ╭ corner above it).
+        classicSplash
       />
     </AlternateScreen>
   )

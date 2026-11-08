@@ -120,9 +120,11 @@ check('the popup and /plugin info agree on the title',
 // ── D. 端到端：真实弹窗，两种宽度 ───────────────────────────────────────────
 /** 含 `marker` 的行必须恰好一条、且带卡片左边框：修复前注入的标题会多出一条
  *  没有左边框的行（100 与 50 列都实测如此）。 */
+/** The marker sits on exactly one list row (borderless list:
+ *  the row leads with the 1-cell gutter, never a wrapped continuation). */
 const borderedOnce = (rows: readonly string[], marker: string): boolean => {
   const hits = rows.filter(line => line.includes(marker))
-  return hits.length === 1 && hits[0]!.trimStart().startsWith('│')
+  return hits.length === 1 && /^ {1,4}(?:❯ )?\S/u.test(hits[0]!)
 }
 
 const popup = (nodes: readonly CommandCompletionNode[]): ReturnType<typeof completeCommands> => completeCommands(
@@ -275,8 +277,10 @@ check('a profile with no extra bundle still shows the shapes on `info`',
   JSON.stringify(fresh('/plugin info ').map(row => [row.name, row.commandLine])))
 
 // ── F. 真实三行示例的版式：长名前的分隔 + 没有幽灵行 ────────────────────────
+// Borderless list: every non-empty row must be one of the three command rows
+// (a wrapped continuation of a long name/description would be a stray row).
 const strayRows = (rows: readonly string[]): readonly string[] =>
-  rows.filter(line => line.trim() !== '' && !'│╭╰'.includes(line.trimStart()[0]!))
+  rows.filter(line => line.trim() !== '' && !/^ {1,4}(?:❯ )?plugin install /u.test(line))
 setLang('en')
 for (const columns of [100, 50]) {
   const view = await renderPopup(installRows, columns)
@@ -290,7 +294,7 @@ const gitRow = await settled(() => widePopup.rows().some(line => line.includes('
   ? widePopup.rows().find(line => line.includes('ple.git')) ?? ''
   : ''
 check('100 columns: a name wider than the name column keeps a gap before its description',
-  /ple\.git\s\S/u.test(gitRow) && gitRow.trimEnd().endsWith('│'), JSON.stringify(gitRow))
+  /ple\.git\s\S/u.test(gitRow), JSON.stringify(gitRow))
 await widePopup.close()
 
 // ── G. `/panel` 的候选与侧栏同一个派生：本次运行隐藏的临时面板不出现 ─────────

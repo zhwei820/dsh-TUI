@@ -136,7 +136,9 @@ async function verify(fullscreen: boolean, columns: number, entry: 'slash' | 'es
     },
   } as never)
   const channel = createChannel(ctx, makeAgent(source) as never, {
-    model: 'model', provider: 'fake', cwd: home, activity: false, whaleIdle: false,
+    model: 'model', provider: 'fake', cwd: home, activity: false, whaleIdle: false, promptSessionLabel: true,
+    // The model readout lives in the footer's opt-in model field.
+    statusBar: { model: true },
   })
   const lease = createChannelUiLease(() => true)
   const screen = <Chat channel={createChannelUi(channel, 'legacy', lease)} questionStore={new QuestionStore()} onExit={() => {}} fullscreen={fullscreen} />

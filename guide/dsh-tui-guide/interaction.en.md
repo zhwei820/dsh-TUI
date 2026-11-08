@@ -596,8 +596,8 @@ In inline mode, the terminal emulator owns native scrollback and selection.
   transcript is a reading surface, selection is the mouse's job there.
 - **Single-click a tool card / thinking / compact summary** — Expand / collapse (header
   brightens on hover; trailing blank cells do not trigger).
-- **Single-click a subagent card** — Open that subagent's detail scene (status glyph
-  brightens on hover).
+- **Single-click a subagent card** — Open that subagent's detail scene (its name
+  brightens on hover; in a parallel group, each branch opens its own subagent).
 - **Single-click the input box** — Place the text caret at the click (multi-line, wrapped
   rows and CJK all width-aligned).
 - **Click a `[Image #N]` token in the input box / a transcript thumbnail** — Open the

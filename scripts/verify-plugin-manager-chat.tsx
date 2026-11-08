@@ -403,13 +403,13 @@ for (const [fullscreen, columns, service] of [
         !hasText('Details: /plugin info') && !hasText('These packages ship with') &&
         !hasText('Enable/disable:'), screen())
       check(`${tag}: experimental rows keep their indentation`,
-        screen().split('\n').some(line => line === '    Agent Teams 0.2.0-rc.2 · off'), screen())
+        screen().split('\n').some(line => line.trimEnd() === '    Agent Teams 0.2.0-rc.2 · off'), screen())
       {
         const rows = screen().split('\n')
-        const teamAt = rows.findIndex(line => line === '    Agent Teams 0.2.0-rc.2 · off')
-        const autoAt = rows.findIndex(line => line === '    Auto review 0.2.0-rc.2 · on')
-        const searchAt = rows.findIndex(line => line === '    Session search 0.2.1-rc.2 · off')
-        const worktreeAt = rows.findIndex(line => line === '    Git Worktrees 0.2.1-rc.2 · off')
+        const teamAt = rows.findIndex(line => line.trimEnd() === '    Agent Teams 0.2.0-rc.2 · off')
+        const autoAt = rows.findIndex(line => line.trimEnd() === '    Auto review 0.2.0-rc.2 · on')
+        const searchAt = rows.findIndex(line => line.trimEnd() === '    Session search 0.2.1-rc.2 · off')
+        const worktreeAt = rows.findIndex(line => line.trimEnd() === '    Git Worktrees 0.2.1-rc.2 · off')
         check(`${tag}: experimental features have no blank row between them`,
           teamAt >= 0 && autoAt > teamAt && searchAt > autoAt && worktreeAt > searchAt &&
           !rows.slice(teamAt + 1, worktreeAt).some(line => line.trim() === ''), screen())
@@ -512,8 +512,8 @@ for (const [fullscreen, columns, service] of [
       stdin.write('\t')
       stdin.write('\x7f')
       check(`${tag}: Tab inserts nothing — one backspace leaves the bare form, not an example`,
-        await settled(() => hasText(t('sugg-count', { n: 1 }))) &&
-        !hasText('plugin install /path/to/repo'), screen())
+        // Borderless list (no `N items` title): the bare subcommand row is back.
+        await settled(() => hasText('❯ plugin install') && !hasText('plugin install /path/to/repo')), screen())
       await clear()
       await type('/plugin install ')
       stdin.write('\r')

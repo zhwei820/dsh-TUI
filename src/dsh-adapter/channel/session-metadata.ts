@@ -7,6 +7,7 @@ import { t } from '../../i18n.js'
 import { appendSessionTitle, deleteSessionLog, userTitleData } from '../compat/index.js'
 import { snapshotLiveSessionEvents } from '../compat/liveSession.js'
 import { collectRecentActivity, parseRecapResponse, RECAP_RECENT_CHARS, wrapRecapPrompt } from '../recap.js'
+import { parseSuggestResponse, wrapSuggestPrompt } from '../../channel/side-prompts.js'
 import { listSummaries, locateSession, previewSession, type SessionSource, type SessionSummary } from '../sessions/index.js'
 import { openStepToolCallIds, runAsSideBranch, runSideQuestion, splitUnresolvedToolCalls, wrapSideQuestion, type InitiatorScope } from '../sideQuestion.js'
 import { beginListingSnapshot, readListingSnapshot } from '../sessions/snapshot.js'
@@ -21,6 +22,7 @@ declare module '@deepseek-ai/dsh-llm' {
   interface MessageSourceMap {
     'dsh-tui-btw': { kind: 'dsh-tui-btw' }
     'dsh-tui-recap': { kind: 'dsh-tui-recap' }
+    'dsh-tui-suggest': { kind: 'dsh-tui-suggest' }
   }
 }
 
@@ -30,6 +32,9 @@ type Capture = DshBindingCapture
 type Binding = Pick<DshChannelBinding, 'agent' | 'capture' | 'isCurrent'>
 
 /** Session-scoped metadata, persistence queries, and tool-less LLM reads. */
+/** Tail budget of the prompt-suggestion call (the latest exchange matters). */
+const SUGGEST_RECENT_CHARS = 3000
+
 export function createSessionMetadataActions(ctx: Context, deps: {
   owner: Pick<ChannelOwner, 'current' | 'signal' | 'own'>
   binding: Binding
@@ -254,6 +259,31 @@ export function createSessionMetadataActions(ctx: Context, deps: {
     return parsed.title === undefined ? { summary: parsed.summary } : { summary: parsed.summary, title: parsed.title }
   }
 
+  /** Prompt suggestion: the recap's side call over a shorter tail, read
+   *  back as one line (or nothing). Silent: any failure is "no suggestion". */
+  const suggestNextPrompt = async (options?: { signal?: AbortSignal }): Promise<string | undefined> => {
+    const capture = deps.binding.capture()
+    const llm = ctx.get('llm') as Partial<SideQuestionLlm> | undefined
+    if (typeof llm?.stream !== 'function') return undefined
+    const activity = collectRecentActivity(snapshotLiveSessionEvents(capture.agent.session), SUGGEST_RECENT_CHARS)
+    if (activity === '') return undefined
+    const signal = withOwnerSignal(options?.signal)
+    try {
+      const outcome = await runSideQuestion({
+        stream: llm.stream.bind(llm),
+        options: llmRequest(capture, [
+          createUserMessage({ content: [{ type: 'text', text: wrapSuggestPrompt(activity) }], source: { kind: 'dsh-tui-suggest' } }),
+        ], false, signal),
+        onText: () => {},
+        signal,
+      })
+      if (!current(capture) || options?.signal?.aborted === true || outcome.answer === null) return undefined
+      return parseSuggestResponse(outcome.answer)
+    } catch {
+      return undefined
+    }
+  }
+
   const renameSession = (title: string): void => {
     const capture = deps.binding.capture()
     if (!current(capture)) return
@@ -294,7 +324,7 @@ export function createSessionMetadataActions(ctx: Context, deps: {
 
   return {
     cachedSessions, listSessions: listing.listSessions, previewSession: preview, listSkills, describeCredential,
-    sideQuestion, recapRecent, setResumeTarget: writeResumeTarget,
+    sideQuestion, recapRecent, suggestNextPrompt, setResumeTarget: writeResumeTarget,
     renameSession, setSessionColor, deleteSession, renameSessionTo,
   }
 }

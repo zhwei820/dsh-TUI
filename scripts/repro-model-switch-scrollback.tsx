@@ -170,7 +170,8 @@ const channel = createChannel(ctx as never, makeAgent('a1', events) as never, {
 const stdoutObj = new FakeStdout()
 const stdin = new FakeStdin()
 const instance = await render(
-  <Chat channel={channel as never} questionStore={new QuestionStore()} onExit={() => {}} />,
+  // classicSplash: the splash-copy count is pinned on the classic header.
+  <Chat channel={channel as never} questionStore={new QuestionStore()} onExit={() => {}} classicSplash />,
   { stdout: stdoutObj, stdin, stderr: new FakeStderr(), exitOnCtrlC: false, patchConsole: false },
 )
 

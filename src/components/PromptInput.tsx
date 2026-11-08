@@ -515,6 +515,12 @@ export interface PromptInputProps {
    * the end. The caller clears it via onFillConsumed once consumed.
    */
   fillText?: string | null
+  /** Prompt suggestion for the next turn: Tab on an
+   *  EMPTY, idle input fills it (Enter then sends). Shown by the host under
+   *  the input, never inside it — see the no-placeholder IME note above. */
+  promptSuggestion?: string | undefined
+  /** The suggestion was taken (Tab) or dismissed by typing: the host clears it. */
+  onPromptSuggestionUsed?(): void
   onFillConsumed?(): void
   /** Double-tap Esc with an empty input: open the rewind picker. */
   onRewindRequest?(): void
@@ -619,6 +625,8 @@ export function PromptInput({
   onRunCommand,
   selectionActive,
   fillText,
+  promptSuggestion,
+  onPromptSuggestionUsed,
   onFillConsumed,
   onRewindRequest,
   onBackgroundRequest,
@@ -785,6 +793,12 @@ export function PromptInput({
    * affordance and refuses the shortcut — the editor cannot open.
    */
   const expandEnabled = channel.expandEditor !== false
+  // Prompt chrome (settings `dsh-tui.promptSessionLabel`, off by default):
+  // the ⌸ sessions button and the ⛶ editor glyph join the session chip.
+  // Off keeps the bare `❯` input row; the expand shortcut and
+  // /resume stay available either way.
+  const promptChrome = channel.promptSessionLabel === true
+  const showExpandGlyph = expandEnabled && promptChrome
   /** Latest expanded viewport metrics for the useInput wheel branch. */
   const editorViewportRef = React.useRef<{ maxRows: number; total: number } | null>(null)
   /** Hover state of the ⤢/✎ expand affordance in the input row. */
@@ -1136,6 +1150,11 @@ export function PromptInput({
     }
   })
   const [selectedCommand, setSelectedCommand] = React.useState(0)
+  // A typed draft supersedes the prompt suggestion (the host stops showing
+  // it); Tab-accept lands here too, which is the same "used" signal.
+  React.useEffect(() => {
+    if (value !== '' && promptSuggestion !== undefined) onPromptSuggestionUsed?.()
+  }, [value, promptSuggestion, onPromptSuggestionUsed])
   // ctrl+r history fill: replace the input when a new fill arrives, then
   // tell the caller to clear it.
   const lastFill = React.useRef<string | null>(null)
@@ -2920,6 +2939,13 @@ export function PromptInput({
       }
       return
     }
+    // Tab on an empty idle input takes the prompt suggestion into the input
+    // (Enter sends it): the suggestion is a draft, never an auto-send.
+    if (key.tab && !key.shift && !channel.working && value === '' && promptSuggestion !== undefined && promptSuggestion !== '') {
+      setInput(promptSuggestion, promptSuggestion.length, 'step')
+      onPromptSuggestionUsed?.()
+      return
+    }
     // Tab while the model is working = queue for AFTER the turn (followup),
     // distinct from Enter's steer (Codex's "tab to queue message").
     if (key.tab && channel.working && value.trim() !== '') {
@@ -3606,7 +3632,8 @@ export function PromptInput({
   // （既有调用方的可用列数逐列不变）。用实测常量而不是 stringWidth：该字符
   // 是 U+1F3E0+VS15，stringWidth 按码点算 2（含 VS15 仍是 2），终端只给 1，
   // 见 HOME_BUTTON_COLS 的说明。
-  const homeButtonCols = onOpenSessions === undefined ? 0 : HOME_BUTTON_COLS
+  const showSessionsButton = onOpenSessions !== undefined && promptChrome
+  const homeButtonCols = showSessionsButton ? HOME_BUTTON_COLS : 0
   // 补全卡片边框与输入框 idle 边框同色（plan 模式下整套面板一起变 sage
   // 绿）。`/color` 会话强调色优先于主题 promptBorder（plan 模式仍整体走
   // sage 绿）。`?? ''` 防御最小 mock channel（只声明用到的字段的回归脚
@@ -3622,7 +3649,7 @@ export function PromptInput({
   const editorGutterCols = editorNoWidth + 3
   const inputWidth = expanded
     ? Math.max(1, columns - 4 - editorGutterCols)
-    : Math.max(1, columns - 3 - vimBadgeCols - homeButtonCols - (expandEnabled ? 2 : 0))
+    : Math.max(1, columns - 3 - vimBadgeCols - homeButtonCols - (showExpandGlyph ? 2 : 0))
   // 展开态无视折叠块：全屏编辑就是为了看全文（foldBlock 状态保留，
   // 收起后折叠显示恢复）。
   const block = expanded ? null : foldBlock
@@ -4644,7 +4671,7 @@ export function PromptInput({
           {/* ⌂ 会话列表入口：点击打开会话浏览；hover 提亮为输入框强调色。
               行首固定 2 列（`⌂` 1 列 + 分隔空格 1 列，见 homeButtonCols）；
               未传 onOpenSessions 时整体不渲染（宽度预算同步归还）。 */}
-          {onOpenSessions !== undefined && (
+          {showSessionsButton && (
             <Box
               flexShrink={0}
               onClick={(event) => {
@@ -4709,7 +4736,7 @@ export function PromptInput({
           {/* ⛶ 全屏草稿编辑入口：点击展开；hover 提亮为输入框强调色。
               inputWidth 已为它预留 2 列（见渲染派生区）；设置关闭时
               整体不渲染（宽度预算同步归还）。 */}
-          {expandEnabled && (
+          {showExpandGlyph && (
             <Box
               flexShrink={0}
               onClick={(event) => {

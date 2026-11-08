@@ -113,7 +113,7 @@ export function CompactionStatusRow({
         ? <SpinnerGlyph frame={frame} messageColor="accent" />
         : <Text color="activity">{`${glyph} `}</Text>)}
       <Text color="accent">{fittedLabel}</Text>
-      {/* Claude Code's spinner-row shape: `label (time · tokens · esc to
+      {/* the spinner-row shape: `label (time · tokens · esc to
           cancel)`. The parens cost the same cells as the separator they
           replace, so the width budget above still holds. */}
       {(showElapsed || showDetail || showHint) && (

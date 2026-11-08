@@ -17,7 +17,7 @@ export const ALL_PLUGIN_FIELDS = '*'
 const PLUGIN_FIELD_KEY = /^[a-z][a-z0-9_-]*(:[a-z][a-z0-9_-]*)*$/u
 
 /**
- * Claude Code-style defaults: a quiet footer — the context readout, the goal
+ * Quiet defaults: a quiet footer — the context readout, the goal
  * chip, and `? for shortcuts` / the session-mode line under the input. Every
  * other field (model, effort, cwd, cache, cost, the segmented context bar)
  * stays one `/settings → statusBar.*` switch away.
@@ -37,14 +37,14 @@ export const DEFAULT_STATUS_BAR: Readonly<StatusBarConfig> = Object.freeze({
   sessionId: false,
   goal: true,
   mode: false,
-  // Off by default since the Claude Code-style footer (2026-11-08, user ask:
-  // replicate Claude Code's UI, keep the extras as settings). It was on by
+  // Off by default since the compact footer (2026-11-08, user ask:
+  // replicate the UI, keep the extras as settings). It was on by
   // default from 2026-09-10; `/settings → statusBar.contextBar` turns the
   // segmented per-segment breakdown back on.
   contextBar: false,
   activity: false,
   trajectory: false,
-  // On by default: Claude Code's `? for shortcuts` under the input.
+  // On by default: the `? for shortcuts` under the input.
   shortcutHint: true,
   // Third-party text in permanent chrome: on by default (a plugin that
   // registered a field asked to be seen), with one switch to silence all of

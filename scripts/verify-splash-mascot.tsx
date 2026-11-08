@@ -395,7 +395,7 @@ try {
   for (const variant of [
     { name: 'no protocol', protocol: undefined, props: COMPACT_PROPS, mascot: true },
     { name: 'row header', protocol: 'kitty' as const, props: { ...COMPACT_PROPS, arrangement: 'row' }, mascot: true },
-    { name: 'claude portrait', protocol: 'kitty' as const, props: { ...COMPACT_PROPS, brand: 'claude' }, mascot: false },
+    { name: 'codex portrait', protocol: 'kitty' as const, props: { ...COMPACT_PROPS, brand: 'codex' }, mascot: false },
   ]) {
     const CELL = Object.freeze({ width: 15, height: 34 })
     const fakeStore = { subscribe: () => () => {}, getSnapshot: () => variant.protocol !== undefined, getCellSize: () => CELL, getProtocol: () => variant.protocol, request: () => () => {} }

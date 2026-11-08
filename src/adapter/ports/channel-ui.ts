@@ -736,6 +736,12 @@ export interface ChannelUi {
    *  summary plus an optional proposed title. The answer is pure UI state
    *  and never enters the session log. */
   recapRecent(options?: { signal?: AbortSignal; onText?: (delta: string) => void }): Promise<RecapOutcome>
+  /** Suggest the user's likely next message after a turn (the
+   *  prompt suggestion, accepted with Tab): one tool-less LLM call over the
+   *  tail of the conversation. Undefined when nothing is pending, the call
+   *  fails, or the backend has no side query. Pure UI state — the answer
+   *  never enters the session log. Silent: no notice on failure. */
+  suggestNextPrompt(options?: { signal?: AbortSignal }): Promise<string | undefined>
   /** Delete a persisted session (`/resume` picker ctrl+d): removes its log
    *  directory, its last-used entry, and the resume marker when it points
    *  here. False for the live session or a missing/unwritable log. */

@@ -183,7 +183,7 @@ export function SpinnerAnimationRow({
     (leaderTokens > 0 || uploadTokens > 0) &&
     availableSpace > usedAfterTimer + tokensWidth
   const usedAfterTokens = usedAfterTimer + (showTokens ? tokensWidth + 2 + sep : 0)
-  // The interrupt hint is the last field to earn room (Claude Code order:
+  // The interrupt hint is the last field to earn room (order:
   // time · tokens · thinking · esc to interrupt); a narrow row drops it first.
   const showInterrupt =
     interruptHint !== undefined && interruptHint !== '' &&

@@ -164,7 +164,8 @@ async function renderHeader(props: Record<string, unknown>, expect?: (plain: str
   const stdout = new FakeStdout(typeof props.columns === 'number' ? props.columns as number : 120)
   const { columns, ...logoProps } = props
   const instance = await render(
-    React.createElement(ThemeProvider, { theme: 'dark' }, React.createElement(LogoHeader, logoProps)),
+    // classic: the portrait lives in the classic splash header (launchpad on).
+    React.createElement(ThemeProvider, { theme: 'dark' }, React.createElement(LogoHeader, { classic: true, ...logoProps })),
     { stdout, stderr: new FakeStderr(), stdin: new FakeStdin(), exitOnCtrlC: false, patchConsole: false },
   )
   const ready = expect ?? ((plain: string) => plain.includes('dsh-TUI') && plain.includes('whale-model-probe'))

@@ -120,7 +120,9 @@ await sleep(1800)
 
 // ---- 控制组：2 张 running 卡片 → 空闲窗口内必须有帧 ----
 const runningFrames = await countIdleFrames(1000)
-check('running 卡片驱动空闲帧（动画存在）', runningFrames >= 4, 'frames=' + runningFrames)
+// The running card's dot blinks (ToolUseLoader, ~2 commits/s); the idle
+// splash animation no longer pads this window, so any frame proves the clock.
+check('running 卡片驱动空闲帧（动画存在）', runningFrames >= 1, 'frames=' + runningFrames)
 
 // ---- 全部 settle：running → completed（走真实高度变化路径）----
 channelRows.forEach(row => {

@@ -282,28 +282,18 @@ function SweepDriver(): React.ReactNode {
   }
 }
 
-// --- Part D: 品牌优先（branding.ts × 色板）------------------------------------
-// claude 品牌在档时品牌色对直接接管，连**声明了自己 ignition 键**的调色板也让位
-// （与 StatusMetrics 的 `usedSegmentColor` 同一规则：切后端整屏换色）。deepseek 档
-// 不受影响——Part C 的合成主题已经钉住「色板键 → 屏上」那条链。
+// --- Part D: 品牌不接管点火色（branding.ts × 色板）-----------------------------
+// 点火色只认色板：codex 品牌在档时，色板声明的 ignition 键照常生效（与 deepseek
+// 档同一条链）。期望值是**字面量**：内置 `dark` 自己声明了 ignition 键，从被测
+// 映射派生期望的话，有人加回品牌分支时两边同漂、这条不红。
 {
   const { setActiveBrand } = await import('../src/branding.js')
-  const CLAUDE_DARK = { ignition: { r: 232, g: 145, b: 63 }, ignitionDim: { r: 38, g: 30, b: 22 } }
-  const CLAUDE_LIGHT = { ignition: { r: 196, g: 96, b: 20 }, ignitionDim: { r: 240, g: 240, b: 242 } }
-  const same = (a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }): boolean =>
-    a.r === b.r && a.g === b.g && a.b === b.b
-  // 期望值是**字面量**：内置 `dark`/`light` 自己声明了 ignition 键，从被测映射
-  // 派生期望的话，品牌分支被删掉时两边同漂、这条不红。
-  setActiveBrand('claude')
+  setActiveBrand('codex')
   try {
     const dark = math.ignitionColors('dark')
-    check('brand: claude 档下色板声明的 ignition 让位（暖橙品牌对）',
-      same(dark.ignition, CLAUDE_DARK.ignition) && same(dark.ignitionDim, CLAUDE_DARK.ignitionDim),
+    check('brand: codex 档下色板声明的 ignition 照常生效',
+      dark.ignition.r === 130 && dark.ignition.g === 185 && dark.ignition.b === 255,
       JSON.stringify(dark))
-    const light = math.ignitionColors('light')
-    check('brand: claude 档浅底取品牌浅色对（更深的橙 + 浅带色）',
-      same(light.ignition, CLAUDE_LIGHT.ignition) && same(light.ignitionDim, CLAUDE_LIGHT.ignitionDim),
-      JSON.stringify(light))
   } finally {
     setActiveBrand('deepseek')
   }

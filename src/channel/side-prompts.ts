@@ -144,3 +144,49 @@ export function parseRecapResponse(raw: string): { summary: string; title?: stri
   }
   return { summary: raw.trim() }
 }
+
+/** The prompt-suggestion answer contract (one short line, or NONE). */
+const SUGGEST_CONTRACT = `Decide whether the assistant's latest reply leaves something for the user to answer: a question, a choice between options, a pending confirmation, or a proposed next step that waits for approval.
+- If it does, write the single reply the user is most likely to send next, as the user, in the user's language: one short line (at most 12 words), no quotes, no explanation.
+- If it does not (the work is simply done, or nothing is pending), answer exactly NONE.`
+
+/**
+ * Wrap a recent-activity excerpt with the prompt-suggestion contract (a call
+ * that does not see the conversation itself).
+ */
+export function wrapSuggestPrompt(activity: string): string {
+  return `Suggest the user's next message for the conversation excerpt below.
+${SUGGEST_CONTRACT}
+
+Conversation excerpt:
+${activity}`
+}
+
+/** The prompt-suggestion request for a call that runs over the conversation itself. */
+export function conversationSuggestPrompt(): string {
+  return `<side-question-context>
+This auxiliary call runs alongside the main session; no tools are available and there is no follow-up turn.
+</side-question-context>
+
+Suggest the user's next message for the conversation so far.
+${SUGGEST_CONTRACT}`
+}
+
+/** Longest suggestion shown (display cells are bounded again by the input). */
+const SUGGEST_MAX_CHARS = 120
+
+/**
+ * Parse the model's suggestion: the first non-empty line, stripped of
+ * wrapping quotes/markdown; `NONE` (any case, optional punctuation), an
+ * empty answer or an overlong one yields no suggestion.
+ */
+export function parseSuggestResponse(raw: string): string | undefined {
+  const line = raw.split('\n').map(part => part.trim()).find(part => part !== '')
+  if (line === undefined) return undefined
+  const text = line
+    .replace(/^(?:[-*>]\s+|\d+[.)]\s+)/u, '')
+    .replace(/^["'“”‘’`「『]+|["'“”‘’`」』]+$/gu, '')
+    .trim()
+  if (text === '' || /^none[.!。！]?$/iu.test(text) || text.length > SUGGEST_MAX_CHARS) return undefined
+  return text
+}

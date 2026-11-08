@@ -91,7 +91,7 @@ const plainText = (frames: string[]) => frames
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-// The panel header is the tool name alone now (Claude Code style); the
+// The panel header is the tool name alone now; the
 // proceed question is the panel's own fixed line.
 const APPROVAL_TITLE = /是否继续|Do you want to proceed/
 const SETTINGS_TITLE = /Plugin settings|插件设置|No configurable plugin settings|没有可配置的插件设置/

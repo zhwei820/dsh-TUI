@@ -59,6 +59,8 @@ function makeChannel(): Record<string, unknown> {
     pending: [],
     notifications: [],
     contextBarEnabled: true,
+    // The segmented bar is an opt-in footer row (statusBar.contextBar).
+    statusBar: { contextBar: true },
     lastUsage: { input: 99_700, cacheRead: 40_300, cacheWrite: 0, output: 120 },
     contextWindow: 1_000_000,
     contextSegments: { system: 42_000, prompt: 18_000, assistant: 26_000, thinking: 21_000, tools: 17_000 },
@@ -361,16 +363,16 @@ const PROBE_FILLS = [0x101010, 0x202020, 0x303030, 0x404040, 0x505050]
   check('五段填充按上下文段顺序来自主题的 contextBar* 键',
     PROBE_FILLS.every((fill, index) => probeFills[index] === fill), shown)
   // ── 品牌优先于色板键（branding.ts）──────────────────────────────────────
-  // claude 品牌在档时五段与空余段都走品牌表，连**声明了 contextBar\* 键**的调色板
-  // 也让位——那是「切后端整屏换色」的语义，与 `ignitionColors` 同一规则。这里用
-  // 同一条渲染链路钉优先级；解析层的纯投影由 verify-themes 钉。
+  // codex 品牌在档时五段都走品牌表，连**声明了 contextBar\* 键**的调色板也让位
+  // ——那是「切品牌整屏换色」的语义。这里用同一条渲染链路钉优先级；解析层的纯
+  // 投影由 verify-themes 钉。
   const { setActiveBrand } = await import('../src/branding.js')
-  const CLAUDE_DARK_RAMP = [0x3a2720, 0x7a4a33, 0xb0623f, 0xd77757, 0xe8a183]
-  setActiveBrand('claude')
+  const CODEX_DARK_RAMP = [0x17171b, 0x282543, 0x5a5090, 0xa69be8, 0xc5bfee]
+  setActiveBrand('codex')
   try {
     const brandFills = await barFills('chrome-probe')
     check('品牌在档：段填充走品牌表，色板声明的键让位',
-      CLAUDE_DARK_RAMP.every((fill, index) => brandFills[index] === fill), fmtFills(brandFills))
+      CODEX_DARK_RAMP.every((fill, index) => brandFills[index] === fill), fmtFills(brandFills))
   } finally {
     setActiveBrand('deepseek')
   }

@@ -18,8 +18,8 @@ const ACCENT = { r: 63, g: 108, b: 196 }
 const PALE = { r: 211, g: 225, b: 254 }
 /** SGR only — the block font paints with truecolor foreground sequences. */
 const SGR = /\x1b\[[0-9;]*m/g
-/** 开屏实际用到的字母（deepseek 词 + claude 品牌词，见 `branding.ts`）；每款字体都必须有。 */
-const LETTERS = [...new Set([...'DEEPSEEK', ...'HARNESS', ...'CLAUDE', ...'CODE', ...'CODEX'])]
+/** 开屏实际用到的字母（deepseek 词 + codex 品牌词，见 `branding.ts`）；每款字体都必须有。 */
+const LETTERS = [...new Set([...'DEEPSEEK', ...'HARNESS', ...'CODEX'])]
 
 let failed = 0
 const check = (name: string, ok: boolean, detail = ''): void => {
@@ -29,8 +29,8 @@ const check = (name: string, ok: boolean, detail = ''): void => {
 
 const columns = (row: string): number => [...row.replace(SGR, '')].length
 
-// ── ①②③ 逐款字体 × 两副词（默认 DEEPSEEK/HARNESS + claude 品牌 CLAUDE/CODE）──
-// claude 词走 `withTagline`（LogoV2 的品牌分支同一条路），契约逐款钉死。
+// ── ①②③ 逐款字体 × 两副词（默认 DEEPSEEK/HARNESS + codex 品牌 CODEX/HARNESS）──
+// codex 词走 `withTagline`（LogoV2 的品牌分支同一条路），契约逐款钉死。
 for (const font of SPLASH_FONTS) {
   const wordPairs: readonly [string, typeof font, 'equal' | 'uniform'][] = [
     // 固定字距档（shadow）默认词对也按 uniform 断言：两行同字距、indent 0。
@@ -102,29 +102,32 @@ for (const font of SPLASH_FONTS) {
 check('字体 id 唯一', new Set(SPLASH_FONTS.map(font => font.id)).size === SPLASH_FONTS.length)
 check('字体数量 >= 2（轮换才有意义）', SPLASH_FONTS.length >= 2, `${SPLASH_FONTS.length} 款`)
 
-// ── 品牌词宽解契约（LogoV2 的 claude 分支用 wide 解，这里钉死它的性质）──
+// ── 宽解契约（`withTagline` 的 wide 选项，这里钉死它的性质）──────────────
+// 样例词对取上排比下排长 3 字（DEEPSEEK / CODEX），与原品牌词对同为「字数差大」。
+const WIDE_TOP = 'DEEPSEEK'
+const WIDE_BOTTOM = 'CODEX'
 // 穷举全部可行解（独立复算，不信实现内部算术），断言实现落在「中间档」：
 // 字距和最接近紧/宽两极的中点——紧解挤、最宽解空旷（用户两轮反馈的结论）。
 // 下排字距天然大于上排是等宽契约的数学必然（字数差靠 bk−tk 补）。
 for (const font of SPLASH_FONTS) {
   if (font.uniformKerning !== undefined) {
-    // 固定字距档不进求解器：CLAUDE/CODE 也同字距（穷举复算不适用）。
-    const fixed = withTagline(font, 'CLAUDE', 'CODE', { wide: true })
+    // 固定字距档不进求解器：宽解词对也同字距（穷举复算不适用）。
+    const fixed = withTagline(font, WIDE_TOP, WIDE_BOTTOM, { wide: true })
     check(
-      `[${font.id}] CLAUDE/CODE 固定字距（不进求解器）`,
+      `[${font.id}] ${WIDE_TOP}/${WIDE_BOTTOM} 固定字距（不进求解器）`,
       fixed.tagline.topKerning === font.uniformKerning && fixed.tagline.bottomKerning === font.uniformKerning && fixed.tagline.bottomIndent === 0,
       `tk=${fixed.tagline.topKerning} bk=${fixed.tagline.bottomKerning}`,
     )
     continue
   }
-  const wide = withTagline(font, 'CLAUDE', 'CODE', { wide: true })
+  const wide = withTagline(font, WIDE_TOP, WIDE_BOTTOM, { wide: true })
   const { topKerning, bottomKerning, bottomIndent } = wide.tagline
   const feasible: number[] = []
   for (let tk = 1; tk <= 8; tk++) {
     for (let bk = 1; bk <= 8; bk++) {
-      const indent = bigTextWidth(font, 'CLAUDE', tk) + tk - bigTextWidth(font, 'CODE', bk) - bk
+      const indent = bigTextWidth(font, WIDE_TOP, tk) + tk - bigTextWidth(font, WIDE_BOTTOM, bk) - bk
       if (indent < 0) continue
-      if (Math.abs(bigTextWidth(font, 'CLAUDE', tk) - bigTextWidth(font, 'CODE', bk) - 2 * indent) <= 1) feasible.push(tk + bk)
+      if (Math.abs(bigTextWidth(font, WIDE_TOP, tk) - bigTextWidth(font, WIDE_BOTTOM, bk) - 2 * indent) <= 1) feasible.push(tk + bk)
     }
   }
   const minSum = feasible.length > 0 ? Math.min(...feasible) : -1
@@ -133,14 +136,14 @@ for (const font of SPLASH_FONTS) {
   const candidates = [...new Set(feasible)]
   const mid = candidates.reduce((best, sum) => (Math.abs(sum - target) < Math.abs(best - target) ? sum : best), candidates[0] ?? -1)
   check(
-    `[${font.id}] CLAUDE/CODE 取中间档可行解（穷举独立复算）`,
+    `[${font.id}] ${WIDE_TOP}/${WIDE_BOTTOM} 取中间档可行解（穷举独立复算）`,
     feasible.includes(topKerning + bottomKerning) && topKerning + bottomKerning === mid,
     `tk=${topKerning} bk=${bottomKerning} 和=${topKerning + bottomKerning} / 可行档 ${candidates.join(',')} 中位=${mid}`,
   )
-  const inkTop = bigTextWidth(wide, 'CLAUDE', topKerning)
-  const inkBottom = bigTextWidth(wide, 'CODE', bottomKerning)
+  const inkTop = bigTextWidth(wide, WIDE_TOP, topKerning)
+  const inkBottom = bigTextWidth(wide, WIDE_BOTTOM, bottomKerning)
   check(
-    `[${font.id}] CLAUDE/CODE 宽解仍满足等宽 + 居中契约`,
+    `[${font.id}] ${WIDE_TOP}/${WIDE_BOTTOM} 宽解仍满足等宽 + 居中契约`,
     Math.abs(inkTop - inkBottom - 2 * bottomIndent) <= 1,
     `ink ${inkTop}/${inkBottom} indent ${bottomIndent}`,
   )

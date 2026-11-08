@@ -58,8 +58,8 @@ function entry(
 
 /**
  * The role each built-in plays as a `base`. The mist and sakura rows play one
- * of the three classic roles (their own names are not bases); the brand pairs
- * play the dark/light role of their brand family — the brand adaptation of
+ * of the three classic roles (their own names are not bases); the brand pair
+ * plays the dark/light role of its brand family — the brand adaptation of
  * `dark`/`light` (their own names are bases too, see THEME_BASE_NAMES).
  * Total over THEME_NAMES, so a new built-in must decide a role to compile.
  */
@@ -70,8 +70,6 @@ const BUILT_IN_BASE: Readonly<Record<(typeof THEME_NAMES)[number], ThemeBase>> =
   'pink-night': 'dark',
   'pink-ansi': 'dark-ansi',
   'pink-day': 'light',
-  'claude-dark': 'dark',
-  'claude-paper': 'light',
   'codex-lavender': 'dark',
   'codex-paper': 'light',
 }

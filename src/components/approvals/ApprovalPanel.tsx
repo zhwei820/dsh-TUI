@@ -136,7 +136,7 @@ export function feedbackRowLines(prefix: string, label: string, reason: string, 
 }
 
 /**
- * The localized label of an option without backend wording (Claude Code's
+ * The localized label of an option without backend wording (the
  * `Yes` / `Yes, and don't ask again` / `No, and tell … (esc)`). The long
  * reject wording only appears where a reason can actually be typed; the
  * typed-reason row keeps the short `No` as its label.

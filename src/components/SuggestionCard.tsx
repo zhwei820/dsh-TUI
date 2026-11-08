@@ -6,7 +6,7 @@ import type { Theme } from '../theme.js'
 import type { WheelEvent } from '../ink/events/wheel-event.js'
 
 /**
- * `/` 命令菜单与 `@` 文件菜单共用的列表外壳，Claude Code 视觉：不画边框、
+ * `/` 命令菜单与 `@` 文件菜单共用的列表外壳，简洁视觉：不画边框、
  * 不画标题，只是一列紧贴输入框的候选行（`❯` 指向选中行，裁剪时末尾一行
  * dim 的 `↑2 · ↓3`）。左右各留 1 列空白 + 1 列内边距（原 │ 位），行内容
  * 的可用宽度仍由 {@link cardContentWidth} 统一计算，CJK 截断契约

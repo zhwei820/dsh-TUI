@@ -91,28 +91,28 @@ function PhaseBadge({
   )
 }
 
+/** Checkbox list: `☒` done, `☐` open (the live one bold). */
 function TodoGlyph({ status }: { status: TodoPanelItem['status'] }): React.ReactNode {
   switch (status) {
     case 'in_progress':
-      return <Text color="suggestion">● </Text>
+      return <Text color="suggestion" bold>☐ </Text>
     case 'completed':
-      return <Text dimColor>✓ </Text>
+      return <Text dimColor>☒ </Text>
     default:
-      return <Text dimColor>○ </Text>
+      return <Text dimColor>☐ </Text>
   }
 }
 
 /**
- * Mind-map style branch prefix: `├─` for every row but the last, which
- * closes with `└─`. The whole panel reads as one tree — the goal is the
- * root and each todo hangs off it.
+ * List gutter: the first todo hangs under `⎿`, the rest align
+ * under it (3 cells either way, so wrapping math is unchanged).
  */
-function BranchPrefix({ last }: { last: boolean }): React.ReactNode {
-  return <Text dimColor>{last ? '└─ ' : '├─ '}</Text>
+function BranchPrefix({ top }: { top: boolean }): React.ReactNode {
+  return <Text dimColor>{top ? '⎿  ' : '   '}</Text>
 }
 
-/** 目标首行前缀；display width 运行时算（emoji 宽度随终端数据源变化）。 */
-const GOAL_GLYPH = '🎯 '
+/** 目标首行前缀；display width 运行时算。 */
+const GOAL_GLYPH = '◆ '
 /** blocked 原因行前缀（与 §16 的树形装饰同宽）。 */
 const BLOCKED_BAR = '│ '
 
@@ -160,6 +160,8 @@ export type GoalPanelRow =
     readonly status: TodoPanelItem['status']
     readonly first: boolean
     readonly last: boolean
+    /** First todo of the list (hangs under the `⎿` gutter). */
+    readonly top: boolean
   }
 
 /**
@@ -218,6 +220,7 @@ export function buildGoalPanelRows(input: {
         status: todo.status,
         first: lineIndex === 0,
         last,
+        top: index === 0,
       })
     })
   })
@@ -483,15 +486,14 @@ export function GoalTodoPanel({
                 <Box key={index} flexDirection="row" height={1}>
                   {row.first ? (
                     <>
-                      <BranchPrefix last={row.last} />
+                      <BranchPrefix top={row.top} />
                       <TodoGlyph status={row.status} />
                     </>
                   ) : (
-                    // 续行前缀语义与 default 形态一致：非末条继续画干，末条
-                    // 用 5 格空格（前缀 3 + glyph 2）与正文对齐。
-                    <Text dimColor>{row.last ? '     ' : '\u2502    '}</Text>
+                    // 续行：5 格空格（前缀 3 + glyph 2）与正文对齐。
+                    <Text dimColor>{'     '}</Text>
                   )}
-                  <Text wrap="truncate" dimColor={row.status === 'completed'}>
+                  <Text wrap="truncate" dimColor={row.status === 'completed'} strikethrough={row.status === 'completed'} bold={row.status === 'in_progress'}>
                     {row.text}
                   </Text>
                 </Box>
@@ -576,7 +578,7 @@ export function GoalTodoPanel({
                   <Box key={li} flexDirection="row" height={1}>
                     {li === 0 ? (
                       <>
-                        <BranchPrefix last={last} />
+                        <BranchPrefix top={index === 0} />
                         <TodoGlyph status={item.todo.status} />
                       </>
                     ) : (
@@ -586,9 +588,9 @@ export function GoalTodoPanel({
                       // 不得再挂干。后随格数与首行正文对齐（前缀 3 + glyph 2
                       // = 5 格）。todo 的折行是渲染前 wrapText 预算好的（不像
                       // jobs 由 ink 在列内部折、加不了前缀），逐行手写不会断。
-                      <Text dimColor>{last ? '     ' : '\u2502    '}</Text>
+                      <Text dimColor>{'     '}</Text>
                     )}
-                    <Text wrap="truncate" dimColor={item.todo.status === 'completed'}>
+                    <Text wrap="truncate" dimColor={item.todo.status === 'completed'} strikethrough={item.todo.status === 'completed'} bold={item.todo.status === 'in_progress'}>
                       {line}
                     </Text>
                   </Box>
@@ -596,7 +598,7 @@ export function GoalTodoPanel({
               })}
               {hidden > 0 && (
                 <Box flexDirection="row" height={1}>
-                  <BranchPrefix last />
+                  <BranchPrefix top={false} />
                   <Text dimColor>… {hidden} more</Text>
                 </Box>
               )}

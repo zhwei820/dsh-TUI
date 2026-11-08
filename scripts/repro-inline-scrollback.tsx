@@ -161,7 +161,8 @@ const stdoutObj = new FakeStdout()
 const stdin = new FakeStdin()
 // inline 模式：不包 AlternateScreen —— 与 npm 安装默认一致。
 const instance = await render(
-  <Chat channel={channel} questionStore={new QuestionStore()} />,
+  // classicSplash: this repro pins the classic header's scrollback copies.
+  <Chat channel={channel} questionStore={new QuestionStore()} classicSplash />,
   { stdout: stdoutObj, stdin, stderr: new FakeStderr(), exitOnCtrlC: false, patchConsole: false },
 )
 
@@ -324,7 +325,7 @@ for (const t of ['五、代码结构']) {
 }
 
 const rowOf = (needle: string) => lines.findIndex(line => line.includes(needle))
-const thinkingRow = lines.findLastIndex(line => line.includes('思考 ·'))
+const thinkingRow = lines.findLastIndex(line => line.includes('已思考'))
 const toolRow = rowOf('TOOL_CALL_ONCE_7F31')
 const bodyRow = rowOf('ASSISTANT_BODY_ONCE_7F31')
 const inputRow = rowOf(INPUT_MARKER)

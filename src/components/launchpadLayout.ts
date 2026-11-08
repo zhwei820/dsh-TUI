@@ -38,7 +38,7 @@ import type { SplashFont } from './splashFonts.js'
 
 /**
  * 立绘槽的默认行数（像素鲸鱼 13 行）。**真实行数由调用方传 `artRows`**——
- * 槽高随形态变（女仆娘/Claude 娘 11、吉祥物 15），写死 13 会让默认的吉祥物
+ * 槽高随形态变（女仆娘 11、吉祥物 15），写死 13 会让默认的吉祥物
  * 路径少算 2 行（见 `splashArtRows.ts` 的表与那段修复说明）。
  */
 const DEFAULT_ART_ROWS = WHALE_ART_ROWS

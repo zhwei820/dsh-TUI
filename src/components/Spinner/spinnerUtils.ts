@@ -7,7 +7,7 @@
 export type RGBColor = { r: number; g: number; b: number }
 
 /**
- * Claude Code's twinkling star (`·` → `✽`, then back): every frame is one
+ * the twinkling star (`·` → `✽`, then back): every frame is one
  * display cell (Dingbats are East-Asian-narrow), so CJK terminals keep the
  * row from jittering.
  */

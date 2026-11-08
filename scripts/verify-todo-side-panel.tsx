@@ -82,7 +82,7 @@ const rowsOf = (
   check('rows: panel content width is width - padding on both sides',
     content28 === 26 && content62 === 60, content28 + '/' + content62)
   check('rows: the objective width leaves room for the glyph plus one spare cell',
-    goalObjectiveWidth(content28) === 22,
+    goalObjectiveWidth(content28) === 23, // 26 - glyph `◆ ` (2) - 1 spare
     String(goalObjectiveWidth(content28)))
 
   // 28/62 列：每行都不超过目标折行宽，宽字符/emoji 不丢不重。
@@ -194,7 +194,7 @@ for (const width of [28, 62]) {
       const firstRow = blocked ? statusRow + 2 : 0
       const lastRow = blocked ? panelLines.findLastIndex(line => line.trim() !== '') : statusRow - 1
       const picked = selection.createSelectionState()
-      selection.startSelection(picked, chatColumns + 2 + (blocked ? 2 : 3), firstRow, screen)
+      selection.startSelection(picked, chatColumns + 2 + 2, firstRow, screen) // glyph `◆ ` / bar `│ ` are both 2 cells
       selection.updateSelection(picked, columns - 1, lastRow)
       const copied = selection.getSelectedText(picked, screen)
       check(`copy: ${width}-col ${blocked ? 'blocked reason' : 'objective'} preserves ${name}`,
@@ -475,12 +475,12 @@ try {
   // 悬挂缩进：续行在首行树形前缀列上是 5 格空格（前缀 3 + glyph 2），正文与首行对齐。
   const wrapFirstRow = lines().findIndex(l => l.includes('aaaaa'))
   const contLine = lines()[wrapFirstRow + 1]
-  const prefixCol = wrapFirstRow >= 0 ? lines()[wrapFirstRow]!.indexOf('\u251c') : -1
-  // 整组不变量：续行在树形前缀列上必须以 '│' 开头（竖线与首行连续），
-  // 且正文列与首行对齐（'│'+4 格 = 5 格）。
+  // 勾选列表：前缀列 = 勾选框列 − 3（`⎿  ` 或 3 格空白）。
+  const prefixCol = wrapFirstRow >= 0 ? lines()[wrapFirstRow]!.indexOf('☐') - 3 : -1
+  // 续行在前缀列上是 5 格空白（前缀 3 + 勾选框 2），正文与首行对齐。
   const contAtPrefix = contLine !== undefined && prefixCol >= 0 ? contLine.slice(prefixCol, prefixCol + 5) : ''
   check('wrap: continuation line hangs with 5-space indent (aligns with first-line text)',
-    contAtPrefix === '\u2502    ',
+    contAtPrefix === '     ',
     JSON.stringify(contLine ?? null))
   // 滚动形态：全部 todo 进入行模型，不再有 `…N more` 预算隐藏；视口外的
   // 条目滚一下就能看到（19 行 > 17 行视口）。
@@ -508,8 +508,8 @@ try {
   check('cap: overlong todo occupies exactly 2 rows', xRows.length === 2, String(xRows.length))
   check('cap: second row ends with the ellipsis', xRows[1] !== undefined && xRows[1].trimEnd().endsWith('\u2026'), JSON.stringify(xRows[1] ?? null))
   const xIdx = xRows[1] !== undefined ? xRows[1].indexOf('XXXXX') : -1
-  check('cap: second row also carries the tree stem (\u2502 + aligned text)',
-    xIdx >= 5 && xRows[1]!.slice(xIdx - 5, xIdx) === '\u2502    ')
+  check('cap: second row hangs with the 5-cell indent (aligned text)',
+    xIdx >= 5 && xRows[1]!.slice(xIdx - 5, xIdx) === '     ')
   check('cap: short neighbor still visible after it (budget left for 1-line rows)', lines().some(l => l.includes('write the fix')))
   check('wrap-cap: panel height still unchanged', JSON.stringify(ruleRows()) === JSON.stringify(rulesBefore))
 
@@ -522,10 +522,11 @@ try {
   ])
   await settled(() => lines().some(l => l.includes('LASTMARK-')), { timeout: 4000 })
   const lastRow = lines().findIndex(l => l.includes('LASTMARK-'))
-  const lastPrefixCol = lastRow >= 0 ? lines()[lastRow]!.indexOf('\u2514') : -1
+  const lastPrefixCol = lastRow >= 0 ? lines()[lastRow]!.indexOf('☐') - 3 : -1
   const lastCont = lastRow >= 0 ? lines()[lastRow + 1] : undefined
   const lastAtPrefix = lastCont !== undefined && lastPrefixCol >= 0 ? lastCont.slice(lastPrefixCol, lastPrefixCol + 5) : ''
-  check('last-wrap: last item first line closes with \u2514', lastPrefixCol >= 0)
+  check('last-wrap: a later item hangs on the plain 3-cell gutter (only the first takes ⎿)',
+    lastPrefixCol >= 0 && lines()[lastRow]!.slice(lastPrefixCol, lastPrefixCol + 3) === '   ')
   check('last-wrap: continuation column is blank (no stray stem)', lastAtPrefix === '     ', JSON.stringify(lastAtPrefix))
   check('last-wrap: continuation text still aligned with first-line text',
     lastCont !== undefined && lastCont.slice(lastPrefixCol + 5, lastPrefixCol + 7) === 'zz')
@@ -544,7 +545,7 @@ try {
   const idleRows = lines().filter(l => l.includes('finished task')).length
   check('idle-9: expanded list shows the completed rows (not empty)', idleRows >= 9, String(idleRows))
   check('idle-9: first and last items both on screen', lines().some(l => l.includes('finished task 0')) && lines().some(l => l.includes('finished task 8')))
-  check('idle-9: completed rows render dimmed but present (glyph ✓)', lines().some(l => l.includes('\u2713 finished task 1')))
+  check('idle-9: completed rows render dimmed but present (glyph ☒)', lines().some(l => l.includes('☒ finished task 1')))
   // 点开/收起往返仍然工作（折叠头 → 预览行；再展开 → 9 行回来）。
   const idleHeader = findCell('9/9')
   await sleep(600) // 固定窗:墙钟 ink 500ms 双击判定窗口（距上次点击已远，此处仅对齐用例节奏）
@@ -674,7 +675,7 @@ try {
   }
   const firstCopyRow = lines().findIndex(l => l.includes('xxxxxxxx'))
   const lastCopyRow = lines().findIndex(l => l.includes('保留原文'))
-  const firstCopyCol = exposedChatColumns + 1 + 1 + 3 // divider, padding, glyph
+  const firstCopyCol = exposedChatColumns + 1 + 1 + 2 // divider, padding, glyph `◆ `
   stdin.write(`\x1b[<0;${firstCopyCol + 1};${firstCopyRow + 1}M`)
   stdin.write(`\x1b[<32;${COLS};${lastCopyRow + 1}M`)
   stdin.write(`\x1b[<0;${COLS};${lastCopyRow + 1}m`)

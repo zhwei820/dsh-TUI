@@ -12,7 +12,7 @@ import { SuggestionCard, cardContentWidth, splitQueryMatch } from './SuggestionC
 
 /**
  * The slash-command suggestion overlay, using the shared borderless
- * `SuggestionCard` list (Claude Code style):
+ * `SuggestionCard` list:
  *
  *     ❯ compact  Summarize earlier turns…     ← 选中：❯ + 加粗 + suggestion 色
  *       compare  Compare selected messages …  ← 名字里命中输入的段提亮

@@ -328,7 +328,7 @@ try {
   const barRig = makeRig(120, 12)
   const barStub = {
     ...channelStub,
-    // The segmented bar is opt-in since the Claude Code-style footer.
+    // The segmented bar is opt-in since the compact footer.
     statusBar: { ...(channelStub as { statusBar?: object }).statusBar, contextBar: true },
     contextBarEnabled: true,
     contextSegments: SEGMENTS,
@@ -602,7 +602,7 @@ try {
       key: '计划模式',
       channel: { ...K_STUB, mode: { id: 'plan', plan: true, sandbox: 'read-only', approval: 'ask' } },
       line: ' TM · 计划模式 · dsh-tui',
-      // Claude Code's under-the-input mode line (the only new row).
+      // the under-the-input mode line (the only new row).
       hint: ' ⏸ 计划模式已开启（shift+tab 切换）',
       sig: '1@ffffff/ffffff 2@aab2c2/ffffff 3@8d95a6/ffffff 8@7fae99/ffffff 3@8d95a6/ffffff 7@aab2c2/ffffff 36@ffffff/ffffff',
     },

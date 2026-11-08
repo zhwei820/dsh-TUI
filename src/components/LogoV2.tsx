@@ -17,10 +17,9 @@ import { pickSplashEgg, splashStarLine, type SplashEgg } from './splashEggs.js'
 import { isHistoricMilestone, markStarAsked, pendingStarMilestone, recordLaunch, STAR_MILESTONES, usageSnapshot } from '../usageStats.js'
 import { effectiveComboDisplay } from '../utils/keymap.js'
 import { stringWidth } from '../ink/stringWidth.js'
-import { BRAND, EMBER, EMBER_BRIGHT, EMBER_FLASH, EMBER_LIGHT, EMBER_PALE, EMBER_PAPER, EMBER_PAPER_FLASH, FLASH, ICE, LAVENDER, LAVENDER_BRIGHT, LAVENDER_FLASH, LAVENDER_LIGHT, LAVENDER_PALE, LAVENDER_PAPER, LAVENDER_PAPER_FLASH, LAVENDER_SOFT, PALE, sweep } from './shimmer.js'
+import { BRAND, FLASH, ICE, LAVENDER, LAVENDER_BRIGHT, LAVENDER_FLASH, LAVENDER_LIGHT, LAVENDER_PALE, LAVENDER_PAPER, LAVENDER_PAPER_FLASH, LAVENDER_SOFT, PALE, sweep } from './shimmer.js'
 import { STANDARD_FRAME_INDEX, WhaleArt } from './Whale.js'
 import { WhaleGirlArt } from './WhaleGirl.js'
-import { ClaudeGirlArt } from './ClaudeGirl.js'
 import { MAID_BOX_CENTER, MaidPortrait, portraitAssetsOf, useMaidPortraits } from './maidPortrait.js'
 import { SplashMascot, useSplashMascotSkin, useSplashMascotBox } from './sidePanel/companion/SplashMascot.js'
 import type { SplashImageBox } from './splashArtRows.js'
@@ -155,8 +154,8 @@ export function LogoV2({
    * replaced with better art) takes the slot. Both forms are static, so
    * `whaleIdle` only animates the whale. */
   whaleGirl?: boolean
-  /** 品牌档（当前后端 → `brandOfProvider`，见 `branding.ts`）：claude 时
-   * 大字词换 `CLAUDE`/`CODE`、配色换橙阶、立绘槽固定 Claude 娘（不看
+  /** 品牌档（设置项 `dsh-tui.brand`，见 `branding.ts`）：codex 时
+   * 大字词换 `CODEX`/`HARNESS`、配色换薰衣草紫阶、立绘槽固定 Codex 娘（不看
    * whaleGirl 设置——鲸鱼与鲸鱼娘是 DeepSeek 品牌资产）。测试缝：缺省
    * `deepseek`，行为与品牌化之前逐字节一致。 */
   brand?: Brand
@@ -306,16 +305,14 @@ export function LogoV2({
   const [dailyFont] = React.useState<SplashFont>(() => pickSplashFont())
   const font = fontId === undefined ? dailyFont : splashFontById(fontId)
 
-  // 品牌词（`branding.ts`）：claude 内核换 `CLAUDE`/`CODE`、codex 内核换
-  // `CODEX`/`HARNESS`——字身不变、**两行同字距**（用户点名「间隙一致」：
+  // 品牌词（`branding.ts`）：codex 品牌换 `CODEX`/`HARNESS`——字身不变、**两行同字距**（用户点名「间隙一致」：
   // 等宽契约靠两行字距互补，字数差大的词对间隙观感差很多），块宽以默认
   // 词对紧解为预算。窄终端阶梯阈值跟着当天真实标题宽度走，与彩蛋共用
   // `withTagline`。
   const words = BRAND_SPLASH_WORDS[brand]
 
   // 节日彩蛋：本地日期整天恒定，每次 mount 只判一次（照 pickSplashFont 的写法）。
-  // 只换下排词——上排钉在品牌词上（deepseek 的 `DEEPSEEK` / claude 的 `CLAUDE`
-  // / codex 的 `CODEX`）。
+  // 只换下排词——上排钉在品牌词上（deepseek 的 `DEEPSEEK` / codex 的 `CODEX`）。
   const [dailyEgg] = React.useState<SplashEgg | null>(() => (egg === undefined ? pickSplashEgg() : egg))
   const titleFont = resolveSplashTitleFont(font, brand, dailyEgg)
 
@@ -339,13 +336,11 @@ export function LogoV2({
   // 女仆娘档优先走**真图**（Kitty/Sixel 终端图像协议，见 `maidPortrait.tsx`）；
   // 协议不可用（内联模式、终端不支持）或资产解码失败时，回落到字符画版
   // 女仆娘（`WhaleGirl.tsx` 半块精灵——作者占位，之后会换更好看的）。
-  // 品牌档（`branding.ts`）的立绘槽固定各自的娘（同一套盒几何）：claude =
-  // Claude 娘（真图 `assets/claude-girl/`，回落 `ClaudeGirl.tsx`）；codex =
-  // 淡紫恶魔精灵（真图 `assets/codex-girl/`，回落 `WhaleGirl.tsx`）——都不看
+  // 品牌档（`branding.ts`）的立绘槽固定各自的娘（同一套盒几何）：codex =
+  // 淡紫恶魔精灵（真图 `assets/codex-girl/`，回落 `WhaleGirl.tsx`）——不看
   // whaleGirl 设置。像素鲸鱼、鲸鱼娘与 deepy/鲸娘皮肤是 DeepSeek 品牌的资产。
   // 两种形态都是静态立绘：闲置动画与点击爱心仍是鲸鱼专属。
   // `maidImageActive` 只在「真图画出来了」时为真。
-  const claudeArt = brand === 'claude'
   const portraitMode = whaleGirl || brand !== 'deepseek'
   const imagesAvailable = useTerminalImages(portraitMode)
   const portraits = useMaidPortraits(portraitMode && imagesAvailable, portraitAssetsOf(brand))
@@ -433,7 +428,7 @@ export function LogoV2({
   // off-screen, leaving the static gradient behind.
   const t = settled ? 0 : time
 
-  // 品牌欢迎语（claude 档专用文案；deepseek 沿用 i18n 的 `logo-tagline`）。
+  // 品牌欢迎语（codex 档专用文案；deepseek 沿用 i18n 的 `logo-tagline`）。
   // 英文是两行（\n 分隔）——渲染与居中都按行处理，见下方 welcomeWidth/渲染。
   const brandTagline = BRAND_TAGLINE[brand]
   const tagline = brand !== 'deepseek'
@@ -519,27 +514,20 @@ export function LogoV2({
   const top = fontTop
   // 大字配色按字体/品牌解析（运行时 `palette`（扩展缝）最优先）：
   // - deepseek：主题 accent → activity → PALE 的蓝白阶（品牌化之前的行为）；
-  // - claude：cc-bridge 校过的深橙 → 浅橙，两行同一对端点——第二行终点不再
-  //   落到写死的蓝白 PALE；
+  // - codex：薰衣草紫阶，两行同一对端点——第二行终点不再落到写死的蓝白 PALE；
   // - bevel（半立体）两个品牌都随基色派生亮/暗两档（提亮 / 压暖黑）：字形
   //   自带 █/▓ 明暗笔画，叠上主题色渐变才是"金属受光"。旧版写死的静态灰阶
   //   在任何主题下都像没上色（用户反馈的"灰色字体"）。
-  // claude 双主题的大字端点：深底 #D77757 → 淡橙；浅底（claude-paper）反向
-  // ——正色压深 #C96442、高光也变深（浅底上"亮"是加深）。bevel 的金属明暗
-  // 两档同样以当档基色派生。
+  // codex 双主题的大字端点：深底亮紫起步；浅底（codex-paper）反向——高光也
+  // 变深（浅底上"亮"是加深）。bevel 的金属明暗两档同样以当档基色派生。
   const brandPaper = brand !== 'deepseek' && isLightThemeActive(themeName)
-  // 品牌大字色阶（跨两行三档，从左上到右下走完）：claude 陶土橙、codex 薰衣草
-  // 紫；深底从亮档起步奔最亮收，浅底反向从深化档起步（浅底上"亮"是加深）。
+  // 品牌大字色阶（跨两行三档，从左上到右下走完）：codex 薰衣草紫；深底从亮档起步奔最亮收，浅底反向从深化档起步（浅底上"亮"是加深）。
   // deepseek 不在表内——沿用主题 wordmark/tagline/PALE 的蓝白阶。
-  const brandLadder = brand === 'claude'
+  const brandLadder = brand === 'codex'
     ? (brandPaper
-        ? { base: EMBER, start: EMBER, mid: EMBER_LIGHT, end: EMBER_BRIGHT, flash: EMBER_PAPER_FLASH }
-        : { base: EMBER_LIGHT, start: EMBER_LIGHT, mid: EMBER_BRIGHT, end: EMBER_PALE, flash: EMBER_FLASH })
-    : brand === 'codex'
-      ? (brandPaper
-          ? { base: LAVENDER_PAPER, start: LAVENDER_PAPER, mid: LAVENDER_LIGHT, end: LAVENDER, flash: LAVENDER_PAPER_FLASH }
-          : { base: LAVENDER_BRIGHT, start: LAVENDER_BRIGHT, mid: LAVENDER_SOFT, end: LAVENDER_PALE, flash: LAVENDER_FLASH })
-      : undefined
+        ? { base: LAVENDER_PAPER, start: LAVENDER_PAPER, mid: LAVENDER_LIGHT, end: LAVENDER, flash: LAVENDER_PAPER_FLASH }
+        : { base: LAVENDER_BRIGHT, start: LAVENDER_BRIGHT, mid: LAVENDER_SOFT, end: LAVENDER_PALE, flash: LAVENDER_FLASH })
+    : undefined
   const brandBase = brandLadder?.base ?? wordmarkRGB
   const bevelShade = titleFont.id === 'bevel'
     ? {
@@ -547,12 +535,10 @@ export function LogoV2({
         to: interpolateColor(brandBase, { r: 24, g: 18, b: 12 }, 0.55),
       }
     : undefined
-  // 扫光高光同族：橙字上扫过蓝光会很脏；claude 深底暖阳高光、浅底深化高光。
+  // 扫光高光同族：紫字上扫过蓝光会很脏；codex 深底亮高光、浅底深化高光。
   const flash = brandLadder?.flash ?? FLASH
-  // claude 渐变是**跨两行的三档色阶**（行一 起→中、行二 中→收），整幅从左
-  // 上到右下走完色阶。起点两轮提亮（用户反馈"还是暗"）：深底直接从亮档
-  // #E68A69 起步 → #EFA97E → 奶油橙 #FBD6B0（官方正色 #D77757 明度中等、
-  // 压深底发闷，只留给浅底当起点）；浅底 #D77757 → #E68A69 → #EFA97E。
+  // 品牌渐变是**跨两行的三档色阶**（行一 起→中、行二 中→收），整幅从左
+  // 上到右下走完色阶。
   const titleFrom = titleFont.palette?.from
     ?? bevelShade?.from
     ?? brandLadder?.start
@@ -637,8 +623,8 @@ export function LogoV2({
                 鲸鱼形态逐字节一致（tip 行截断/阶梯契约），吉祥物（31 格）在
                 盒内居中。 */}
             <Box width={WHALE_BOX_WIDTH} flexDirection="column" alignItems="center">
-            {/* claude 品牌档的立绘槽钉死 Claude 娘——吉祥物（deepy/鲸娘皮肤）
-                是 DeepSeek 品牌的资产，不跟 claude 档混用。 */}
+            {/* codex 品牌档的立绘槽钉死 Codex 娘——吉祥物（deepy/鲸娘皮肤）
+                是 DeepSeek 品牌的资产，不跟 codex 档混用。 */}
             {brand === 'deepseek' && mascotSkin !== undefined ? (
               <SplashMascot skin={mascotSkin} active={!whaleFrozen && whaleIdle} imageBox={imageBox} />
             ) : portraitMode ? (
@@ -664,7 +650,7 @@ export function LogoV2({
                     presentation="transcript"
                   />
                 ) : (
-                  claudeArt ? <ClaudeGirlArt width={WHALE_BOX_WIDTH} /> : <WhaleGirlArt width={WHALE_BOX_WIDTH} />
+                  <WhaleGirlArt width={WHALE_BOX_WIDTH} />
                 )}
               </Box>
             ) : (
@@ -759,7 +745,7 @@ export function LogoV2({
       {(chrome !== 'minimal' || starLine !== null) && (
       <Box flexDirection="column" marginTop={1} {...(starLine === null || onStarClick === undefined ? {} : { onClick: onStarClick })}>
         {starLine === null ? (
-          // 多行欢迎语（claude 品牌英文 slogan 是两行）：`center` 版式交给
+          // 多行欢迎语（文案含 `\n` 时）：`center` 版式交给
           // 父级逐行居中；`start` 版式在立绘中线下**块内居中**——窄行补半差，
           // 两行的中轴对齐而不是左缘对齐。
           taglineLines.map(line => (

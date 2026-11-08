@@ -148,6 +148,8 @@ const channel = {
   modeIndex: 0,
   cycleMode() {},
   commandList: LOCAL_COMMANDS,
+  // Prompt chrome on: the ⛶ glyph is what this suite clicks.
+  promptSessionLabel: true,
   commandCompletions: () => [],
   notifications: [],
   pending: [],

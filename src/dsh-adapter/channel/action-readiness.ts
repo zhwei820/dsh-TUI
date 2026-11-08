@@ -60,6 +60,7 @@ export type ChannelActionDelegates = Pick<ChannelState,
   | 'renameSession'
   | 'setSessionColor'
   | 'recapRecent'
+  | 'suggestNextPrompt'
   | 'deleteSession'
   | 'renameSessionTo'
   | 'compact'
@@ -143,6 +144,7 @@ export function createChannelActionMethods(
     renameSession: title => getReadyActions().renameSession(title),
     setSessionColor: color => getReadyActions().setSessionColor(color),
     recapRecent: options => getReadyActions().recapRecent(options),
+    suggestNextPrompt: options => getReadyActions().suggestNextPrompt(options),
     deleteSession: sessionId => getReadyActions().deleteSession(sessionId),
     renameSessionTo: (sessionId, title) => getReadyActions().renameSessionTo(sessionId, title),
     compact: () => getReadyActions().compact(),
@@ -264,6 +266,8 @@ export function createUnavailableActionDelegates(
     setResumeTarget: () => { unavailable('resume') },
     renameSession: () => { unavailable('rename') },
     setSessionColor: () => { unavailable('color') },
+    // Silent by contract: an unready session simply has no suggestion.
+    suggestNextPrompt: () => Promise.resolve(undefined),
     recapRecent: () => {
       unavailable('recap')
       return Promise.resolve({ summary: null, error: unavailableLines('recap').join(' ') })

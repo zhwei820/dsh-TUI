@@ -16,7 +16,7 @@
  * exists, so no construction-time placeholder is ever callable.
  */
 import type { AgentSession } from '../../../agent/session.js'
-import { conversationRecapPrompt, parseRecapResponse, sideQuestionPrompt } from '../../../channel/side-prompts.js'
+import { conversationRecapPrompt, conversationSuggestPrompt, parseRecapResponse, parseSuggestResponse, sideQuestionPrompt } from '../../../channel/side-prompts.js'
 import { t } from '../../../i18n.js'
 import { nearestLowerEffort } from '../../../effortPrefs.js'
 import { createUnavailableActionDelegates, type ChannelActionDelegates, type createChannelActionReadiness } from '../action-readiness.js'
@@ -143,6 +143,18 @@ export function createCapabilityDelegates(deps: {
         return { summary: parsed.summary, ...(parsed.title === undefined ? {} : { title: parsed.title }) }
       } catch (error) {
         return { summary: null, error: error instanceof Error ? error.message : String(error) }
+      }
+    },
+    // Prompt suggestion: the same side call, read back as one short line
+    // (or nothing). Silent by contract — no notice when unavailable.
+    suggestNextPrompt: async options => {
+      const side = caps().sideQuery
+      if (side === undefined) return undefined
+      try {
+        const outcome = await side.ask(conversationSuggestPrompt(), options)
+        return outcome.answer === null ? undefined : parseSuggestResponse(outcome.answer)
+      } catch {
+        return undefined
       }
     },
     renameSession: title => {

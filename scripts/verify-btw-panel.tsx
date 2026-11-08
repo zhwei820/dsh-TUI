@@ -629,6 +629,8 @@ function makeChatChannel(ask: ReturnType<typeof scriptedAsk>) {
   return {
     ...base,
     whaleIdle: false,
+    // Prompt chrome on: these checks key off the ⌸ sessions button.
+    promptSessionLabel: true,
     sessionTitle: 'probe',
     model: 'deepseek-v4-flash',
     provider: 'deepseek',

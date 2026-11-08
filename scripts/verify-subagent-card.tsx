@@ -1,5 +1,5 @@
 /**
- * 对话流子代理卡片回归（Claude Code 视觉语言，见 subagentCardModel.ts）。
+ * 对话流子代理卡片回归（简洁视觉语言，见 subagentCardModel.ts）。
  *
  *   M. 纯模型：token / 时长格式、可见工具调用与 `+N more`、状态行、行数预算、
  *      并行组判定（相邻 + 时间重叠才成组；先后委派不成组；无快照不成组）。
