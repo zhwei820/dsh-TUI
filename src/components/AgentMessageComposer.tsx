@@ -220,6 +220,8 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
 
   const viaLabel = agentMessageViaText(control.via)
   const afterCaret = nextCodePoint(text, caret)
+  // The same shape as the main prompt: a rounded box with the `❯` pointer,
+  // so following up with a subagent reads like talking to the main agent.
   return (
     <Box flexDirection="column">
       <Box flexDirection="row">
@@ -233,7 +235,8 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
       {target.name === undefined && (
         <Text color="warning">{t('agent-message-target-nameless')}</Text>
       )}
-      <Box flexDirection="row">
+      <Box flexDirection="row" borderStyle="round" borderColor={focused ? 'promptBorder' : 'inactive'} paddingX={0}>
+        <Text color={focused ? 'suggestion' : undefined} dimColor={!focused}>{'❯ '}</Text>
         <Text>{text.slice(0, caret)}</Text>
         <InputCaret active={focused}>{text.slice(caret, afterCaret) || ' '}</InputCaret>
         <Text>{text.slice(afterCaret)}</Text>
