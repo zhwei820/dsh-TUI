@@ -311,15 +311,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
           "load 400 older" read as "the start (the task) is not here". */}
       <Text dimColor wrap="truncate-end">{`${headerWidth < 64 && spendText !== '' ? `${spendText} · ` : ''}${t('agent-view-title')} · ${sourceLabel(source)} · ${t('agent-view-back')}: Esc${headerWidth < 44 ? '' : ` · ↑/↓ ${t('subagent-hint-scroll')}${transcript.status === 'ready' && transcript.hasOlder ? ` · o ${t('subagent-transcript-load-older', { count: Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) })}` : ''}`}`}</Text>
 
-      {/* The child's working directory; truncated from the left so the
-          deepest folders stay readable. */}
-      {shownCwd !== undefined && (
-        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(shownCwd)}`}</Text>
-      )}
-
       {/* Body: the transcript column, plus the workbench rail on wide
        * terminals. */}
-      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (shownCwd !== undefined ? 1 : 0) - (isRunning || subagentEnded(subagent) ? 1 : 0))}>
+      <Box flexDirection="row" paddingX={1} maxHeight={Math.max(10, rows - (compose !== undefined ? 12 : 6) - (isRunning || subagentEnded(subagent) ? 1 : 0))}>
         <Box flexDirection="column" flexGrow={1} minWidth={panelEnabled ? 44 : 0}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {loadTranscript === undefined ? (
@@ -442,6 +436,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
         {panelEnabled && roster !== undefined && (
           <WorkbenchPanel
             subagent={subagent}
+            cwd={shownCwd}
             parent={neighbourhood.parent}
             parentRow={parentRow}
             rosterIds={rosterIds}
@@ -505,12 +500,12 @@ function foldTailThinking(lines: readonly SubagentOutputLine[]): Array<{ kind: '
 }
 
 /** One label/value metadata line of the workbench panel. */
-function PanelMetaRow({ label, value }: { readonly label: string; readonly value: string | undefined }): React.ReactNode {
+function PanelMetaRow({ label, value, wrap = 'truncate-end' }: { readonly label: string; readonly value: string | undefined; readonly wrap?: 'truncate-end' | 'truncate-start' }): React.ReactNode {
   if (value === undefined || value === '') return null
   return (
     <Box>
       <Box flexShrink={0} width={9}><Text dimColor>{label}</Text></Box>
-      <Text wrap="truncate-end">{value}</Text>
+      <Text wrap={wrap}>{value}</Text>
     </Box>
   )
 }
@@ -522,8 +517,9 @@ function PanelMetaRow({ label, value }: { readonly label: string; readonly value
  * never touches the roster, the Channel or the source stack, and an
  * unknown parent stays unknown.
  */
-function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, switchTargets, cursor, focused, onSwitch }: {
+function WorkbenchPanel({ subagent, cwd, parent, parentRow, rosterIds, siblings, switchTargets, cursor, focused, onSwitch }: {
   readonly subagent: SubagentState
+  readonly cwd: string | undefined
   readonly parent: AgentParentFact
   readonly parentRow: SubagentState | undefined
   readonly rosterIds: ReadonlySet<string>
@@ -571,6 +567,9 @@ function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, swit
       <PanelMetaRow label={t('agent-view-field-run')} value={subagent.runId === undefined ? undefined : subagent.runId.slice(0, 8)} />
       <PanelMetaRow label={t('agent-view-field-session')} value={subagent.sessionId === undefined ? undefined : subagent.sessionId.slice(0, 8)} />
       <PanelMetaRow label={t('agent-view-field-depth')} value={subagent.depth === undefined ? undefined : String(subagent.depth)} />
+      {/* Truncated from the left like the header line: the deepest folders
+          are the informative part in a 30-column rail. */}
+      <PanelMetaRow label={t('agent-view-field-cwd')} value={cwd === undefined ? undefined : tildePath(cwd)} wrap="truncate-start" />
       <Text dimColor>{' ' + t('agent-view-panel-tools') + ' ────────'}</Text>
       {subagent.toolCalls.length === 0 && subagent.reportedToolUses === undefined && (
         <Text dimColor>{'  ' + t('agent-view-tools-none')}</Text>

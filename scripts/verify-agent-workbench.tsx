@@ -221,7 +221,7 @@ console.log('--- W3: workbench panel + sibling switching ---')
     makeRow('agent-nested', { depth: 2, parentAgentId: 'agent-a' }),
   ]
   // roster rows carry depth 1 for a/b/c (the main-loop proof)
-  roster[0] = makeRow('agent-a', { depth: 1, mode: 'continuable', model: 'fx-model', tokens: { input: 10, output: 5, total: 15 }, toolCalls: [{ id: 't1', name: 'Grep', status: 'completed', startedAt: NOW - 30_000, endedAt: NOW - 20_000 }] })
+  roster[0] = makeRow('agent-a', { depth: 1, cwd: '/srv/work/deep/leafdir', mode: 'continuable', model: 'fx-model', tokens: { input: 10, output: 5, total: 15 }, toolCalls: [{ id: 't1', name: 'Grep', status: 'completed', startedAt: NOW - 30_000, endedAt: NOW - 20_000 }] })
   const switched: string[] = []
   let exited = 0
   await withTerminal(
@@ -237,6 +237,11 @@ console.log('--- W3: workbench panel + sibling switching ---')
       check('W3 宽屏渲染右侧工作台面板', await settled(() => frame.screen().includes('workbench') && frame.screen().includes('metadata') && frame.screen().includes('parent & siblings')), frame.lines().slice(0, 2).join('|'))
       check('W3 面板元数据：状态/模式/模型', frame.screen().includes('completed') && frame.screen().includes('continuable') && frame.screen().includes('fx-model'))
       check('W3 面板工具段保留记录', frame.screen().includes('Grep'))
+      // The cwd lives only in the rail (the header no longer repeats it);
+      // left-truncated, so the leaf folder survives.
+      const cwdLines = frame.lines().filter(line => line.includes('leafdir'))
+      check('W3 面板元数据：目录（左截断保留末级）', cwdLines.some(line => { const at = line.lastIndexOf('│'); return at >= 0 && /cwd\s+\S*leafdir/.test(line.slice(at)) }), cwdLines.join('|'))
+      check('W3 标题区不再显示目录', cwdLines.length === 1, cwdLines.join('|'))
       check('W3 父关系=主循环（depth 1 事实）', frame.screen().includes('main loop'))
       check('W3 同主循环兄弟列出（b/c）', frame.screen().includes('agent agent-b') && frame.screen().includes('agent agent-c'))
       check('W3 嵌套不同父不混入兄弟列表', !frame.screen().includes('agent agent-nested'))
