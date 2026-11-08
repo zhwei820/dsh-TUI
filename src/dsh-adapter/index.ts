@@ -142,6 +142,10 @@ export interface Config {
    *  preview and folds each step when it settles; `full` keeps thinking
    *  expanded until the whole turn ends. Editable live from `/settings`. */
   thinkingFold?: 'preview' | 'full'
+  /** Language the model is asked to think and reply in, via one DSH
+   *  system-prompt section: `off` (default) adds nothing; `zh` / `en` add
+   *  the instruction. DSH backend only. Editable live from `/settings`. */
+  thinkingLanguage?: 'off' | 'zh' | 'en'
   /** Grouping/folding of consecutive background-job cards: `auto` (default)
    *  groups any run of ≥2 adjacent job cards and folds a run of 3+ into its
    *  summary line once every member settled; `always` folds any run of 2+
@@ -355,6 +359,7 @@ export const Config: Schema<Config, RuntimeConfig<Config>> = editableConfig<Conf
   // Unified by default (Claude Code style); `auto`/`split` stay selectable.
   diffLayout: Schema.union(['auto', 'split', 'unified']).default('unified'),
   thinkingFold: Schema.union(['preview', 'full']).default('preview'),
+  thinkingLanguage: Schema.union(['off', 'zh', 'en']).default('off'),
   jobGroupFold: Schema.union(['auto', 'always', 'never']).default('auto'),
   toolBackground: Schema.union(['none', 'subtle', 'strong']).default('none'),
   scrollGutter: Schema.union(['timeline', 'scrollbar', 'hidden']).default('timeline'),

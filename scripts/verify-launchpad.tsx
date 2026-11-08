@@ -2457,45 +2457,43 @@ const PALETTE_COMMANDS: readonly CommandCompletion[] = [
 ]
 
 async function checkPaletteCardGeometry(columns: number, label: string): Promise<void> {
+  // Borderless list (Claude Code style): the palette is N contiguous rows
+  // straight above the input box, no frame and no title row. Geometry is
+  // pinned against the input box's own frame instead.
   const ev: Ev[] = []
   const s = await openLaunchpad(ev, { columns, commands: PALETTE_COMMANDS })
   await s.send('/')
-  await settled(() => rowOf(s.term, '╭─ 命令') >= 0)
+  await settled(() => rowOf(s.term, 'background') >= 0 && rowOf(s.term, 'goal') >= 0)
   const cardWidth = Math.max(24, Math.min(columns - 4, 72))
   const lines = viewportLines(s.term)
-  const topRow = rowOf(s.term, '╭─ 命令')
-  // 从顶边框往下收集到第一条 `╰`（面板底边框；再往下才是输入框自己的边框）。
-  const card: string[] = []
-  for (let i = topRow; i >= 0 && i < lines.length; i++) {
-    card.push(lines[i]!)
-    if (lines[i]!.includes('╰')) break
-  }
-  const top = (card[0] ?? '').trimEnd()
-  const bottom = (card[card.length - 1] ?? '').trimEnd()
+  const firstRow = rowOf(s.term, 'status')
+  const lastRow = rowOf(s.term, 'goal')
+  const card = firstRow >= 0 && lastRow >= firstRow ? lines.slice(firstRow, lastRow + 1) : []
   const longRow = (card.find(line => line.includes('setup')) ?? '').trimEnd()
   const tagRow = (card.find(line => line.includes('goal')) ?? '').trimEnd()
-  // 面板左右缘 = 成组块左右缘，行首那段缩进不算卡片宽度。
-  const boxTop = lines.slice(topRow + card.length).find(line => line.includes('╭')) ?? ''
-  // 命令行不许贴到右 │：行内容 ≤ usable = cardWidth − 4，内容盒还留 2 列内边距，
-  // 所以每一行与右 │ 之间至少 1 个空格。贴边 = 行内容越界（flex 收缩 → 幽灵空行）。
-  const crowded = card.slice(1, -1).filter(line => line.trimEnd() !== '' && !/\s│$/u.test(line))
-  check(`PK1@${columns} ${label}：面板顶边框闭合（右上是 ╮，不是被截出来的 …），宽度 = cardWidth`,
-    top.endsWith('╮') && stringWidth(top) - leftGap(top) === cardWidth,
-    `top=${JSON.stringify(top)} w=${stringWidth(top) - leftGap(top)} cardWidth=${cardWidth}`)
-  check(`PK2@${columns} ${label}：面板底边框闭合（右下是 ╯），宽度 = cardWidth`,
-    bottom.endsWith('╯') && stringWidth(bottom) - leftGap(bottom) === cardWidth,
-    `bottom=${JSON.stringify(bottom)} w=${stringWidth(bottom) - leftGap(bottom)} cardWidth=${cardWidth}`)
-  check(`PK3@${columns} ${label}：卡片行数 = 边框 2 + 命令 ${PALETTE_COMMANDS.length}（长描述行 / 超长 tag 行都不再多出一条幽灵空行）`,
-    card.length === PALETTE_COMMANDS.length + 2 && card.every(line => line.trim() !== ''),
+  const boxTop = lines.slice(lastRow + 1).find(line => line.includes('╭')) ?? ''
+  const boxLeft = leftGap(boxTop)
+  const boxRight = boxLeft + cardWidth
+  // Rows close inside the box's right edge with ≥1 column to spare (the
+  // old right `│` slot): crowding = content overflow (flex shrink → ghost row).
+  const crowded = card.filter(line => stringWidth(line.trimEnd()) > boxRight - 1)
+  check(`PK1@${columns} ${label}：无边框、无标题行（Claude Code 列表）`,
+    !lines.some(line => line.includes('╭─ 命令')) && card.length > 0 && !card.some(line => line.includes('│')),
+    JSON.stringify(card))
+  check(`PK2@${columns} ${label}：列表紧贴输入框（最后一行下一行就是输入框顶边）`,
+    (lines[lastRow + 1] ?? '').includes('╭'),
+    `next=${JSON.stringify(lines[lastRow + 1])}`)
+  check(`PK3@${columns} ${label}：列表行数 = 命令 ${PALETTE_COMMANDS.length}（长描述行 / 超长 tag 行都不再多出一条幽灵空行）`,
+    card.length === PALETTE_COMMANDS.length && card.every(line => line.trim() !== ''),
     `lines=${card.length} card=${JSON.stringify(card)}`)
-  check(`PK4@${columns} ${label}：过长描述在卡片内截断并带 …（不是被右 │ 覆盖吃掉）`,
-    /…\s*│$/u.test(longRow) && stringWidth(longRow) - leftGap(longRow) === cardWidth,
-    `row=${JSON.stringify(longRow)} w=${stringWidth(longRow) - leftGap(longRow)}`)
-  check(`PK5@${columns} ${label}：面板与输入框同左缘（同一成组块，浮层不漂）`,
-    leftGap(boxTop) === leftGap(top) && stringWidth(boxTop) - leftGap(boxTop) === cardWidth,
-    `box=${JSON.stringify(boxTop)} boxLeft=${leftGap(boxTop)} panelLeft=${leftGap(top)}`)
-  check(`PK6@${columns} ${label}：每一行都在 usable 内收口（与右 │ 之间留白 ≥1 列；宿主 hint 型 tag 也一样）`,
-    crowded.length === 0 && /\s│$/u.test(tagRow),
+  check(`PK4@${columns} ${label}：过长描述在列表宽度内截断并带 …`,
+    longRow.endsWith('…') && stringWidth(longRow) <= boxRight - 1,
+    `row=${JSON.stringify(longRow)} w=${stringWidth(longRow)} right=${boxRight}`)
+  check(`PK5@${columns} ${label}：列表与输入框同左缘（同一成组块，浮层不漂）`,
+    card.length > 0 && card.every(line => leftGap(line) >= boxLeft) && stringWidth(boxTop) - boxLeft === cardWidth,
+    `box=${JSON.stringify(boxTop)} boxLeft=${boxLeft} rowLeft=${card.map(leftGap).join(',')}`)
+  check(`PK6@${columns} ${label}：每一行都在输入框宽度内收口（右侧留白 ≥1 列；宿主 hint 型 tag 也一样）`,
+    crowded.length === 0 && stringWidth(tagRow) <= boxRight - 1,
     `crowded=${JSON.stringify(crowded)} tagRow=${JSON.stringify(tagRow)}`)
   check(`PK7@${columns} ${label}：过长的宿主 tag 显式截断带 …（不是整段消失）`,
     tagRow.includes('…'),

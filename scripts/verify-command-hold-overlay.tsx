@@ -145,9 +145,12 @@ async function boot(cols: number, working: boolean, commands = COMMANDS) {
   }
 }
 
-/** 卡片内的命令行行号：`│` 边框 + 名字紧跟留白/指针。 */
+/** 列表内的命令行行号：无边框（Claude Code 视觉），行首留白 + 指针/名字。
+ *  行首可能残留一格 `╭`：窄终端下输入框上边框在启动期留下的既有残影（基线
+ *  同样存在，开浮层前就在；旧卡片的底边框恰好把它盖住），列表的留白不覆写它。 */
+const COMMAND_ROW = /^╭? {1,4}(?:❯ )?[a-z][\w-]*(?:\s|$)/
 function rowOf(lines: readonly string[], name: string): number {
-  return lines.findIndex(line => new RegExp(`^│\\s+(?:❯ )?${name}(?:\\s|$)`).test(line))
+  return lines.findIndex(line => new RegExp(`^╭? {1,4}(?:❯ )?${name}(?:\\s|$)`).test(line))
 }
 
 /** SGR 点击注入：同一单元格 press+release（1-indexed）。 */
@@ -172,20 +175,20 @@ async function run(): Promise<void> {
   check('分区：正常区两行在上、灰区三行沉底，内部各自保持原序',
     statusRow >= 0 && statusRow < themeRow && themeRow < modelRow && modelRow < newRow && newRow < auditRow,
     JSON.stringify({ statusRow, themeRow, modelRow, newRow, auditRow }))
-  // 「不插标题行」由行数钉住：多一行标题就会多一条 `│` 边框行。原先这里还
+  // 「不插标题行」由行数钉住：多一行标题就会多一条候选行形状的行。原先这里还
   // 顺带断言渲染结果里不含已删的组标题文案，但那段文案只存在于
   // `CommandSuggestions.tsx` 的 JSDoc 里，渲染输出永不包含它——恒真子句，
   // 已删；真正的不变量是上面这个行数。
   check('分区不插标题行、不额外占显示行',
-    lines.filter(line => /^│/.test(line)).length === 5
+    lines.filter(line => COMMAND_ROW.test(line)).length === 5
       && !lines.some(line => line.includes('↑') || line.includes('↓')),
-    JSON.stringify(lines.filter(line => /^│/.test(line)).map(line => line.trim().slice(0, 14))))
+    JSON.stringify(lines.filter(line => COMMAND_ROW.test(line)).map(line => line.trim().slice(0, 14))))
   check('默认选中仍是正常区第一行（❯ status），索引空间未变',
     lines[statusRow]!.includes('❯') && !lines[themeRow]!.includes('❯') && !lines[modelRow]!.includes('❯'),
     (lines[statusRow] ?? '').trim().slice(0, 24))
 
   const frames = wide.frames()
-  check('灰区行整行一次 subtle 平铺（名字没有被命中提亮切成两段）', frames.includes(`${SUBTLE}  new`))
+  check('灰区行整行一次 subtle 平铺（名字没有被命中提亮切成两段）', frames.includes(`${SUBTLE}   model`) && frames.includes('   new        '))
   check('正常区行不吃 subtle',
     !frames.includes(`${SUBTLE}  status`) && !frames.includes(`${SUBTLE}  theme`))
 
@@ -240,12 +243,10 @@ async function run(): Promise<void> {
   narrow.stdin.write('/')
   await settled(() => rowOf(narrow.lines(), 'model') >= 0)
   const card = narrow.lines()
-  const top = card.findIndex(line => line.includes('╭'))
-  const bottom = card.findIndex((line, index) => index > top && line.includes('╰'))
-  const body = card.slice(top + 1, bottom)
-  check('36 列：卡片每行仍是 │ … │（截断而非换行溢出）',
-    top >= 0 && bottom > top && body.length > 0 && body.every(line => line.startsWith('│') && line.endsWith('│')),
-    `${top}..${bottom} rows=${body.length}`)
+  const body = card.filter(line => COMMAND_ROW.test(line))
+  check('36 列：每条命令仍是一行（截断而非换行溢出）',
+    body.length === 5 && ['status', 'theme', 'model', 'new', 'audit'].every(name => rowOf(card, name) >= 0),
+    `rows=${body.length}`)
   check('36 列：每行显示宽度不越界',
     card.every(line => stringWidthOf(line) <= 36),
     JSON.stringify(card.map(line => stringWidthOf(line)).filter(width => width > 36)))
@@ -266,10 +267,10 @@ async function run(): Promise<void> {
   const resumeRow = rowOf(browseLines, 'resume')
   const rewindRow = rowOf(browseLines, 'rewind')
   check('浏览型 /resume 留在正常区（界面里的切换是另外确认的动作）',
-    resumeRow >= 0 && resumeRow < rewindRow && !browse.frames().includes(`${SUBTLE}  resume`),
+    resumeRow >= 0 && resumeRow < rewindRow && !browse.frames().includes(`${SUBTLE}   resume`),
     JSON.stringify({ resumeRow, rewindRow }))
   check('同族的 /rewind 仍沉灰区（core 路径回合中直接拒绝）',
-    rewindRow > resumeRow && browse.frames().includes(`${SUBTLE}  rewind`))
+    rewindRow > resumeRow && browse.frames().includes(`${SUBTLE}   rewind`))
   browse.instance.unmount()
 
   console.log(failed === 0 ? 'verify-command-hold-overlay OK' : `verify-command-hold-overlay: ${failed} 项失败`)

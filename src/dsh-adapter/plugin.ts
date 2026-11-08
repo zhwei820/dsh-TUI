@@ -83,6 +83,7 @@ import { attachHerdrIntegration } from '../herdr.js'
 import { logMouseDebug } from '../utils/debug.js'
 import { Chat } from '../screens/Chat.js'
 import { openInjectChannel, type InjectChannel, type InjectController } from './inject-channel.js'
+import { normalizeThinkingLanguage, registerThinkingLanguage } from './thinking-language.js'
 import { startSessionMountHeartbeat } from './session-mount-heartbeat.js'
 import { reserveMount, reserveNewSession } from '../sessionMounts.js'
 import { getHostDialogStore, type TuiDialogRuntime } from './dialogs.js'
@@ -1372,6 +1373,11 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
   // the next boot, the running session keeps what it booted with.
   let bootedLaunchpad = config.launchpad !== false
   let rendererSettingsFrozen = false
+  // Thinking language (settings `thinkingLanguage`): the section reads this
+  // at every assembly, so a /settings edit lands on the next model step.
+  // Observational (shadow) runtimes never touch the observed prompt.
+  let thinkingLanguage = normalizeThinkingLanguage(config.thinkingLanguage)
+  if (!shadow) registerThinkingLanguage(ctx, () => thinkingLanguage)
   const terminalImagesDisabledByEnv = isEnvTruthy(process.env.DSH_TUI_DISABLE_TERMINAL_IMAGES)
   // The settings service may come up AFTER this plugin's apply: the cordis
   // inject callback defers until the service registers, so the first
@@ -1394,6 +1400,9 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       Schema.object({
         diffLayout: Schema.union(['auto', 'split', 'unified']).default('unified'),
         thinkingFold: Schema.union(['preview', 'full']).default('preview'),
+        // No default (same rule as foldTerminalCommand below): unset keeps
+        // cordis.yml's `thinkingLanguage` decisive.
+        thinkingLanguage: Schema.union(['off', 'zh', 'en']),
         jobGroupFold: Schema.union(['auto', 'always', 'never']).default('auto'),
         toolBackground: Schema.union(['none', 'subtle', 'strong']).default('none'),
         scrollGutter: Schema.union(['timeline', 'scrollbar', 'hidden']).default('timeline'),
@@ -1553,6 +1562,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       launchpad?: boolean
       terminalImages?: boolean
       thinkingFold?: 'preview' | 'full'
+      thinkingLanguage?: 'off' | 'zh' | 'en'
       jobGroupFold?: 'auto' | 'always' | 'never'
       effortDefault?: string
       toolBackground?: ToolBackground
@@ -1739,6 +1749,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       applyLang(next)
       applyDisplay(next)
       applyEffortDefault(next)
+      thinkingLanguage = normalizeThinkingLanguage(next.thinkingLanguage ?? config.thinkingLanguage)
       applyShortcuts(next)
       applyRendererSettings(next)
     }
@@ -1892,6 +1903,13 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
         },
         {
           ...settingField('thinkingFold'),
+        },
+        {
+          ...settingField('thinkingLanguage'),
+          format(value: unknown): string {
+            // Unset in the user layer: show the effective cordis.yml value.
+            return normalizeThinkingLanguage(value ?? config.thinkingLanguage)
+          },
         },
         {
           ...settingField('jobGroupFold'),

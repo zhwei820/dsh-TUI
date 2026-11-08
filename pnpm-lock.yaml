@@ -483,22 +483,22 @@ importers:
   vendor/dsh-std/packages/command:
     dependencies:
       '@dsh-std/connection':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../connection
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@dsh-std/manifest':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../manifest
       '@dsh-std/presentation':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../presentation
 
   vendor/dsh-std/packages/connection:
     dependencies:
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   vendor/dsh-std/packages/core: {}
@@ -506,28 +506,28 @@ importers:
   vendor/dsh-std/packages/manifest:
     dependencies:
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   vendor/dsh-std/packages/messages:
     dependencies:
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   vendor/dsh-std/packages/presentation:
     dependencies:
       '@dsh-std/connection':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../connection
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   vendor/dsh-std/packages/storage:
     dependencies:
       '@dsh-std/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
 
   vendor/mathjax-tex-svg:

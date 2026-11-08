@@ -11,15 +11,13 @@ import { POINTER } from '../terminal-utils/figures.js'
 import { SuggestionCard, cardContentWidth, splitQueryMatch } from './SuggestionCard.js'
 
 /**
- * The slash-command suggestion overlay, using the shared rounded
- * `SuggestionCard` for the command list:
+ * The slash-command suggestion overlay, using the shared borderless
+ * `SuggestionCard` list (Claude Code style):
  *
- *   ╭─ 命令 · 共 12 项 ──────────────────────╮
- *   │ ❯ compact  Summarize earlier turns…  │   ← 选中：❯ + 加粗 + suggestion 色
- *   │   compare  Compare selected messages … │   ← 名字里命中输入的段提亮
- *   │   new      Start a new conversation   │   ← 灰区整行 subtle，不提亮命中
- *   │ ↑2 · ↓3                                 │   ← 仅当列表被窗口裁剪
- *   ╰─────────────────────────────────────────╯
+ *     ❯ compact  Summarize earlier turns…     ← 选中：❯ + 加粗 + suggestion 色
+ *       compare  Compare selected messages …  ← 名字里命中输入的段提亮
+ *       new      Start a new conversation     ← 灰区整行 subtle，不提亮命中
+ *     ↑2 · ↓3                                 ← 仅当列表被窗口裁剪
  *
  * 未选中行整体 dim，唯独名字里匹配当前查询 token 的前缀以正常亮度提亮
  * （bold 与 dim 在终端互斥，故提亮用非 dim 而非加粗）；选中行整行
@@ -139,7 +137,9 @@ export function CommandSuggestions({
         if (isHeld && !isSelected) {
           return (
             <Text key={command.name} color="subtle" wrap="truncate">
-              {`  ${command.name}${' '.repeat(padAfter)}${tagText}${description}`}
+              {/* Same 3-cell lead as the other rows (' ' + the 2-cell pointer
+                  column), so held rows stay column-aligned. */}
+              {`   ${command.name}${' '.repeat(padAfter)}${tagText}${description}`}
             </Text>
           )
         }

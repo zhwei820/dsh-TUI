@@ -514,6 +514,19 @@ export const SETTING_DEFINITIONS = {
       { value: 'full', label: 'Full until turn end', descriptions: { zh: '展开至轮末' } },
     ],
   },
+  'thinkingLanguage': {
+    label: 'Thinking language',
+    descriptions: { zh: '思考语言' },
+    group: 'conversation',
+    hint: 'Asks the model to think and reply in the chosen language through a system-prompt instruction (code, commands and error text stay as written). Off (default) adds nothing. A soft constraint: long English context can still pull the model back. DSH backend only. Applies from the next model step.',
+    hintDescriptions: { zh: '通过系统提示词要求模型用所选语言思考和回复（代码、命令与报错原文保持原样）。关闭（默认）不注入任何内容。属于软约束：上下文里英文很多时模型仍可能切回英文。仅 DSH 后端生效。从下一次模型调用起生效。' },
+    kind: 'select',
+    options: [
+      { value: 'off', label: 'Off', descriptions: { zh: '关闭' } },
+      { value: 'zh', label: 'Chinese', descriptions: { zh: '中文' } },
+      { value: 'en', label: 'English', descriptions: { zh: '英文' } },
+    ],
+  },
   'toolBackground': {
     label: 'Tool background',
     descriptions: { zh: '工具卡背景' },

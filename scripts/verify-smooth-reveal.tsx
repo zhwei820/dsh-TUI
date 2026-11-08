@@ -290,7 +290,8 @@ console.log('--- B: MessageList integration ---')
 // ---------------------------------------------------------------------------
 console.log('--- C: component contracts ---')
 
-// C1: thinking ticker follows ARRIVED text; expanded body paints the slice.
+// C1: the folded streaming row is one header line (Claude Code style — no
+// text ticker to lag behind the reveal); the expanded body paints the slice.
 {
   resetRevealForTest()
   const full = Array.from({ length: 12 }, (_, i) => `think line ${i}`).join('\n')
@@ -300,11 +301,10 @@ console.log('--- C: component contracts ---')
       <AssistantThinkingMessage thinking={slice} textFull={full} marginTopOnTurn={false} verbose={false} preview streaming />
     ),
     async screen => {
-      // 固定窗:探针 预览 ticker 不得被揭示节流：settled 等到揭完也判过，
-      // 遮蔽「ticker 跟着 reveal 走」这个 bug
+      // 固定窗:探针 折叠态只画标题行：等一个渲染周期确认没有正文行冒出来
       await sleep(120)
       const text = screen()
-      check(text.includes('think line 11'), 'C1 preview ticker follows the ARRIVED text (not the reveal)')
+      check(!text.includes('think line'), 'C1 folded streaming row shows the header only')
     },
   )
   await withTerminal(
