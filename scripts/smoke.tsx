@@ -520,7 +520,7 @@ console.log('--- has user?', plain.includes('hello'))
 console.log('--- has markdown bold?', output.includes('\x1b[1m'))
 console.log('--- has table border?', plain.includes('┌') && plain.includes('┼'))
 console.log('--- has tool card?', plain.includes('Bash'))
-console.log('--- has reasoning?', plain.includes('Thinking'))
+console.log('--- has reasoning?', /Thinking|Thought|已思考/.test(plain)) // settled rows read `∴ Thought …`
 console.log('--- has statusline model?', plain.includes('deepseek-v4-flash'))
 console.log('--- has tokens?', plain.includes('120→45'))
 console.log('--- has interrupted?', plain.includes('Interrupted') && plain.includes('What should DeepSeek do instead?'))

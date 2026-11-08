@@ -5,6 +5,8 @@
 #                         profile (`dsh plugin --profile dsh-tui add <tarball>`);
 #                         a missing dsh is installed first (make install-dsh)
 #   make install DSH_HOME=/path/to/home   install into another DSH home
+#   make uninstall        remove the profile plugin and the global launcher
+#                         (dsh itself stays; make uninstall-dsh removes it)
 #
 # The repository has no root `test` or `lint` script; `make check` runs the
 # TypeScript build plus the build gates, `make ci GROUP=<name>` a CI group.
@@ -16,6 +18,7 @@ PNPM        ?= pnpm
 NPM         ?= npm
 DSH         ?= dsh
 DSH_PROFILE ?= dsh-tui
+PKG_NAME    := @deepseek-harness-tui/dsh-tui
 PACK_DIR    ?= .tmp/pack
 GROUP       ?= channel-ui
 JOBS        ?= 6
@@ -23,7 +26,7 @@ JOBS        ?= 6
 DSH_VERSION ?= $(shell sed -n "s/^export const UPSTREAM_VALIDATED_VERSION = '\(.*\)'$$/\1/p" src/dsh-adapter/contract.ts)
 
 .PHONY: help setup submodule submodule-init submodule-sync build check typecheck smoke package pack require-dsh \
-	ensure-dsh install-dsh install install-launcher uninstall dev dev-config ci guide clean
+	ensure-dsh install-dsh install install-launcher uninstall uninstall-dsh dev dev-config ci guide clean
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  \033[36m%-17s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -150,8 +153,25 @@ install: ensure-dsh pack ## Install dsh if missing, then build, pack and install
 install-launcher: pack ## Also install the dsh-tui / dst launcher globally from the same tarball
 	@set -e; tarball=$$(ls $(PACK_DIR)/*.tgz); $(NPM) install -g "$$PWD/$$tarball"
 
-uninstall: require-dsh ## Remove the TUI plugin from the local dsh profile
-	$(DSH) plugin --profile $(DSH_PROFILE) remove @deepseek-harness-tui/dsh-tui
+# Undoes `make install` and `make install-launcher`; each step is skipped when there is
+# nothing to remove. DeepSeek Harness itself (make uninstall-dsh) and the user data under
+# ~/.dsh-tui are kept.
+uninstall: ## Remove the TUI plugin from the dsh profile and the global dsh-tui / dst launcher
+	@if command -v $(DSH) >/dev/null 2>&1; then \
+		echo "Removing $(PKG_NAME) from profile '$(DSH_PROFILE)' ($${DSH_HOME:-~/.dsh})"; \
+		$(DSH) plugin --profile $(DSH_PROFILE) remove $(PKG_NAME) || echo "make: plugin not removed (not installed in profile '$(DSH_PROFILE)'?)"; \
+	else \
+		echo "'$(DSH)' not found; no profile plugin to remove"; \
+	fi
+	@if $(NPM) ls -g --depth=0 $(PKG_NAME) >/dev/null 2>&1; then \
+		echo "Removing the global dsh-tui / dst launcher"; \
+		$(NPM) uninstall -g $(PKG_NAME); \
+	else \
+		echo "Global launcher not installed; nothing to remove"; \
+	fi
+
+uninstall-dsh: ## Uninstall the global DeepSeek Harness (npm uninstall -g @deepseek-ai/dsh)
+	$(NPM) uninstall -g @deepseek-ai/dsh
 
 dev: ## Build, pack, install in an isolated home and launch (pnpm dev)
 	$(PNPM) dev

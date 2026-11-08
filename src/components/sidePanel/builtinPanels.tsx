@@ -232,7 +232,10 @@ function AgentsPanelAdapter({ focused, visible }: PanelProps): React.ReactNode {
       variant="panel"
       focused={focused}
       visible={visible}
-      onSelect={(id: string) => setRoute({ detail: id })}
+      // Opening an agent shows its whole conversation like the main agent's
+      // (one transcript, no tabs, with the follow-up composer); Esc returns
+      // here to the panel.
+      onSelect={(id: string) => agentViewStore.request(id, 'agents-dashboard', true)}
       onOpenView={(id: string) => agentViewStore.request(id, 'agents-dashboard', true)}
       messages={messageControl?.messages()}
     />
