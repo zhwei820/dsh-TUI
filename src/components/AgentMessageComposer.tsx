@@ -1,8 +1,10 @@
 import React from 'react'
 import { Box, Text, InputCaret, useInput } from '../ui.js'
 import { t } from '../i18n.js'
+import { decorColor } from '../minimalUiMode.js'
 import { isPlainReturnInput } from '../utils/modifiers.js'
 import { agentMessageStateColor, agentMessageStateText, agentMessageViaText } from './messages/TranscriptLeaves.js'
+import type { AgentMessageDelivery } from '../adapter/ports/channel-view.js'
 import type {
   AgentComposeTarget,
   AgentMessageControl,
@@ -41,23 +43,31 @@ const NOTICE_OF_REASON: Readonly<Record<Extract<AgentMessageSubmitResult, { ok: 
 interface SentIntent {
   readonly intentId: string
   readonly text: string
-  readonly delivery: 'queue' | 'steer'
+  readonly delivery: AgentMessageDelivery
   state: AgentMessageState
 }
 
+/** [Enter, Ctrl+Enter] deliveries for this control and target state. */
+function keyDeliveries(control: AgentMessageControl, running: boolean): readonly [AgentMessageDelivery, AgentMessageDelivery] {
+  if (control.steer !== true) return ['queue', 'queue']
+  if (!running) return ['queue', 'steer']
+  return control.interrupt === true ? ['interrupt', 'steer'] : ['steer', 'queue']
+}
+
 /** Direct-prompt status word: what the user did, then what the child did. */
-function directStateText(state: AgentMessageState, delivery: 'queue' | 'steer'): string {
+function directStateText(state: AgentMessageState, delivery: AgentMessageDelivery): string {
   if (state === 'delivered') return t('agent-message-direct-received')
-  if (state === 'queued' || state === 'issued') return t(delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
+  if (state === 'queued' || state === 'issued') return t(delivery === 'interrupt' ? 'agent-message-direct-interrupted' : delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
   return agentMessageStateText(state)
 }
 
 /** The note after the status word. A direct prompt says when the child will
  *  see it (its next step / after this turn / right away) instead of the
  *  generic inbox disclaimer; other transports keep that disclaimer. */
-function directNoteKey(via: AgentMessageControl['via'], state: AgentMessageState, delivery: 'queue' | 'steer', running: boolean): 'agent-message-claimed-note' | 'agent-message-inbox-note' | 'agent-message-steer-note' | 'agent-message-queue-note-running' | 'agent-message-queue-note-idle' {
+function directNoteKey(via: AgentMessageControl['via'], state: AgentMessageState, delivery: AgentMessageDelivery, running: boolean): 'agent-message-claimed-note' | 'agent-message-inbox-note' | 'agent-message-steer-note' | 'agent-message-interrupt-note' | 'agent-message-queue-note-running' | 'agent-message-queue-note-idle' {
   if (state === 'delivered') return 'agent-message-claimed-note'
   if (via !== 'direct-continuable' || (state !== 'queued' && state !== 'issued')) return 'agent-message-inbox-note'
+  if (delivery === 'interrupt') return 'agent-message-interrupt-note'
   if (delivery === 'steer') return 'agent-message-steer-note'
   return running ? 'agent-message-queue-note-running' : 'agent-message-queue-note-idle'
 }
@@ -154,7 +164,7 @@ export function AgentMessageComposer({ target, control, messages, targetRunning 
     return advance?.state ?? sent.state
   }, [messages, sent])
 
-  const submit = (delivery: 'queue' | 'steer'): void => {
+  const submit = (delivery: AgentMessageDelivery): void => {
     const submitted = draftRef.current.text
     if (target.name === undefined || sendingRef.current || submitted.trim() === '') return
     sendingRef.current = true
@@ -196,16 +206,19 @@ export function AgentMessageComposer({ target, control, messages, targetRunning 
       return true
     }
     const returnKey = key.return === true || key.return_ === true
-    // Steer ONLY under an explicit capability; Claude mediation keeps the
-    // followup placement (never interruptAndDeliver). A running target swaps
-    // the keys: Enter steers, Ctrl+Enter queues behind the current turn.
-    const steerFirst = control.steer === true && targetRunning
+    // Steer/interrupt ONLY under an explicit capability; Claude mediation
+    // keeps the followup placement (never interruptAndDeliver). At a running
+    // target plain Enter is the strongest declared interjection (interrupt,
+    // else steer) and Ctrl+Enter the gentler one (steer, else queue); idle,
+    // Enter queues (the child starts its next turn with it) and Ctrl+Enter
+    // steers as before.
+    const [enterDelivery, ctrlDelivery] = keyDeliveries(control, targetRunning)
     if (isPlainReturnInput(input, { ...key, return: returnKey })) {
-      submit(steerFirst ? 'steer' : 'queue')
+      submit(enterDelivery)
       return true
     }
     if (returnKey && key.ctrl === true) {
-      submit(control.steer !== true ? 'queue' : steerFirst ? 'queue' : 'steer')
+      submit(ctrlDelivery)
       return true
     }
     const current = draftRef.current
@@ -251,7 +264,7 @@ export function AgentMessageComposer({ target, control, messages, targetRunning 
   return (
     <Box flexDirection="column">
       <Box flexDirection="row">
-        <Text color="accent">{'› '}</Text>
+        <Text color={decorColor('accent' as const)}>{'› '}</Text>
         <Text bold>{t('agent-message-compose-title', { name: shownName })}</Text>
         <Text dimColor>{` · ${viaLabel}`}</Text>
       </Box>
@@ -284,7 +297,8 @@ export function AgentMessageComposer({ target, control, messages, targetRunning 
         {canSubmit
           ? (control.steer !== true
               ? t('agent-message-hint-queue')
-              : targetRunning ? t('agent-message-hint-steer-first') : t('agent-message-hint-queue-steer'))
+              : !targetRunning ? t('agent-message-hint-queue-steer')
+                : control.interrupt === true ? t('agent-message-hint-interrupt-first') : t('agent-message-hint-steer-first'))
           : t('agent-message-hint-nameless')}
       </Text>
     </Box>

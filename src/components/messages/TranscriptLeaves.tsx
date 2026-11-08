@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Text } from '../../ui.js'
 import { t } from '../../i18n.js'
+import { decorColor, isMinimalUiMode } from '../../minimalUiMode.js'
 import type { Theme } from '../../theme.js'
 import type { ClickEvent } from '../../ink/events/click-event.js'
 import type { ToolRow } from '../../dsh-adapter/channel.js'
@@ -16,7 +17,9 @@ import type { AgentMessageState, AgentMessageVia, AgentMessageView } from './age
 
 /** Delivery-state badge color: only what the channel reported — green is
  *  reserved for an explicit `delivered` fact, dim for `unknown`/`expired`. */
-export function agentMessageStateColor(state: AgentMessageState): keyof Theme {
+export function agentMessageStateColor(state: AgentMessageState): keyof Theme | undefined {
+  // Status tints are decoration: the minimal UI shows the state word plain.
+  if (isMinimalUiMode()) return undefined
   if (state === 'delivered') return 'success'
   if (state === 'refused') return 'error'
   if (state === 'issued' || state === 'queued' || state === 'held') return 'warning'
@@ -64,12 +67,12 @@ export function AgentMessageLeafRow({ message, selfAgentId, marginTopOnTurn }: {
     const status = message.state === 'delivered'
       ? t('agent-message-direct-received')
       : message.state === 'queued' || message.state === 'issued'
-        ? t(message.delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
+        ? t(message.delivery === 'interrupt' ? 'agent-message-direct-interrupted' : message.delivery === 'steer' ? 'agent-message-direct-steered' : 'agent-message-direct-queued')
         : agentMessageStateText(message.state)
     return (
       <Box flexDirection="column" marginTop={marginTopOnTurn ? 1 : 0}>
         <Box flexDirection="row" gap={1}>
-          <Text color="suggestion" bold>{`❯ ${t(message.delivery === 'steer' ? 'agent-message-you-steer' : 'agent-message-you')}`}</Text>
+          <Text color="suggestion" bold>{`❯ ${t(message.delivery === 'interrupt' ? 'agent-message-you-interrupt' : message.delivery === 'steer' ? 'agent-message-you-steer' : 'agent-message-you')}`}</Text>
           <Box flexShrink={0}><Text color={agentMessageStateColor(message.state)} dimColor={message.state !== 'delivered'}>{status}</Text></Box>
         </Box>
         <Box paddingLeft={2} flexDirection="column">
@@ -85,7 +88,7 @@ export function AgentMessageLeafRow({ message, selfAgentId, marginTopOnTurn }: {
   return (
     <Box flexDirection="column" marginTop={marginTopOnTurn ? 1 : 0} paddingLeft={2}>
       <Box flexDirection="row" gap={1}>
-        <Text color="accent">⇄</Text>
+        <Text color={decorColor('accent' as const)}>⇄</Text>
         {known ? (
           <Text dimColor wrap="truncate-end">{t('agent-message-from-to', { from, to })}</Text>
         ) : (

@@ -78,7 +78,7 @@ export function MainAgentButton({ onClick, compact = false }: { onClick: () => v
       onMouseEnter={(): void => setHovered(true)}
       onMouseLeave={(): void => setHovered(false)}
     >
-      <Text color={hovered ? 'accent' : 'subtle'}>{compact ? '←' : t('agent-view-main-agent')}</Text>
+      <Text color={hovered ? 'text' : 'subtle'}>{compact ? '←' : t('agent-view-main-agent')}</Text>
     </NoSelect>
   )
 }

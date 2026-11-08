@@ -1,6 +1,7 @@
 import React from 'react'
 import { Box, Text } from '../../ui.js'
 import { t } from '../../i18n.js'
+import { decorColor } from '../../minimalUiMode.js'
 import type { AgentMessageView } from './agentTeam.js'
 import {
   agentMessagePartyLabel,
@@ -31,7 +32,7 @@ export function AgentMessageFlowRow({ message, selfAgentId }: {
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" gap={1}>
-        <Text color="accent">⇄</Text>
+        <Text color={decorColor('accent' as const)}>⇄</Text>
         {known
           ? <Text bold wrap="truncate-end">{t('agent-message-from-to', { from: from!, to: to! })}</Text>
           : <Text bold italic dimColor>{t('agent-message-unknown-target')}</Text>}
@@ -79,7 +80,7 @@ export function AgentMessagesSummary({ messages, selfAgentId }: {
   const known = from !== undefined && to !== undefined
   return (
     <Box flexDirection="row" gap={1} paddingLeft={2}>
-      <Text color="accent">⇄</Text>
+      <Text color={decorColor('accent' as const)}>⇄</Text>
       {known
         ? <Text dimColor wrap="truncate-end">{t('agent-message-from-to', { from: from!, to: to! })}</Text>
         : <Text dimColor italic wrap="truncate-end">{t('agent-message-unknown-target')}</Text>}

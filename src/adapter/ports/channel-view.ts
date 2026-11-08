@@ -793,10 +793,14 @@ export interface AgentMessageView {
   readonly observedAt: number
   /** The parent session the observation rode; absent when unknown. */
   readonly parentSessionId?: string
-  /** How a composer submission asked to be delivered ('steer' = into the
-   *  child's current turn, 'queue' = its next turn). Local submissions only. */
-  readonly delivery?: 'queue' | 'steer'
+  /** How a composer submission asked to be delivered. Local submissions only. */
+  readonly delivery?: AgentMessageDelivery
 }
+
+/** Where a composer message lands: 'queue' = the agent's next turn, 'steer'
+ *  = its current turn at the next step, 'interrupt' = stop the current turn
+ *  and answer this message right away. */
+export type AgentMessageDelivery = 'queue' | 'steer' | 'interrupt'
 
 /** One composer submission to an agent. */
 export interface AgentMessageSubmitInput {
@@ -805,8 +809,9 @@ export interface AgentMessageSubmitInput {
   /** Display name, when the transport addresses by name (Claude). */
   readonly targetName?: string
   readonly text: string
-  /** Enter = 'queue'; Ctrl+Enter = 'steer' only where the control says so. */
-  readonly delivery: 'queue' | 'steer'
+  /** Only a delivery the control declares (`steer` / `interrupt`) is sent;
+   *  'queue' is always available. */
+  readonly delivery: AgentMessageDelivery
   /** Caller cancellation before acceptance. */
   readonly signal?: AbortSignal
 }
@@ -828,6 +833,10 @@ export interface AgentMessageControl {
    *  yes; Claude parent-mediated is always a followup and never interrupts
    *  the parent turn). */
   readonly steer: boolean
+  /** Whether interrupt delivery is supported here: the running turn is
+   *  cancelled with its unclaimed inbox kept, then the message starts the
+   *  next turn (DSH direct: yes; absent = no). */
+  readonly interrupt?: boolean
   /** Addressable children, in roster order. Only children the transport may
    *  actually take (DSH: direct continuable catalog entries; Claude: the
    *  known subagent roster) are listed. Rejects when the backend's roster

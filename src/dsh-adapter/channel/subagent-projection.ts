@@ -178,6 +178,9 @@ export function createSubagentProjection(getState: () => ProjectionState, deps: 
         // The prompt control plane takes both deliveries natively; the
         // composer shows steer for Ctrl+Enter only because this says so.
         steer: true,
+        // Interrupt = the runtime's own interrupt + a prompt (submitPrompt);
+        // present exactly when the service serves both.
+        get interrupt() { const service = deps.subagents(); return service?.interrupt !== undefined && service.prompt !== undefined },
         listTargets,
         submit: input => active.submitPrompt(input),
         messages: () => [...active.agentMessages],
@@ -617,6 +620,22 @@ function createSessionSubagentProjection(
     if (store.get(input.targetId)?.mode === 'one-shot') return { ok: false, reason: 'not-resumable' }
     const parentSessionId = String(deps.agent().session.id)
     const requestId = `tui-${randomUUID()}`
+    // Interrupt-and-answer: cancel the child's running turn FIRST, then send.
+    // The runtime cancels with the unclaimed inbox kept, and the agent loop
+    // reroutes a message sent into an aborted turn to `next-turn` with a
+    // latched wake — so the new turn starts the moment the aborted one
+    // retires (the same convergence the main channel's interruptAndDeliver
+    // relies on). The row is NOT marked cancelled here: the turn's own
+    // subagent/end and the next epoch's start are the facts the store folds.
+    // An idle child has nothing to cancel; the prompt then simply starts it.
+    const targetStatus = store.get(input.targetId)?.status
+    if (input.delivery === 'interrupt' && (targetStatus === 'running' || targetStatus === 'starting') && service.interrupt !== undefined) {
+      try {
+        service.interrupt(store.get(input.targetId)?.sessionId ?? input.targetId, { kind: 'ancestor', agent: deps.agent() })
+      } catch (error) {
+        return agentMessageFailureOf(error)
+      }
+    }
     const signals = [new AbortController().signal, deps.ownerSignal, input.signal].filter((signal): signal is AbortSignal => signal !== undefined)
     try {
       const receipt = await service.prompt(
@@ -625,7 +644,9 @@ function createSessionSubagentProjection(
           parentSessionId,
           childSessionId: input.targetId,
           mode: 'continuable',
-          delivery: input.delivery,
+          // The runtime knows queue/steer; an interrupt's message starts the
+          // next turn (the cancel above already made room for it).
+          delivery: input.delivery === 'interrupt' ? 'queue' : input.delivery,
           content: [{ type: 'text', text }],
         },
         AbortSignal.any(signals),

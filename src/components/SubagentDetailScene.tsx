@@ -23,7 +23,7 @@ import { actionMatches } from '../utils/keymap.js'
 import { toolNameColor } from './messages/AssistantToolUseMessage.js'
 import { Markdown } from './Markdown.js'
 import { getCliHighlightPromise } from '../terminal-utils/cliHighlight.js'
-import { isMinimalUiMode } from '../minimalUiMode.js'
+import { decorColor, isMinimalUiMode } from '../minimalUiMode.js'
 import { usePanelInput } from './sidePanel/usePanelInput.js'
 import type { SidePanelKeyFlags } from './sidePanel/types.js'
 import type { Theme } from '../theme.js'
@@ -505,7 +505,7 @@ export function SubagentDetailScene({
           onClick={() => setPageSafe(name)}
           backgroundColor={!active ? 'userMessageBackgroundHover' : undefined}
         >
-          <Text color={active ? 'accent' : undefined} bold={active} inverse={active}>
+          <Text color={active ? decorColor('accent' as const) : undefined} bold={active} inverse={active}>
             {` ${label} `}
           </Text>
         </Box>
@@ -528,7 +528,7 @@ export function SubagentDetailScene({
         <Text bold>{agentTitle(subagent.description)}</Text>
         <Text dimColor>·</Text>
         <Text color={info.color}>{info.label}</Text>
-        {subagent.mode === 'continuable' && <Text color="warning">{t('subagent-mode-continuable')}</Text>}
+        {subagent.mode === 'continuable' && <Text color={decorColor('warning' as const)}>{t('subagent-mode-continuable')}</Text>}
         {subagent.mode === 'one-shot' && <Text dimColor>{t('subagent-mode-one-shot')}</Text>}
         <Box flexGrow={1} />
         {/* 主屏查看（'v' 键的鼠标等价）。只放字形：窄面板里长标签会把
@@ -644,7 +644,7 @@ export function SubagentDetailScene({
                 if (line.kind === 'text' && isActivityLine(line.text)) {
                   return (
                     <Box key={`act-${index}`} flexDirection="row" gap={1}>
-                      <Text color="accent">{'⏵'}</Text>
+                      <Text color={decorColor('accent' as const)}>{'⏵'}</Text>
                       <Text dimColor wrap="truncate-end">{line.text.replace(/^[\s⏵▶▸»]+/, '')}{unsettled}</Text>
                     </Box>
                   )
@@ -701,7 +701,7 @@ export function SubagentDetailScene({
                     )}
                     {transcript.hasOlder && (
                       <Box onClick={loadOlderTranscript} marginTop={1}>
-                        <Text color="accent">{transcript.loadingOlder
+                        <Text color={decorColor('accent' as const)}>{transcript.loadingOlder
                           ? `⏳ ${t('subagent-transcript-loading')}`
                           : `▸ ${t('subagent-transcript-load-older', { count: transcript.sourceCursor === undefined ? Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) : TRANSCRIPT_OLDER_CHUNK })}`}</Text>
                       </Box>
@@ -717,7 +717,7 @@ export function SubagentDetailScene({
                             {line.kind === 'text' && isActivityLine(line.text)
                               ? (
                                 <Box flexDirection="row" gap={1}>
-                                  <Text color="accent">{'⏵'}</Text>
+                                  <Text color={decorColor('accent' as const)}>{'⏵'}</Text>
                                   <Text dimColor wrap="truncate-end">{line.text.replace(/^[\s⏵▶▸»]+/, '')}{unsettled}</Text>
                                 </Box>
                               )
@@ -852,7 +852,7 @@ export function SubagentDetailScene({
           <>
             <Text dimColor>{' · '}</Text>
             <Box onClick={() => onInterrupt(subagent.agentId)}>
-              <Text dimColor bold color="warning">X interrupt</Text>
+              <Text dimColor bold color={decorColor('warning' as const)}>X interrupt</Text>
             </Box>
           </>
         )}

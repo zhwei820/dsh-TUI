@@ -24,3 +24,12 @@ export function isMinimalUiMode(): boolean {
 export function setMinimalUiMode(enabled: boolean): void {
   minimalUi = enabled
 }
+
+/**
+ * A decorative color: the color itself, or undefined under the minimal UI
+ * (which keeps text plain). For accents, status tints and markers — not for
+ * tool-name colors or code highlighting, which the minimal UI keeps.
+ */
+export function decorColor<T>(color: T): T | undefined {
+  return minimalUi ? undefined : color
+}

@@ -13,6 +13,7 @@ import {
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
 import { ExitButton, MainAgentButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
+import { decorColor, isMinimalUiMode } from '../minimalUiMode.js'
 import { agentTitle, formatCny, formatSubagentSpend, formatTokenCount, subagentSpend, tildePath } from '../components/Chat/subagentCardModel.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView, AgentViewSource } from '../components/messages/agentTeam.js'
 import { agentNeighbourhood, type AgentParentFact } from '../components/messages/agentTeam.js'
@@ -24,11 +25,16 @@ const WORKBENCH_PANEL_COLUMNS = 30
 const WORKBENCH_TOOL_ROWS = 5
 const WORKBENCH_SIBLING_ROWS = 5
 
-const panelStatusGlyph = (status: SubagentState['status']): { glyph: string; color?: 'warning' | 'success' | 'error' | 'subtle' } =>
-  status === 'running' || status === 'starting' ? { glyph: '●', color: 'warning' }
-    : status === 'failed' || status === 'cancelled' ? { glyph: '×', color: 'error' }
-      : status === 'unknown' ? { glyph: '○', color: 'subtle' }
-        : { glyph: '✓', color: 'success' }
+const panelStatusGlyph = (status: SubagentState['status']): { glyph: string; color?: 'warning' | 'success' | 'error' | 'subtle' } => {
+  // The minimal UI keeps the plain glyph set and drops the tint (the same
+  // vocabulary as SubagentDetailScene / SubagentCard).
+  const minimalUi = isMinimalUiMode()
+  const shown = status === 'running' || status === 'starting' ? { glyph: minimalUi ? '·' : '●', color: 'warning' as const }
+    : status === 'failed' || status === 'cancelled' ? { glyph: '×', color: 'error' as const }
+      : status === 'unknown' ? { glyph: minimalUi ? '·' : '○', color: 'subtle' as const }
+        : { glyph: '✓', color: 'success' as const }
+  return minimalUi ? { glyph: shown.glyph } : shown
+}
 
 const panelFormatDuration = (ms: number): string => {
   const seconds = Math.floor(ms / 1000)
@@ -49,8 +55,8 @@ function AgentSwitchRow({ agent, selected, onSelect }: { readonly agent: Subagen
       onMouseLeave={(): void => setHovered(false)}
       backgroundColor={hovered && !selected ? 'userMessageBackgroundHover' : undefined}
     >
-      <Text color={selected ? 'accent' : undefined} wrap="truncate-end">{` ${selected ? '▸' : ' '} ${glyph} `}</Text>
-      <Text color={selected ? 'accent' : color} wrap="truncate-end">{agent.description}</Text>
+      <Text color={selected ? decorColor('accent' as const) : undefined} wrap="truncate-end">{` ${selected ? '▸' : ' '} ${glyph} `}</Text>
+      <Text color={selected ? decorColor('accent' as const) : color} wrap="truncate-end">{agent.description}</Text>
     </Box>
   )
 }
@@ -289,7 +295,8 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
     <Box flexDirection="column" paddingX={2} paddingY={1}>
       {/* Header: identity + live/history + read-only, one truncating line. */}
       <Box flexDirection="row" gap={1}>
-        <Box flexShrink={0}><Text color="accent" bold>⤢</Text></Box>
+        {/* Header decoration: the minimal UI drops the ⤢ mark. */}
+        {!isMinimalUiMode() && <Box flexShrink={0}><Text color="accent" bold>⤢</Text></Box>}
         <Box flexShrink={1} minWidth={0}><Text bold wrap="truncate-end">{headerLabel}</Text></Box>
         <Box flexShrink={0}><Text dimColor>{headerBadges}</Text></Box>
         <Box flexGrow={1} />
@@ -367,7 +374,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
                     )}
                     {transcript.hasOlder && (
                       <Box onClick={loadOlder} marginTop={1}>
-                        <Text color="accent">{transcript.loadingOlder
+                        <Text color={decorColor('accent' as const)}>{transcript.loadingOlder
                           ? `⏳ ${t('subagent-transcript-loading')}`
                           : `▸ ${t('subagent-transcript-load-older', { count: Math.min(TRANSCRIPT_OLDER_CHUNK, transcript.skippedFromStart) })}`}</Text>
                       </Box>
@@ -535,7 +542,7 @@ function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, swit
       borderBottom={false}
       borderColor="inactive"
     >
-      <Text bold color={focused ? 'accent' : undefined}>{t('agent-view-panel-title')}</Text>
+      <Text bold color={focused ? decorColor('accent' as const) : undefined}>{t('agent-view-panel-title')}</Text>
       <Text dimColor>{' ' + t('agent-view-panel-metadata') + ' ─────'}</Text>
       <PanelMetaRow label={t('agent-view-field-status')} value={subagent.status} />
       <PanelMetaRow label={t('agent-view-field-mode')} value={subagent.mode} />
@@ -555,7 +562,7 @@ function WorkbenchPanel({ subagent, parent, parentRow, rosterIds, siblings, swit
       )}
       {keptTools.map(tool => (
         <Box key={tool.id ?? tool.name + tool.startedAt}>
-          <Box flexShrink={0}><Text color={tool.status === 'failed' ? 'error' : tool.status === 'running' ? 'warning' : 'success'}>{tool.status === 'failed' ? '× ' : tool.status === 'running' ? '● ' : '✓ '}</Text></Box>
+          <Box flexShrink={0}><Text color={decorColor(tool.status === 'failed' ? 'error' as const : tool.status === 'running' ? 'warning' as const : 'success' as const)}>{tool.status === 'failed' ? '× ' : tool.status === 'running' ? (isMinimalUiMode() ? '· ' : '● ') : '✓ '}</Text></Box>
           <Text wrap="truncate-end" dimColor={tool.status === 'completed'}>{tool.name}</Text>
         </Box>
       ))}
