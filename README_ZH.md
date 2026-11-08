@@ -77,7 +77,7 @@
 
 ### DSH 集成
 
-- **DSH 集成** — presets、技能、MCP、目标、待办、子代理、问卷。
+DSH 提供 presets、技能、MCP、目标、待办、子代理与问卷，dsh-TUI 原生呈现。
   - **子代理卡片与运行列表** — 子代理显示为 `● Agent(描述)` 卡片，列出最近的工具调用，结束后显示 `完成（N 次工具调用 · tokens · 用时）` 一行；并行的子代理合成一棵 `N 个子代理运行中…` 树，`Ctrl+O` 展开卡片的工具调用。只要有子代理在运行，输入框上方就常驻一个「N 个子代理运行中」列表，每个子代理一行，显示最近的工具调用、已用时间和 tokens，点击即可打开该子代理。
   - **子代理视图** — 从这个列表、对话流里的子代理卡片、agents 仪表盘（Ctrl+A）或 agents 侧栏打开子代理，看到的都和主代理的对话一样是一条完整转录：主代理交给它的任务原文（完整显示、不截断；更早的记录还没加载时固定显示在最上面）、每一步过程（思维链和主代理一样折叠成一行 `∴`）和最终结果。按 Esc 回到打开它的地方。
   - **追加提示** — 底部有和主输入框同款的输入框，可以给可继续的子代理追加提示；提示按顺序进入转录，输入框下方显示通道回报的投递状态。
@@ -90,7 +90,7 @@
 - **任务完成通知** — 会话的实时任务成功结束，且没有排队的后续输入或活动目标时提醒。标题为「dsh-TUI · 任务已完成」，正文显示本轮最新回复的单行纯文本摘要（去掉 Markdown 样式，最多 200 字符）；OSC 777/9 还会按包含标题和协议开销的 2048 字节预算截短，保留完整字素；没有回复时只显示标题，BEL 只响铃。回放、取消和失败不通知；inline 与 fullscreen 均支持。
   - **设置** — `/settings` → 对话：`taskNotifications` 可选 `unfocused`（默认，仅失焦）、`always`（每次完成）、`off`；`notificationMethod` 可选 `auto`（默认）、`osc9`、`bel`、`windows`。
   - **投递** — 自动模式在 Ghostty/WezTerm（OSC 777）与 Kitty（OSC 99）分别显示标题与正文；iTerm2/Warp 与显式 `osc9` 将标题放在正文前；其他终端使用响铃，实际提醒取决于终端的通知/响铃设置。不支持焦点报告的终端可选 `always`；tmux 的 OSC 通知需要 `set -g allow-passthrough on`，焦点报告需要 `set -g focus-events on`。
-  - **Windows** — 在本地 Windows 上，`auto` 解析为 `windows`，即系统原生通知。首次弹出会注册当前用户的 AppUserModelID（写 HKCU），弹出比任务结束晚约 3 秒（零安装路线要付的 PowerShell 冷启动代价）。DSH 会话所在运行中 profile 的外部 DSH 通知插件已启用且处于 active 时，dsh-TUI 让位（不弹也不响）；仅安装但已禁用的插件不会吞掉提醒。注册写不进去时回落到响铃，不会静默。
+  - **Windows** — 在本地 Windows 上，`auto` 解析为 `windows`，即系统原生通知。首次弹出会注册当前用户的 AppUserModelID（写 HKCU），弹出比任务结束晚约 3 秒（零安装路线要付的 PowerShell 冷启动代价）。DSH 会话所在运行中 profile 的 `cc-dsh-notifier` 插件已启用且处于 active 时，dsh-TUI 让位（不弹也不响）；仅安装但已禁用的插件不会吞掉提醒。注册写不进去时回落到响铃，不会静默。
   - **SSH** — SSH 会话的 `auto` 保留所连接终端的通知协议；显式 `windows` 仍选择运行主机的原生通知。
 - **为长会话设计** — 事件驱动投影、虚拟化、有界缓存。
 
@@ -138,23 +138,6 @@
 
 前置条件：安装 [Node.js](https://nodejs.org/zh-cn) 与 [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)。`deepseek-official` API key 路由需要 `DEEPSEEK_API_KEY`；DSH 0.2.0-rc.1+ 的标准 profile 也可用 `/auth login deepseek-account` 登录，再通过 `/model` 选择独立的账号路由。
 
-主适配目标为 DSH `0.2.2-rc.1`，已接入新版 Shell API、V4 会话消息、声明式预设与
-profile 设置；旧受支持版本保留兼容路径。迁移说明见[配置参考](docs/configuration.md)。
-
-DSH 0.2.1-rc.5 及之后还可在 `/settings` 选择 DeepSeek 搜索 / 抓取 API、修改端点与结果数。
-分区支持自定义 Loader 行 ID，可直接输入 API key，密钥以掩码显示并保存到 DSH 凭据库。
-
-`/settings` 按页签组织：TUI 自己的设置位于「常规」页，插件声明的页单独成签
-（`Tab` / `Shift+Tab` 或全屏下点击页签切换；只有一页时不显示页签）。
-
-DSH 0.1.7 的 `/settings` 使用 TUI 实际的 Loader 行 ID，也支持自定义 ID。
-profile 依赖须配套，包含 `@deepseek-ai/schemastery` 3.18.3 或更新版本；
-Schema 不兼容时，TUI 在启动阶段报错并提示修复安装，不再显示不可编辑的设置页。
-旧 host 继续使用原有设置 scope。
-
-`/settings` 的 `dsh-tui` 分区保存在 `~/.dsh-tui/settings.json`，所有内核共用；第一次启动时
-从 profile 的 `cordis.patch.yml`（以及旧版 host 的 `~/.dsh/settings.yaml`）一次性导入（见[配置参考](docs/configuration.md#tui-配置)）。
-
 ```sh
 # 安装（全局，自带 dsh-tui 命令）
 npm install -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui
@@ -169,7 +152,28 @@ dst
 
 > **新用户提示**：pnpm ≥11 默认拦截带安装脚本的依赖，报 `ERR_PNPM_IGNORED_BUILDS`。更新时还会忽略异平台原生包（如 `@img/sharp-*`），只取本机平台的二进制。`/update` 与 `dsh-tui update` 都会自动写好这两份配置，无需手工处理。细节见[安装与快速开始](docs/getting-started.md#pnpm-安装脚本拦截与异平台原生包)。
 
-TUI 启动后会在后台检查新版本，不阻塞首帧。有更新时输入 `/update` 一键对齐整套（TUI、全局 dsh 引擎、全局启动器），自动重启并恢复当前会话；TUI 与引擎不兼容或引擎不可启动时明确拒绝；若 registry 上有超出本 TUI 验证范围的新 dsh，会说明在等 TUI 适配，不会安装未验证的引擎。启动器对齐通常是 best effort，但引擎已推进后若启动器对齐失败，会拒绝重启并打印修复命令；只操作可证明的全局安装；项目内 npm/npx 包、归属有歧义的别名和 pnpm 多成员组均保持不变。profile 叠加机制、源码构建、常见问题以及从旧包 `dsh-cc-tui` 的迁移见[安装与快速开始](docs/getting-started.md)。
+### 更新
+
+TUI 启动后会在后台检查新版本，不阻塞首帧。有更新时输入 `/update` 一键对齐整套——TUI、全局 dsh 引擎与全局启动器。
+
+- **重启** — 自动重启并恢复当前会话；TUI 与引擎不兼容或引擎不可启动时明确拒绝，不留下无法启动的组合。
+- **启动器对齐** — 通常是 best effort，但引擎已推进后若启动器对齐失败，会拒绝重启并打印修复命令。
+- **版本线** — 若 registry 上有超出本 TUI 验证范围的新 dsh，会说明在等 TUI 适配，不会安装未验证的引擎。
+- **范围** — 只操作可证明的全局安装；项目内 npm/npx 包、归属有歧义的别名和 pnpm 多成员组均保持不变。
+
+profile 叠加机制、源码构建、常见问题以及从旧包 `dsh-cc-tui` 的迁移见[安装与快速开始](docs/getting-started.md)。
+
+### Profile 与设置兼容性
+
+主适配目标为 DSH `0.2.2-rc.1`，已接入新版 Shell API、V4 会话消息、声明式预设与 profile 设置；旧受支持版本保留兼容路径。迁移说明见[配置参考](docs/configuration.md)。
+
+DSH 0.2.1-rc.5 及之后还可在 `/settings` 选择 DeepSeek 搜索 / 抓取 API、修改端点与结果数。分区支持自定义 Loader 行 ID，可直接输入 API key，密钥以掩码显示并保存到 DSH 凭据库。
+
+`/settings` 按页签组织：TUI 自己的设置位于「常规」页，插件声明的页单独成签（`Tab` / `Shift+Tab` 或全屏下点击页签切换；只有一页时不显示页签）。
+
+DSH 0.1.7 的 `/settings` 使用 TUI 实际的 Loader 行 ID，也支持自定义 ID。profile 依赖须配套，包含 `@deepseek-ai/schemastery` 3.18.3 或更新版本；Schema 不兼容时，TUI 在启动阶段报错并提示修复安装，不再显示不可编辑的设置页。旧 host 继续使用原有设置 scope。
+
+`/settings` 的 `dsh-tui` 分区保存在 `~/.dsh-tui/settings.json`，所有内核共用；第一次启动时从 profile 的 `cordis.patch.yml`（以及旧版 host 的 `~/.dsh/settings.yaml`）一次性导入（见[配置参考](docs/configuration.md#tui-配置)）。
 
 ### CLI 子命令
 
@@ -452,22 +456,15 @@ pnpm smoke
 
 ## 插件生态
 
-插件开发：[准入与开发指南](tui-profile/docs/plugin-admission-and-development.md) · [plugin-template](https://github.com/dsh-tui-ecosystem/plugin-template) · [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem)。参考实现：`dsh-working-activity`。
+插件开发：[准入与开发指南](tui-profile/docs/plugin-admission-and-development.md) · [plugin-template](https://github.com/dsh-tui-ecosystem/plugin-template) · [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem)。参考实现：`dsh-working-activity`。接缝分级与 API 说明：[插件开发](docs/plugins.md)。生态组织只维护收录，不背书社区插件。
 
-通过包子路径导出的插件组件，按实际 ESM 入口最近的包清单准入（含 import-only 与条件导出），不继承外层包的身份。
+### 安装插件
 
-后端插件（实验性的 `tui.dsh/v1alpha1` `Backend` 贡献族）装了就会在重启后进内核选择器：启动时扫 profile 声明的已装 bundle，按包根的 `dsh-plugin.json` 校验、准入并注册，后端实现从包里导出 `backend`（模块只在真的选中时才加载）。
-每个 bundle 只能声明一个后端，handler 的 id 必须与声明一致。等待授权的条目不参与探测，也不能加载；显式指定它启动同样会被拒绝。
+`/plugin install <包名 | 路径 | git URL>` 在 TUI 内运行，走宿主 profile 插件管理器——装前提醒、信任确认、可取消的进度、构建脚本批准与精确版本豁免。
 
-接缝分级与 API 说明：[插件开发](docs/plugins.md)。生态组织只维护收录，不背书社区插件。
-
-在 TUI 里装插件：`/plugin install <包名 | 路径 | git URL>`。动作全走宿主 profile 插件管理器——装前提醒、信任确认、可取消的进度、构建脚本批准与精确版本豁免；命中**随包发布的嫡系清单**（`tui-profile/feed/first-party.json`，一个版本钉死一份、离线可判）的包跳过信任确认，且只有写明该精确版本的 spec 才算命中：裸包名、标签或范围会在安装时被重新解析，因此一律先让人确认。
-
-确认的是哪一件就装哪一件——安装会钉住 inspect 读到的精确 `name@version`；回合仍在运行时拒绝安装（先结束它，或用 `/new`）。同样的动作在命令行仍可用（`dsh plugin --profile dsh-tui …`）。
-
-装前确认页会列出该包声明的权限；`Enter` = 安装并授权——授权先写进 `~/.dsh-tui/extension-grants.json`，再开始安装，安装失败会回滚这次写入。注册表包在装上之前读不到声明，装成功后会出现一个「授予」步骤：`Enter` 授予，`Esc` 跳过（安装保留）。清单里宿主不认识的权限会被跳过并点名。终端高度不足以放下一行权限时，清单折成计数或把计数放进按键提示；包名、notice 与按键提示始终保留。
-
-一个 spec 是下面三种之一：
+- **嫡系清单** — 命中随包发布的嫡系清单（`tui-profile/feed/first-party.json`，一个版本钉死一份、离线可判）的包跳过信任确认，且只有写明该精确版本的 spec 才算命中：裸包名、标签或范围会在安装时被重新解析，因此一律先让人确认。
+- **钉住的制品** — 确认的是哪一件就装哪一件——安装会钉住 inspect 读到的精确 `name@version`；回合仍在运行时拒绝安装（先结束它，或用 `/new`）。
+- **spec 形态** — 一个 spec 是下面三种之一：
 
 ```sh
 /plugin install /path/to/repo
@@ -475,21 +472,49 @@ pnpm smoke
 /plugin install @scope/package@1.2.3
 ```
 
-输入 `/plugin install ` 时补全浮窗会列出这三种形状，`/plugin info ` 则在已装名之后跟上同样三条。它们是示例、不是候选：`Tab` 让草稿逐字保持原样，`Enter` 提交的始终是你自己打的那一行——spec 还空着时就是子命令的用法行，已经有 spec 时就是你写的那个。示例既插不进草稿、也不会被误装，一个只是开头像示例的真实路径也不会被吞掉。
+- **补全** — 输入 `/plugin install ` 时补全浮窗会列出这三种形状，`/plugin info ` 则在已装名之后跟上同样三条。它们是示例、不是候选：`Tab` 让草稿逐字保持原样，`Enter` 提交的始终是你自己打的那一行——spec 还空着时就是子命令的用法行，已经有 spec 时就是你写的那个。示例既插不进草稿、也不会被误装，一个只是开头像示例的真实路径也不会被吞掉。
+- **取消** — 安装期间按 `esc` 会尝试取消，面板等写操作结束后才关闭；取消来不及时会等待安装完成。版本豁免登记期间取消会等待当前写入，停止后续登记和安装重试；已写入的豁免保留。
+- **失败** — 安装失败时最多显示六行脱敏日志；超过 16 KiB 的单行会整行省略并提示。
+- **CLI** — 同样的动作在命令行仍可用（`dsh plugin --profile dsh-tui …`）。
 
-安装期间按 `esc` 会尝试取消，面板等写操作结束后才关闭；取消来不及时会等待安装完成。版本豁免登记期间取消会等待当前写入，停止后续登记和安装重试；已写入的豁免保留。
+### 信任与权限
 
-安装失败时最多显示六行脱敏日志；超过 16 KiB 的单行会整行省略并提示。
+- **列出什么** — 装前确认页会列出该包声明的权限。
+- **安装并授权** — `Enter` = 安装并授权——授权先写进 `~/.dsh-tui/extension-grants.json`，再开始安装，安装失败会回滚这次写入。
+- **注册表包** — 注册表包在装上之前读不到声明，装成功后会出现一个「授予」步骤：`Enter` 授予，`Esc` 跳过（安装保留）。
+- **未知权限** — 清单里宿主不认识的权限会被跳过并点名。
+- **短终端** — 终端高度不足以放下一行权限时，清单折成计数或把计数放进按键提示；包名、notice 与按键提示始终保留。
+- **生命周期** — `enable` 启用并按包内声明授予、`disable` 关闭并撤销该组件声明过的权限；`remove` 在卸载后**删除该组件的 `grants`/`denies` 条目**——授权以组件 id 为键，留着会被后来复用同一 id 的包静默继承，所以卸载必须关掉它，重新安装后需要再授权一次。
+- **失败处理** — 写授权失败不会挡住安装或启用，只会在转录里说明。授权是行为约束，不是安全边界。
+- **残留** — 数据目录、存储命名空间与效果台账仍然保留，残留报告按来源逐项点名。
 
-管理已经装上的东西：`/plugin remove <bundle>`、`/plugin enable <名称 | 行 id>`、`/plugin disable <名称 | 行 id>`。bundle 是组合层、行是 patch 的一条，两者分开做动作，且 bundle 名优先于任何行身份；模块名匹配多行时，必须改用具体行 ID。
+### 管理插件
 
-**门禁 2 拒绝三种「自己把自己关掉」**——卸载/关闭提供本应用的 bundle、宿主层 `dsh-base`、以及本包自己提供的行——并说清破了哪条规则，且完全不调用服务；热重载开着时同样拒（那正是上游守卫失效的那条路径）。`enable` 不会因门禁 2 被拒（它是复原动作）。任何启用与卸载都要确认，`disable` 只对宿主层自己的行问；宿主不提供已装包的来源证明，即使名称与版本命中嫡系清单，启用时仍须确认。
+管理已经装上的东西：`/plugin remove <bundle>`、`/plugin enable <名称 | 行 id>`、`/plugin disable <名称 | 行 id>`。
 
-这三个动作**没有取消面**——服务不提供——所以 `esc` 只关面板，写入照旧跑完并把结果写进转录。启用与关闭在命令行也没有动词（那两件事由服务写 profile 自己的文件）。
+- bundle 是组合层、行是 patch 的一条，两者分开做动作，且 bundle 名优先于任何行身份。
+- 模块名匹配多行时，必须改用具体行 ID。
+- 任何启用与卸载都要确认，`disable` 只对宿主层自己的行问。
+- 宿主不提供已装包的来源证明，即使名称与版本命中嫡系清单，启用时仍须确认。
+- 这三个动作**没有取消面**——服务不提供——所以 `esc` 只关面板，写入照旧跑完并把结果写进转录。
+- 启用与关闭在命令行也没有动词（那两件事由服务写 profile 自己的文件）。
 
-**授权跟着生命周期走**：`enable` 启用并按包内声明授予、`disable` 关闭并撤销该组件声明过的权限；`remove` 在卸载后**删除该组件的 `grants`/`denies` 条目**——授权以组件 id 为键，留着会被后来复用同一 id 的包静默继承，所以卸载必须关掉它，重新安装后需要再授权一次。
+### 门禁 2 规则
 
-数据目录、存储命名空间与效果台账仍然保留，残留报告按来源逐项点名；写授权失败不会挡住安装或启用，只会在转录里说明。授权是行为约束，不是安全边界。
+**门禁 2 拒绝三种「自己把自己关掉」**——卸载/关闭提供本应用的 bundle、宿主层 `dsh-base`、以及本包自己提供的行——并说清破了哪条规则，且完全不调用服务。
+
+- 热重载开着时同样拒（那正是上游守卫失效的那条路径）。
+- `enable` 不会因门禁 2 被拒（它是复原动作）。
+
+### 后端插件
+
+后端插件（实验性的 `tui.dsh/v1alpha1` `Backend` 贡献族）装了就会在重启后进内核选择器：启动时扫 profile 声明的已装 bundle，按包根的 `dsh-plugin.json` 校验、准入并注册，后端实现从包里导出 `backend`（模块只在真的选中时才加载）。
+
+- **每个 bundle 一个** — 每个 bundle 只能声明一个后端，handler 的 id 必须与声明一致。
+- **授权** — 等待授权的条目不参与探测，也不能加载；显式指定它启动同样会被拒绝。
+- **准入身份** — 通过包子路径导出的插件组件，按实际 ESM 入口最近的包清单准入（含 import-only 与条件导出），不继承外层包的身份。
+
+### 实验性功能
 
 `/plugin list` 除了你装的额外插件，还会列出 DSH 安装自带、默认关闭、本应用已适配的实验性功能（当前是智能体团队、自动授权审查、会话搜索与 Git 工作树），每一项都给出开启与用法；运行中的 DSH 不自带该包时不显示这一段。
 
@@ -518,19 +543,51 @@ pnpm smoke
 
 ## 权限与安全边界
 
+### 默认策略
+
 > **Windows 安全警告：** Windows profile 默认 `danger-full-access`、approval 默认 `never`，工具访问不受限制。在敏感凭证或不可信仓库旁启动前，先检查并收紧 profile。
 
 不自带沙箱：用当前 DSH profile 的文件、Shell、sandbox 与 approval 策略。权限预设来自 DSH `permissionPresets` registry。
 
-**权限记忆**：DSH 的 `/permission` 选择存在 `~/.dsh-tui/permission.json`。任何一次持久的预设切换（选择器、手敲 `/permission`、Shift+Tab 静态模式、官方命令自行完成的切换）都会更新记忆；从未自定义过权限面的会话将以上次的选择启动——同样走官方切换路径。这里的“未自定义”以用户动作为准：合成层会在每个新会话创建时写入自己的默认预设，那些事件不算用户选择。计划模式的临时切换与实验性的自动授权审查（见下）不记入；`DSH_PERMISSION_MODE` 是本次启动的初始权限面，显式设置时优先于该文件；名册已不提供的身份会被跳过。
+### 权限记忆
 
-**自动授权审查**（DSH，实验性）：`/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-auto-review` 开启后，`auto` 预设（显示为「自动授权审查」，带 `EXP` 标记）即时出现在 `/permission` 及其补全里，移除插件后即时消失。它只对当前会话生效：模型在每次工具调用执行前审查，没有文件沙箱，每次调用额外一次模型请求；其审批显示本地化原因，子代理中的拒绝显示为「自动授权审查拒绝，未执行」。在选择器里选中它会先出风险确认（`Enter` 启用，`Esc` 返回；全屏下「启用 / 返回」两行可点击）；手敲 `/permission auto` 直接切换。当前会话选过它一次之后，选择器不再弹确认，Shift+Tab 也不再跳过它。
+- **存储** — DSH 的 `/permission` 选择存在 `~/.dsh-tui/permission.json`。
+- **写入** — 任何一次持久的预设切换（选择器、手敲 `/permission`、Shift+Tab 静态模式、官方命令自行完成的切换）都会更新记忆。
+- **恢复** — 从未自定义过权限面的会话将以上次的选择启动——同样走官方切换路径。
+- **「未自定义」** — 这里的“未自定义”以用户动作为准：合成层会在每个新会话创建时写入自己的默认预设，那些事件不算用户选择。
+- **例外** — 计划模式的临时切换与实验性的自动授权审查（见下）不记入；`DSH_PERMISSION_MODE` 是本次启动的初始权限面，显式设置时优先于该文件；名册已不提供的身份会被跳过。
 
-**会话搜索**（DSH，实验性）：`/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-session-search` 开启后，Agent 多出 5 个只读检索工具（`session_search`、`session_event_search`、`session_trace`、`session_event_trace`、`session_event_read`），可检索同一工作区的历史会话——跨会话访问要求 `cwd` 完全一致。索引只在内存里，首次搜索时建立，不落盘。本应用让内核的极简模式保持它那一个持久 shell 工具，因此极简模式既不显示这 5 个工具，也不显示它们的用法指导。
+### 自动授权审查（实验性）
 
-**Git 工作树**（DSH，实验性）：`/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-tool-worktree` 开启后，Agent 多出 `create_worktree` 工具：在当前仓库的 `.agents/worktrees/<名称>` 下新建 Git 分支与工作树（基于 `HEAD` 或指定的本地版本；未提交的改动留在原工作区），再把会话切进去——状态栏、Git 分支与 `@` 补全随之跟随，会话仍登记在原项目下。工具卡显示为 `Worktree("<分支>")`，正文是工作树路径与基于的版本。不会自动清理：工作树用 `git worktree remove <路径>` 删除，分支要另外用 `git branch -D <分支>` 删除（Agent 用 `working_directory` 切回；工作树删除后，下一次请求会把会话带回项目）。分支没删时，再用同名调用 `create_worktree` 会失败。在工作树里再调用，新工作树会嵌套建在当前工作树下。切换不改变文件权限，也不影响已打开的终端。本应用对内核的极简模式与随包的 liangshen 预设隐藏 `create_worktree`：它们的持久 shell（liangshen 在 macOS / Linux 上）停在启动时的目录，切换后仍会改原工作区的文件。
+DSH 的 `/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-auto-review` 开启后，`auto` 预设（显示为「自动授权审查」，带 `EXP` 标记）即时出现在 `/permission` 及其补全里，移除插件后即时消失。
 
-**上游断链自动重试**（DSH）：会话每次绑定（启动、`/model` 切换、resume）时，只为**当前实际使用的渠道**播种一份重试策略——最多重试 5 次、失败码覆盖传输类中断（含 `STREAM_CLOSED`，即上游流被掐断）——写入官方 `llm-pi-ai` settings 分节（内核 `llm-retry` 插件执行的就是这份策略）。只补未声明 `retryPolicy` 的渠道、从不写闲置渠道；已显式声明的不会被覆盖；cordis.yml 里 `upstreamRetry: false` 可整体关闭。
+- **仅限当前会话** — 模型在每次工具调用执行前审查，没有文件沙箱，每次调用额外一次模型请求。
+- **提示文案** — 审批显示本地化原因，子代理中的拒绝显示为「自动授权审查拒绝，未执行」。
+- **确认** — 在选择器里选中它会先出风险确认（`Enter` 启用，`Esc` 返回；全屏下「启用 / 返回」两行可点击）；手敲 `/permission auto` 直接切换。当前会话选过它一次之后，选择器不再弹确认，Shift+Tab 也不再跳过它。
+
+### 会话搜索（实验性）
+
+DSH 的 `/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-session-search` 开启后，Agent 多出 5 个只读检索工具（`session_search`、`session_event_search`、`session_trace`、`session_event_trace`、`session_event_read`），可检索同一工作区的历史会话——跨会话访问要求 `cwd` 完全一致。
+
+索引只在内存里，首次搜索时建立，不落盘。本应用让内核的极简模式保持它那一个持久 shell 工具，因此极简模式既不显示这 5 个工具，也不显示它们的用法指导。
+
+### Git 工作树（实验性）
+
+DSH 的 `/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-experimental-tool-worktree` 开启后，Agent 多出 `create_worktree`。
+
+- **创建与切换** — 在当前仓库的 `.agents/worktrees/<名称>` 下新建 Git 分支与工作树（基于 `HEAD` 或指定的本地版本；未提交的改动留在原工作区），再把会话切进去——状态栏、Git 分支与 `@` 补全随之跟随，会话仍登记在原项目下。
+- **卡片** — 工具卡显示为 `Worktree("<分支>")`，正文是工作树路径与基于的版本。
+- **清理** — 不会自动清理：工作树用 `git worktree remove <路径>` 删除，分支要另外用 `git branch -D <分支>` 删除（Agent 用 `working_directory` 切回；工作树删除后，下一次请求会把会话带回项目）。分支没删时，再用同名调用 `create_worktree` 会失败。
+- **嵌套与影响** — 在工作树里再调用，新工作树会嵌套建在当前工作树下。切换不改变文件权限，也不影响已打开的终端。
+- **预设排除** — 本应用对内核的极简模式与随包的 liangshen 预设隐藏 `create_worktree`：它们的持久 shell（liangshen 在 macOS / Linux 上）停在启动时的目录，切换后仍会改原工作区的文件。
+
+### 上游断链自动重试
+
+会话每次绑定（启动、`/model` 切换、resume）时，TUI 只为**当前实际使用的渠道**播种一份重试策略，写入官方 `llm-pi-ai` settings 分节（内核 `llm-retry` 插件执行的就是这份策略）。
+
+- **策略** — 最多重试 5 次，失败码覆盖传输类中断（含 `STREAM_CLOSED`，即上游流被掐断）。
+- **守卫** — 只补未声明 `retryPolicy` 的渠道、从不写闲置渠道；已显式声明的不会被覆盖。
+- **关闭** — cordis.yml 里 `upstreamRetry: false` 可整体关闭。
 
 详见[权限边界](docs/architecture.md#权限与安全边界)。
 
