@@ -1,6 +1,7 @@
 import React from 'react'
 import { getLang, t as tr, tOr } from '../i18n.js'
 import { pickRandomTip, type Tip } from '../tips.js'
+import { buildCommitLabel } from '../buildInfo.js'
 import { upstreamDriftSummary, UPSTREAM_VALIDATED_VERSION, type UpstreamDriftSummary } from '../dsh-adapter/contract.js'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -49,6 +50,10 @@ const VERSION = (() => {
     return '0.1.0'
   }
 })()
+
+/** The compiled build's commit (`6605b81`, `+` = built from a dirty tree),
+ *  beside the version so a stale lib is visible at a glance. */
+const BUILD_COMMIT = buildCommitLabel()
 
 /**
  * Center of the whale art's bounding box: sprite columns 3..34 (center
@@ -672,7 +677,7 @@ export function LogoV2({
             {chrome !== 'minimal' && (
               <Text wrap="truncate-end">
                 {sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60)}
-                <Text dimColor>{'  v' + VERSION}</Text>
+                <Text dimColor>{'  v' + VERSION + (BUILD_COMMIT === '' ? '' : ` · ${BUILD_COMMIT}`)}</Text>
               </Text>
             )}
             {showBigTitle ? (

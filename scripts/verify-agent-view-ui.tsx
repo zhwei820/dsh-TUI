@@ -367,7 +367,9 @@ console.log('--- S4: esc layering + queue/steer ---')
       await settled(() => frame.screen().includes('steer me'))
       frame.stdin.write('\x1b[13;5u')
       check('S4 DSH 直发 Ctrl+Enter = steer', await settled(() => steerLog.length === 1 && steerLog[0]!.delivery === 'steer'), JSON.stringify(steerLog))
-      check('S4 receipt 只升到 queued（不伪造 delivered）', frame.screen().includes('queued') && !frame.screen().includes('delivered'))
+      // A direct steer reads 'steered in' until the child's log proves the
+      // claim ('received'); the receipt alone never upgrades it.
+      check('S4 receipt 只升到 queued（不伪造 delivered）', frame.screen().includes('steered in') && !frame.screen().includes('received') && !frame.screen().includes('delivered'))
     },
   )
   // failure keeps draft + notice
