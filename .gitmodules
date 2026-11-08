@@ -2,3 +2,7 @@
 	path = vendor/dsh-std
 	url = https://github.com/T-Auto/dsh-std.git
 	branch = main
+[submodule "vendor/deepseek-harness"]
+	path = vendor/deepseek-harness
+	url = https://github.com/deepseek-ai/deepseek-harness.git
+	branch = master

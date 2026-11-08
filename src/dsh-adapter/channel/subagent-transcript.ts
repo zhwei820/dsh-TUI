@@ -21,7 +21,9 @@
  *     the host states it, else from bounded single-event tail probes of the
  *     public range reader (never an unbounded whole-log read + slice);
  *  4. translation: a fresh translator instance per call; only the leaf
- *     kinds (`assistant.message` / `tool.call` / `tool.result`) survive,
+ *     kinds (`assistant.message` / `tool.call` / `tool.result`, plus the
+ *     prompts the child was given — `user.message` with a `user` source)
+ *     survive,
  *     each stamped with the child lane's `parentCallId`, so the shared
  *     fold/page/merge pipeline consumes them exactly like Claude's;
  *  5. fences: the binding capture (session + generation) is re-checked after
@@ -43,6 +45,10 @@ import type { SubagentsServiceView } from './subagent-projection.js'
  * neutral cursor stays one unit wide for both backends.
  */
 export const CHILD_TRANSCRIPT_PAGE_EVENTS = 400
+
+/** Events read from the head of the child's log to find its initial task
+ *  (it is the first prompt; system/context injections may precede it). */
+const TASK_PROBE_EVENTS = 32
 
 /** Span ceiling for the exponential probe (2^24 ≈ 16.7M events). */
 const PROBE_SPAN_MAX = 2 ** 24
@@ -298,12 +304,35 @@ export async function readChildTranscriptPage(
           lane.push({ ...orphanResult(translated, event as SessionEvent<'tool/result'>), parentCallId: agentId })
         } else if (translated.type === 'assistant.message' || translated.type === 'tool.call' || translated.type === 'tool.result') {
           lane.push({ ...translated, parentCallId: agentId })
+        } else if (translated.type === 'user.message' && translated.source === 'user') {
+          // The prompts it was given: the delegating agent's task first, then
+          // any follow-ups to a continuable child (no lane stamp: prompts are
+          // not tool-lane leaves).
+          lane.push(translated)
         }
       }
     }
     const skippedFromStart = Math.max(0, start - cut)
+    // Paging from the middle: the task sits on the oldest page. Read the
+    // head of the child's own log (bounded) for it, so the views can show
+    // what the agent was asked to do without paging all the way back.
+    // Only the NEWEST page probes: an older-window request already has it
+    // (the fold carries the task across prepends).
+    let task: string | undefined
+    if (window === undefined && skippedFromStart > 0) {
+      guard()
+      signal?.throwIfAborted()
+      const head = (await handle.read(cut, Math.min(TASK_PROBE_EVENTS, skippedFromStart), signal === undefined ? undefined : { signal })).events
+      guard()
+      const headTranslator = deps.createTranslator()
+      for (const event of head) {
+        const prompt = headTranslator.translateEvent(event).find(translated => translated.type === 'user.message' && translated.source === 'user')
+        if (prompt !== undefined && prompt.type === 'user.message' && prompt.text.trim() !== '') { task = prompt.text; break }
+      }
+    }
     return {
       events: lane,
+      ...(task === undefined ? {} : { task }),
       // The parent is a verified fact (roster + stored lineage), never inferred.
       parentAgentId: capture.sessionId,
       uuids,

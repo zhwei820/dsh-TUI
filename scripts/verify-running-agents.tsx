@@ -3,7 +3,8 @@
  *
  *   A1. While subagents run, a `N agents running` header lists each running
  *       agent (settled ones are left out) with its latest tool and elapsed.
- *   A2. Clicking a row opens that agent's detail scene.
+ *   A2. Clicking a row opens that agent's conversation (one transcript, no
+ *       tabs — the same view as the main agent); Esc comes back.
  *   A3. Nothing running → no roster.
  *
  * Run: node --import tsx/esm scripts/verify-running-agents.tsx
@@ -89,10 +90,11 @@ check('A1 settled agents are left out', !screen().includes('Agent(task gamma)'))
 const row = lines().findIndex(line => line.includes('Agent(task beta)'))
 const col = lines()[row]!.indexOf('Agent(task beta)') + 2
 stdin.write(`\x1b[<0;${col};${row + 1}M\x1b[<0;${col};${row + 1}m`)
-check('A2 clicking a row opens that agent\'s detail scene', await settled(() => screen().includes('Agent(task beta)') && screen().includes('Esc')
+check('A2 clicking a row opens that agent\'s conversation (one transcript, like the main agent)', await settled(() => screen().includes('⤢ Agent(task beta)')
   && !screen().includes('agents running')), screen().split('\n').slice(0, 6).join(' | '))
+check('A2 … with no Summary/Output/Tools tab strip', !screen().includes('Summary') && !screen().includes('Tools'))
 stdin.write('\x1b')
-await settled(() => screen().includes('agents running'))
+check('A2 Esc returns to the conversation', await settled(() => screen().includes('agents running')))
 
 // A3
 for (const sub of channel.subagents) { sub.status = 'completed'; sub.completedAt = Date.now() }

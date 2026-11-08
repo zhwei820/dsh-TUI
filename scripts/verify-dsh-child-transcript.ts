@@ -194,7 +194,13 @@ const rosterService = (ids: readonly string[]) => ({
   const { deps } = makeDeps({ subagents: () => rosterService([CHILD]), persistence: () => memory.source })
   const page = await readChildTranscriptPage(deps, CHILD)
   assert.ok(page !== null)
-  const lane = page.events
+  // The prompt it was given rides along (the delegated task); every other
+  // surviving event is a leaf kind on the child lane.
+  const prompts = page.events.filter(e => e.type === 'user.message')
+  const lane = page.events.filter(e => e.type !== 'user.message')
+  check('T0 the delegated task survives as a user-sourced prompt', prompts.length === 1
+    && (prompts[0] as { source?: string; text?: string }).source === 'user'
+    && (prompts[0] as { text?: string }).text === 'scan the tree' && page.events[0] === prompts[0])
   check('T1 only leaf kinds survive (turn/todo/plugin events filtered)', lane.every(e => e.type === 'assistant.message' || e.type === 'tool.call' || e.type === 'tool.result') && lane.length === 7)
   check('T2 every lane event is on the child lane (parentCallId)', lane.every(e => (e as { parentCallId?: string }).parentCallId === CHILD))
   check('T3 durable message ids ride verbatim (no fabricated uuids)', JSON.stringify(page.uuids) === JSON.stringify(['um-1', 'am-1', 'am-2', 'am-3']))
@@ -209,12 +215,12 @@ const rosterService = (ids: readonly string[]) => ({
   shared.foldTranscriptLeaves(page.events, leaves)
   const kinds = leaves.map(leaf => leaf.kind)
   check('T8 shared fold: thinking + text + settled tools',
-    kinds.join(',') === 'thinking,text,tool,tool,text,text'
-    && leaves[2]!.kind === 'tool' && leaves[2]!.tool.status === 'ok' && leaves[2]!.tool.resultText === 'file body',
+    kinds.join(',') === 'prompt,thinking,text,tool,tool,text,text'
+    && leaves[3]!.kind === 'tool' && leaves[3]!.tool.status === 'ok' && leaves[3]!.tool.resultText === 'file body',
     kinds.join(','))
   const errorPage: Leaf[] = []
-  shared.foldTranscriptLeaves(page.events.slice(0, 5), errorPage) // through call-b's error result
-  check('T9 an error result marks the tool error', errorPage.length === 4 && errorPage[3]!.kind === 'tool' && errorPage[3]!.tool.status === 'error' && errorPage[3]!.tool.errorText !== undefined)
+  shared.foldTranscriptLeaves(page.events.slice(0, 6), errorPage) // prompt, then through call-b's error result
+  check('T9 an error result marks the tool error', errorPage.length === 5 && errorPage[4]!.kind === 'tool' && errorPage[4]!.tool.status === 'error' && errorPage[4]!.tool.errorText !== undefined)
   const uniqued = shared.uniqueRenderKeys(leaves)
   check('T10 unique render keys: collisions get ordinals, first occurrence keeps its key',
     new Set(uniqued.map(l => l.key)).size === uniqued.length && uniqued.length === leaves.length && uniqued[0]!.key === leaves[0]!.key,
@@ -306,12 +312,15 @@ const rosterService = (ids: readonly string[]) => ({
     `skipped=${newest.skippedFromStart} own=${own}`)
   const firstSeq = Number((newest.events[0] as unknown as { seq: number }).seq)
   check('W2 the fork-inherited parent prefix is never paged', firstSeq === cut + own - CHILD_TRANSCRIPT_PAGE_EVENTS && !newest.uuids.includes('p-1') && !newest.uuids.includes('p-2'))
+  check('W2b paging from the middle carries the child\'s own initial task (not an inherited parent message)',
+    newest.task === 'child prompt', String(newest.task))
   const older = await readChildTranscriptPage(deps, CHILD, { count: 400, skipFromStart: newest.skippedFromStart })
   assert.ok(older !== null)
   check('W3 older window addresses [skip-count, skip) exactly',
     older.skippedFromStart === newest.skippedFromStart - 400
     && Number((older.events[0] as unknown as { seq: number }).seq) === cut + older.skippedFromStart
     && older.hasOlder === true)
+  check('W3b an older window does not re-probe the task', older.task === undefined)
   const oldest = await readChildTranscriptPage(deps, CHILD, { count: 400, skipFromStart: older.skippedFromStart })
   assert.ok(oldest !== null)
   check('W4 the last older window bottoms out at the cut',
@@ -330,7 +339,10 @@ const rosterService = (ids: readonly string[]) => ({
   const statPage = await readChildTranscriptPage(statDeps.deps, CHILD)
   assert.ok(statPage !== null)
   const statReads = statMemory.reads
-  check('W6 a fresh stat eventCount skips the tail probes entirely', statReads.length === 2 && statReads[0]!.length === 1 && statReads[1]!.length === CHILD_TRANSCRIPT_PAGE_EVENTS, JSON.stringify(statReads))
+  // freshness probe, the newest page, then (older pages remain) one bounded
+  // head read for the initial task — never a tail probe.
+  check('W6 a fresh stat eventCount skips the tail probes entirely', statReads.length === 3 && statReads[0]!.length === 1 && statReads[1]!.length === CHILD_TRANSCRIPT_PAGE_EVENTS
+    && statReads[2]!.offset === 0 && statReads[2]!.length <= 32, JSON.stringify(statReads))
   check('W7 the stat page agrees with the probe page', statPage.skippedFromStart === newest.skippedFromStart && JSON.stringify(statPage.uuids) === JSON.stringify(newest.uuids))
 
   // A stale stat (the log grew since): the one-event freshness probe at the
@@ -383,12 +395,16 @@ const rosterService = (ids: readonly string[]) => ({
   const page = await readChildTranscriptPage(deps, CHILD)
   assert.ok(page !== null)
   const probeReads = memory.reads.filter(read => read.length === 1)
-  const pageReads = memory.reads.filter(read => read.length > 1)
+  // The one bounded head read for the initial task (≤ 32 events at the
+  // child's own start) is its own budget line, not a page.
+  const taskReads = memory.reads.filter(read => read.length > 1 && read.length <= 32)
+  const pageReads = memory.reads.filter(read => read.length > 32)
   check('B1 the 50k+ log never sees an unbounded read', memory.reads.every(read => Number.isSafeInteger(read.length) && read.length <= CHILD_TRANSCRIPT_PAGE_EVENTS), JSON.stringify(memory.reads.map(r => r.length).filter(l => l > CHILD_TRANSCRIPT_PAGE_EVENTS)))
   check('B2 probe reads are single-event and hard-capped', probeReads.length > 0 && probeReads.length <= 48, `probes=${probeReads.length}`)
   check('B3 exactly one page read', pageReads.length === 1 && pageReads[0]!.length === CHILD_TRANSCRIPT_PAGE_EVENTS)
   const scanned = memory.reads.reduce((sum, read) => sum + Math.min(read.length, CHILD_TRANSCRIPT_PAGE_EVENTS), 0)
-  check('B4 total scanned events stay within page + probes', scanned <= CHILD_TRANSCRIPT_PAGE_EVENTS + 48, `scanned=${scanned}`)
+  check('B3b at most one bounded task read', taskReads.length <= 1, JSON.stringify(taskReads))
+  check('B4 total scanned events stay within page + probes + task read', scanned <= CHILD_TRANSCRIPT_PAGE_EVENTS + 48 + 32, `scanned=${scanned}`)
   check('B5 the probe path found the true end (last own event in page)',
     page.skippedFromStart === big.events.length - CHILD_TRANSCRIPT_PAGE_EVENTS
     && page.uuids.at(-1) === 'u-50122'

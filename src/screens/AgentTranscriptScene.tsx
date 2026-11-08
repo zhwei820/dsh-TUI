@@ -261,7 +261,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
   // repeated below the header, so they are the first to go.
   const headerBadges = headerWidth < 64
     ? (liveBadge === '' ? '' : ` · ${liveBadge}`)
-    : `${liveBadge === '' ? '' : ` · ${liveBadge}`} · ${t('agent-view-readonly')} · id ${agentId.slice(0, 8)}`
+    : `${liveBadge === '' ? '' : ` · ${liveBadge}`}${compose === undefined ? ` · ${t('agent-view-readonly')}` : ''} · id ${agentId.slice(0, 8)}`
   const fallbackTail = subagent.outputEvents
   const retained = fallbackTail.length >= OUTPUT_WINDOW_CAP
 
@@ -310,7 +310,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
             </Box>
           ) : (
             <Box flexDirection="column">
-              <Text dimColor>{`${hasHistory ? t('agent-view-history') : t('agent-view-live')} · ${t('agent-view-readonly')}`}</Text>
+              <Text dimColor>{`${hasHistory ? t('agent-view-history') : t('agent-view-live')}${compose === undefined ? ` · ${t('agent-view-readonly')}` : ''}`}</Text>
               {transcript.status === 'ready' && transcript.parentAgentId !== null && (
                 <Text dimColor>{t('subagent-transcript-parent', { id: transcript.parentAgentId.slice(0, 8) })}</Text>
               )}
@@ -328,6 +328,11 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
                 if (merged.length === 0) return <Text dimColor>{t('subagent-transcript-empty')}</Text>
                 return (
                   <>
+                    {/* The task sits on the oldest page: pin it here until that
+                        page is loaded and shows it in place. */}
+                    {transcript.hasOlder && transcript.task !== undefined && (
+                      <PromptLeafRow text={transcript.task} first marginTopOnTurn={false} />
+                    )}
                     {transcript.hasOlder && (
                       <Box onClick={loadOlder} marginTop={1}>
                         <Text color="accent">{transcript.loadingOlder

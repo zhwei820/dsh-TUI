@@ -368,7 +368,7 @@ if (modernSchema) for (const registry of ['service', 'local']) for (const entryI
     // 份；漏声明时那一行永远只显示「（未设置）」）。
     const costField = section.fields.find(field => field.path.length === 2 && field.path[0] === 'statusBar' && field.path[1] === 'cost')
     assert.ok(costField, `${registry}: the production section exposes statusBar.cost`)
-    assert.equal(form.field(costField).text, 'false', 'unset statusBar.cost shows the effective default (off in the quiet footer)')
+    assert.equal(form.field(costField).text, 'true', 'unset statusBar.cost shows the effective default (on: the footer keeps the ¥ estimate)')
     // sidePanel.panels（issue #1662）：Config 默认值就是 `*`，未设置时生产 format
     // 也给出 `*`（勾选器据此显示「全部已注册面板」）；`*` 可保存、`*,todo` 被拒绝、
     // 空串仍是 clear。

@@ -1911,6 +1911,12 @@ export function Chat({
   const switchViewedAgent = React.useCallback((agentId: string): void => {
     setAgentView(prev => prev === null ? prev : { ...prev, agentId })
   }, [])
+  /** Opening a subagent shows its whole conversation like the main agent's —
+   *  one transcript, no tabs, with the composer for follow-up prompts — and
+   *  Esc returns to the conversation. Stable for the memoized rows. */
+  const openSubagentConversation = React.useCallback((agentId: string): void => {
+    openAgentView(agentId, { kind: 'chat', returnFocus: 'prompt' })
+  }, [openAgentView])
   /** 转录卡入口的稳定句柄：MessageList 的 memo 行按 props 身份比较，内联
    *  箭头会让每个流式 tick 重渲染全部落定行（verify-tool-history-window）。 */
   const openSubagentViewFromCard = React.useCallback((agentId: string, rowId: number): void => {
@@ -6841,7 +6847,8 @@ export function Chat({
         sessionId={channel.sessionId}
         onSelect={(id) => {
           setSubagentDashboardOpen(false)
-          setSubagentDetailId(id)
+          // Same single-transcript view as everywhere; Esc comes back here.
+          openAgentView(id, { kind: 'agents-dashboard' })
         }}
         onOpenView={(id) => openAgentView(id, { kind: 'agents-dashboard' })}
         messages={channel.subagentControl?.message?.messages()}
@@ -7246,7 +7253,7 @@ export function Chat({
           newSinceRowId={isSticky ? null : lastSeenRowIdRef.current}
           onUnseenCount={setUnseenCount}
           onTimeline={setTimeline}
-          onOpenSubagent={setSubagentDetailId}
+          onOpenSubagent={openSubagentConversation}
           onOpenSubagentView={openSubagentViewFromCard}
           onOpenJobs={openJobsPanel}
           onOpenFile={openFileActions}
@@ -7345,7 +7352,7 @@ export function Chat({
         )}
         {/* Running subagents: a clickable roster under the main agent while
             any of them runs (click → that agent's detail scene). */}
-        <RunningAgentsPanel subagents={channel.subagents ?? []} onOpen={setSubagentDetailId} />
+        <RunningAgentsPanel subagents={channel.subagents ?? []} onOpen={openSubagentConversation} />
         {/* 分栏且 todo Panel 已启用时，Goal/Todo 由右栏 Panel 承载，
             底部 chrome 不再挂载（窄屏 / inline / 未启用时保留现状）。 */}
         {!(sidePanel.split && sidePanel.enabledPanelIds.includes('todo'))

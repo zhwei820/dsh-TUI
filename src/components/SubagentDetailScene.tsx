@@ -674,6 +674,11 @@ export function SubagentDetailScene({
                 if (merged.length === 0) return <Text dimColor>{t('subagent-transcript-empty')}</Text>
                 return (
                   <>
+                    {/* The task sits on the oldest page: pin it here until that
+                        page is loaded and shows it in place. */}
+                    {transcript.hasOlder && transcript.task !== undefined && (
+                      <PromptLeafRow text={transcript.task} first marginTopOnTurn={false} />
+                    )}
                     {transcript.hasOlder && (
                       <Box onClick={loadOlderTranscript} marginTop={1}>
                         <Text color="accent">{transcript.loadingOlder

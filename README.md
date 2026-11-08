@@ -66,8 +66,16 @@
 ### DSH integration
 
 - **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires.
+<<<<<<< HEAD
   - Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call. While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool and elapsed time; click a row to open that agent. A subagent's detail opens on its full transcript: the task the delegating agent gave it (complete, never truncated), every step it took, and its final answer; follow-up prompts to a continuable agent appear in place.
 - **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
+=======
+  - Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call.
+=======
+- **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires. Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call. While any subagent runs, a `N agents running` list stays pinned above the input — one row per agent with its latest tool and elapsed time; click a row to open that agent. Opening a subagent (from that list, its transcript card or the agents dashboard) shows its conversation the way the main agent's reads — one transcript, no tabs: the task the delegating agent gave it (complete, never truncated; pinned on top while older pages are still unloaded), every step, and its final answer — with an input at the bottom to send it follow-up prompts (DSH subagents are continuable). Esc returns to where you came from.
+>>>>>>> 444f507c69651549071bcba07ae6ca45651b580f
+- **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers Host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
+>>>>>>> 431a9afa60a70cf47689a9b03745b8b2e053eb60
   - A profile-only update from a global TUI patch that already mounts `dsh-tui-auth` can still start the official loopback callback listener on demand; fixed-port SSH forwarding still requires the global package to be aligned.
 - **Extensions** — browser interaction, computer use and more.
 

@@ -354,7 +354,7 @@ for (const multiline of [true, false]) {
 Object.assign(channel, {
   contextBarEnabled: true,
   // The three-row footer: model field + segmented bar are opt-in now.
-  statusBar: { model: true, contextBar: true },
+  statusBar: { model: true, contextBar: true, cwd: false, gitBranch: false, tokens: false, cost: false },
   contextOccupancy: { usedTokens: 120, contextWindow: 1000, source: 'backend' },
   contextSegments: { system: 0, prompt: 0, assistant: 0, thinking: 0, tools: 0 },
 })
