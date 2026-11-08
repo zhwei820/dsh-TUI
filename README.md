@@ -17,59 +17,67 @@
 
 # dsh-TUI
 
-> An interactive terminal UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), the coding agent you drive from a terminal. dsh-TUI adds a pixel-whale header, live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime. It supports DeepSeek models only; DSH is the one built-in backend, and installed plugin backends are experimental. Zero core changes: it consumes only DSH's public exports, so installing enables it and uninstalling leaves no patches behind. It is moving from a mounted plugin to an app with its own entry and composition root, with DSH loaded in process as the first-party backend.
+> An interactive terminal UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), the coding agent you drive from a terminal — built for people who want to stay in that terminal.
+> It adds a pixel-whale header, live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime, and supports DeepSeek models only. DSH is the built-in backend; installed plugin backends are experimental.
+> Zero core changes: it consumes only DSH's public exports, so installing enables it and uninstalling leaves no patches behind.
+> It is moving from a mounted plugin to an app with its own entry and composition root, with DSH loaded in process as the first-party backend.
 
+**Contents** — [Highlights](#highlights) · [Preview](#preview) · [Featured & Listed](#featured--listed) · [Quick Start](#quick-start) · [Keybindings & Mouse](#keybindings--mouse) · [Built-in Commands](#built-in-commands) · [Configuration & Extensions](#configuration--extensions) · [How It Works](#how-it-works) · [Known Limitations](#known-limitations) · [Development](#development) · [Plugin Ecosystem](#plugin-ecosystem) · [Documentation](#documentation) · [Community](#community) · [Permissions and Security Boundary](#permissions-and-security-boundary) · [Acknowledgments](#acknowledgments)
 
 ## Highlights
 
+### Terminal experience
+
 - **Pixel whale pet** — three startup intros, click to wake; freezes after the first task.
-<<<<<<< HEAD
-- **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box. `/` and `@` completions are a borderless list, the footer is quiet (context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`), and todos read as a `⎿ ☐/☒` checklist.
-- **Quiet status lines** — while working, the line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it); an interruption reads `⎿ Interrupted · …` and compaction reads `Compacting conversation…`. Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`.
-- **Diffs** — Edit/Write diffs are unified with tinted `+`/`-` rows under an `Updated with N additions and M removals` line; `/settings` `diffLayout` switches to side by side or automatic by terminal width. Split diff cards give one-sided additions and deletions the full body width, without an empty opposite pane; ordinary edits stay side by side, and mixed files choose their layout separately before folding or streaming reveal.
-- **Classic look** — the older presentation stays one switch away: `/settings` `launchpad` (landing page + whale header), `statusBar.*` (model, cwd, cost, cache, segmented context bar), `diffLayout`, `promptSessionLabel` (session chip + ⌸ / ⛶), and cordis `activity: true` (live activity line).
-- **Turn receipts and recaps** — a turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM` (`/settings` `turnUsageRow` swaps in the detailed token ledger), and one of a minute or more is followed by a one-line `※ recap: …` (the `recapOnOpen` switch covers both automatic recaps).
-- **Suggested next messages** — after each turn a suggested next message (when something is pending) appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it, `Enter` sends (cordis `promptSuggestions: false` turns it off). The model is also asked to state its rough plan and key decisions in its reply (cordis `decisionNotes: false` turns that off).
+- **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box (shown once on the first run). `/` and `@` completions are a borderless list, the footer is quiet (context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`), and todos read as a `⎿ ☐/☒` checklist.
+- **Quiet status lines** — while working, the line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it), an interruption reads `⎿ Interrupted · …`, and compaction reads `Compacting conversation…`. Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`. In narrow panes the compaction status stays on one line: phase and cancellation hints yield first, then the label shortens, and elapsed time only appears as a complete field.
+- **Diffs** — Edit/Write diffs are unified with tinted `+`/`-` rows under an `Updated with N additions and M removals` line; `/settings` `diffLayout` switches to side by side, or automatic by terminal width. One-sided additions and deletions get the full body width without an empty opposite pane; ordinary edits stay side by side, and mixed files choose their layout separately before folding or streaming reveal.
+- **Classic look** — the older presentation stays one switch away: `/settings` `launchpad` (landing page + whale header), `statusBar.*` (model, cwd and Git branch, cache, tokens, cost, segmented context bar and the other status-bar toggles), `diffLayout`, `promptSessionLabel` (session chip + ⌸ / ⛶), and cordis `activity: true` (live activity line).
 - **Launchpad** — with `/settings` `launchpad` on, an ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions; short or narrow terminals drop whole blocks, and whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title; off by default). Command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it.
 - **First-run guide** — the first run walks a four-step wizard (accounts & models / language + theme / model + workspace / shortcuts), re-runnable with `/setup`. It is not offered on launch once an account is configured (a `DEEPSEEK_API_KEY` or a signed-in account); its first step signs in to a DeepSeek account and catches the models it brings in (none → no question, one → that one, several → you choose); without any access it shows how to set `DEEPSEEK_API_KEY` by hand.
-=======
-- **Quiet defaults** — an ordinary launch goes straight into chat (the very first launch shows a compact welcome box once); the working line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it); `⎿ Interrupted · …`, `Compacting conversation…`; approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`; Edit/Write diffs are unified with tinted +/- rows under an `Updated with N additions and M removals` line; `/` and `@` completions are a borderless list; the footer shows the current folder and Git branch, the context readout, the session's cumulative tokens and estimated ¥ cost, and `? for shortcuts` (or `⏸ plan mode on (shift+tab to cycle)`); todos read as a `⎿ ☐/☒` checklist. A turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM` (`/settings` `turnUsageRow` swaps in the detailed token ledger), and one of a minute or more is followed by a one-line `※ recap: …` (the `recapOnOpen` switch covers both automatic recaps). After each turn a suggested next message (when something is pending) appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it, `Enter` sends (cordis `promptSuggestions: false` turns it off). The model is asked to state its rough plan and key decisions in its reply (cordis `decisionNotes: false` turns that off). The classic look stays one switch away: `/settings` `launchpad` (landing page + whale header), `statusBar.*` (model, effort, cache, segmented context bar), `diffLayout`, `promptSessionLabel` (session chip + ⌸ / ⛶), cordis `activity: true` (live activity line).
-- **Launchpad and first-run guide** — with `/settings` `launchpad` on, every ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions, dropping whole blocks on short/narrow terminals; whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title; off by default); command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it. The first run walks a four-step wizard (accounts & models / language+theme / model+workspace / shortcuts), re-runnable with `/setup`; it is not offered on launch once an account is configured (a `DEEPSEEK_API_KEY` or a signed-in account); its first step signs in to a DeepSeek account and catches the models it brings in (none → no question, one → that one, several → you choose); without any access it shows how to set `DEEPSEEK_API_KEY` by hand.
->>>>>>> 444f507c69651549071bcba07ae6ca45651b580f
+- **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes. The `/model` picker shows the same cursor while moving between provider tabs, model rows and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row. The session manager also moves this cursor between the workspace rail, session rows and the search box; typing claims the search caret, and navigation returns it to the focused row. Configure animation and trail effects in your terminal.
 - **Terminal-native UI** — streaming Markdown, tool cards, `/` and `@` completion, `#L12-14` ranges, history search, zh/en UI.
-- **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes. The `/model` picker shows the same cursor while moving between provider tabs, model rows, and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row. The session manager also moves this cursor between the workspace rail, session rows, and search box; typing claims the search caret, and navigation returns it to the focused row. Configure animation and trail effects in your terminal.
-- **Images** — Kitty/Sixel thumbnails, centered preview with zoom and pan, paste-time fitting, text fallback. Kitty images scale to the reserved cells' physical pixels, including on HiDPI terminals. Image files referenced with `@path` use the same admission and resize/conversion policy as pasted images; adjustment notices report the stored dimensions and format, and required animation conversion is refused instead of dropping frames. Mentioned and staged images share count and stored-byte limits in source order.
-- **Mermaid diagrams** — ````mermaid ```` fences drawn as Unicode diagrams.
-- **LaTeX math** — `$…$` and `$$…$$` formulas as Unicode text, fractions and limits stacked in display blocks; `mathRendering: image` typesets block and one-row inline formulas as terminal images on graphics terminals.
-- **Timeline rail** — every turn clickable; timeline / scrollbar / hidden gutter.
-- **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize it. All eight built-in panels are enabled by default, and so are plugin panels registered later (`sidePanel.panels: '*'`; untick a row in `/settings` to switch to an explicit list). The header shows each inactive panel's symbol; hover to see its name. Narrow terminals and inline mode keep full-screen panels.
-  - **Panel settings**: toggles apply immediately, unrelated settings changes preserve them, and editing the enabled list applies your explicit selection. Panels without a verified Component identity are temporary: settings show their title and a distinct number for this run, their toggles are not saved, and old `actN:panel` entries must be removed and the current panel selected again. A verified Component named `actN` keeps its public runtime address and is saved as `component:actN:panel`, so it never claims an old anonymous entry.
-  - **Workspace counts**: workspace panel counts match the session manager — the current conversation counts; empty logs, subagents, fork ancestors and archived sessions do not. Registered workspaces with no visible conversations stay at zero; load and read errors are shown separately, and `r` refreshes.
+
+### Rendering
+
+- **Images** — Kitty/Sixel thumbnails, centered preview with zoom and pan, paste-time fitting, and a text fallback. Kitty images scale to the reserved cells' physical pixels, including on HiDPI terminals. Images referenced with `@path` follow the same admission and resize/conversion policy as pasted images; notices report the stored dimensions and format, required animation conversion is refused rather than dropping frames, and mentioned and staged images share count and stored-byte limits in source order.
+- **Mermaid diagrams** — `mermaid` fenced code blocks are drawn as Unicode diagrams.
+- **LaTeX math** — `$…$` and `$$…$$` formulas render as Unicode text, with fractions and limits stacked in display blocks; `mathRendering: image` typesets block and one-row inline formulas as terminal images on graphics terminals.
+- **Timeline rail** — every turn is clickable; timeline / scrollbar / hidden gutter.
+- **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize. All eight built-in panels and later-registered plugin panels start enabled (`sidePanel.panels: '*'`; untick a row in `/settings` for an explicit list), the header shows each inactive panel's symbol, and narrow terminals and inline mode keep full-screen panels. Panel identity and settings rules: [Configuration](docs/configuration.en.md#tui-configuration).
+  - **Workspace counts** — panel counts match the session manager: the current conversation counts; empty logs, subagents, fork ancestors and archived sessions do not. Registered workspaces with no visible conversations stay at zero; load and read errors are shown separately, and `r` refreshes.
 - **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata. Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused.
   - TPS includes hidden reasoning time and excludes tool execution time; decode spans of 500ms or less are excluded from TPS samples, while token and cost totals still include all reported usage.
-  - Context-bar fill follows backend occupancy; colors estimate content composition. Compaction clears obsolete estimates, and missing composition displays a single used block with a measured used count in both hover details.
-- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos. The presets dsh-TUI registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
-  - In the `todo` panel a long goal wraps to the panel width with its phase on a separate row; when the content exceeds the viewport, focus the panel and scroll with `↑`/`↓` or the wheel. The compact goal row above the input stays a single truncated line with a hover tooltip.
-- **One session manager** — `/resume` `/home` `/agentview` `/bg` `⌸`.
+  - Context-bar fill follows backend occupancy, and colors estimate content composition; compaction clears obsolete estimates, and missing composition shows a single used block with a measured used count in both hover details.
+
+### Sessions and workflow
+
+- **One session manager** — `/resume` `/home` `/agentview` `/bg` `⌸` open the same manager: workspace rail, live state, filter, ★ pins.
 - **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, fullscreen draft editor.
   - `/btw` uses an overlay when its sidebar cannot render; main-task questionnaires and the fullscreen draft editor take priority while preserving the side question and draft.
 - **Moving sessions** — when a DSH 0.2.1+ Agent moves its session to another directory (the `working_directory` tool or a Git worktree), the status line, Git branch, `@` completion, `!` commands, clicked paths, skill commands and loaded context follow it, including after `/resume`. The session stays registered under the project it started in. Relative paths in cards rendered before a move resolve against the session's current directory when clicked; absolute paths keep their target.
-- **Reasoning effort** — the default effort setting offers the current backend/model's declared tiers, including custom IDs. Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable. On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default; plugin backends keep their own backend preference at startup and on resume, and explicitly choosing Auto resets the model default. Explicit settings changes affect the next request; unsupported preferences fall back with a notice and are never forced onto a route. Resuming a DSH session preserves its recorded effort (or its live selection when reattaching); the saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
+- **Reasoning effort** — the default effort setting offers the current backend/model's declared tiers, including custom IDs. Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable. On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default; plugin backends keep their own backend preference at startup and on resume, and explicitly choosing Auto resets the model default. Explicit changes affect the next request, unsupported preferences fall back with a notice and are never forced onto a route, and resuming a DSH session preserves its recorded effort (or its live selection when reattaching); the saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
+- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos. The presets dsh-TUI registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
+  - In the `todo` panel a long goal wraps to the panel width with its phase on a separate row; when the content exceeds the viewport, focus the panel and scroll with `↑`/`↓` or the wheel. The compact goal row above the input stays a single truncated line with a hover tooltip.
+- **Turn receipts and recaps** — a turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM` (`/settings` `turnUsageRow` swaps in the detailed token ledger), and one of a minute or more is followed by a one-line `※ recap: …` (the `recapOnOpen` switch covers both automatic recaps).
+- **Suggested next messages** — after each turn a suggested next message (when something is pending) appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it, `Enter` sends (cordis `promptSuggestions: false` turns it off). The model is also asked to state its rough plan and key decisions in its reply (cordis `decisionNotes: false` turns that off).
 - **IDE selection channel** — a VS Code selection lands in the prompt.
-<<<<<<< HEAD
-- **Task completion notifications** — sessions notify after successful live work settles, with no queued follow-up or active goal. The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters). OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings. Replay, cancellation and failures do not notify; works in inline and fullscreen modes.
-  - **Settings**: `/settings` → Conversation: `taskNotifications` = `unfocused` (default), `always`, or `off`; `notificationMethod` = `auto` (default), `osc9`, `bel`, or `windows`.
-  - **Delivery**: `auto` uses separate title/body fields on Ghostty/WezTerm (OSC 777) and Kitty (OSC 99); iTerm2/Warp and explicit `osc9` use a title prefix; other terminals ring the bell, and delivery follows your terminal's notification/bell settings. Terminals without focus reporting need `always`; tmux needs `set -g allow-passthrough on` for OSC notifications and `set -g focus-events on` for focus reporting.
-  - **Windows**: on local Windows, `auto` resolves to `windows`, the system's native notifications. The first toast registers that user's AppUserModelID under HKCU; it appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route). For DSH sessions, an enabled, active external DSH notification plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications. If the AppUserModelID cannot be written, the notification falls back to the bell instead of going silent.
-  - **SSH**: SSH sessions keep the attached terminal's notification protocol in `auto` mode; explicit `windows` still selects the host's native transport.
+
+### DSH integration
+
 - **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires.
-  - Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call.
-=======
-- **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires. Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call. While any subagent runs, a `N agents running` list stays pinned above the input — one row per agent with its latest tool and elapsed time; click a row to open that agent. A subagent's detail opens on its full transcript: the task the delegating agent gave it (complete, never truncated), every step it took, and its final answer; follow-up prompts to a continuable agent appear in place.
->>>>>>> 444f507c69651549071bcba07ae6ca45651b580f
-- **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers Host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
+  - Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call. While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool and elapsed time; click a row to open that agent. A subagent's detail opens on its full transcript: the task the delegating agent gave it (complete, never truncated), every step it took, and its final answer; follow-up prompts to a continuable agent appear in place.
+- **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
   - A profile-only update from a global TUI patch that already mounts `dsh-tui-auth` can still start the official loopback callback listener on demand; fixed-port SSH forwarding still requires the global package to be aligned.
 - **Extensions** — browser interaction, computer use and more.
+
+### Platform and performance
+
+- **Task completion notifications** — sessions notify after successful live work settles, with no queued follow-up or active goal. The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters). OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings. Replay, cancellation and failures do not notify; works in inline and fullscreen modes.
+  - **Settings** — `/settings` → Conversation: `taskNotifications` = `unfocused` (default), `always`, or `off`; `notificationMethod` = `auto` (default), `osc9`, `bel`, or `windows`.
+  - **Delivery** — `auto` uses separate title/body fields on Ghostty/WezTerm (OSC 777) and Kitty (OSC 99); iTerm2/Warp and explicit `osc9` use a title prefix; other terminals ring the bell, and delivery follows your terminal's notification/bell settings. Terminals without focus reporting need `always`; tmux needs `set -g allow-passthrough on` for OSC notifications and `set -g focus-events on` for focus reporting.
+  - **Windows** — on local Windows, `auto` resolves to `windows`, the system's native notifications. The first toast registers that user's AppUserModelID under HKCU; it appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route). For DSH sessions, an enabled, active external DSH notification plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications. If the AppUserModelID cannot be written, the notification falls back to the bell instead of going silent.
+  - **SSH** — SSH sessions keep the attached terminal's notification protocol in `auto` mode; explicit `windows` still selects the host's native transport.
 - **Built for long sessions** — event-driven projection, virtualization, bounded caches.
 
 Keys and commands: [Interaction and commands](docs/interaction.en.md). Everything else: [documentation index](docs/README.md).
@@ -141,8 +149,8 @@ IDs. It requires matching profile dependencies with `@deepseek-ai/schemastery`
 instead of showing an uneditable settings page. Older hosts keep their legacy settings scope.
 
 The `dsh-tui` section of `/settings` is saved in `~/.dsh-tui/settings.json`, shared by
-every kernel; the first launch imports it once from the profile's `cordis.patch.yml` (and an older host's `~/.dsh/settings.yaml`)
-(see [configuration](docs/configuration.en.md#tui-configuration)).
+every kernel; the first launch imports it once from the profile's `cordis.patch.yml` (and an older host's `~/.dsh/settings.yaml`).
+See [configuration](docs/configuration.en.md#tui-configuration).
 
 ```sh
 # Install the CLI and this plugin globally (ships the dsh-tui command)
@@ -219,12 +227,12 @@ dsh-tui migrate codex --dry-run  # preview what would land, write nothing
 - **Read-only source**: migration only reads the foreign agent's local store; artifacts are written through the official `JsonlSessionPersistence` backend, so imported sessions are first-class (openable, continuable).
 - **Idempotent**: one deterministic UUID per source conversation — re-importing skips what is already present instead of stacking duplicates.
 - **Structure preserved**: user/assistant messages, reasoning traces, tool calls with their results, and the source's context compactions (as native compaction checkpoints) are rebuilt turn by turn; harness-injected machine text opens no turn. An imported session can pick the work straight up.
+- More agents (pi, opencode, …) extend the adapter registry as adapters land; grok-build reads `GROK_HOME` when set.
+
 In-TUI browsing: the session screen (`/resume`) shows a tab per agent that has conversations; picking one imports just that conversation and opens it.
 In-TUI: `/migrate` (optionally `/migrate <agent> [--dry-run]`) runs the same import in a child process and reports through the notification flow.
 CLI alternative: `dsh-tui migrate ...` from any shell runs the same import.
 Full guide: [Session migration](docs/migrate.en.md).
-
-- More agents (pi, opencode, …) extend the adapter registry as adapters land; grok-build reads `GROK_HOME` when set.
 
 **VS Code**: use the integrated terminal or the `dsh-tui-vscode` extension. See [VS Code guide](docs/vscode.en.md). **Herdr**: run `dsh-tui` in a [Herdr](https://herdr.dev) pane; `idle` / `working` / `blocked` are reported through its local integration API. **Any terminal**: dsh-tui reports `idle` / `working` / `blocked` / `done` / `error` over the pty with [OSC 7501 (Program Status Protocol)](https://www.superlogical.com/rex/docs/build/program-status), so terminals and agentic inboxes that implement it can show what the session is doing; terminals that do not implement it ignore the sequence. Set `DSH_TUI_PROGRAM_STATUS=0` to turn it off.
 
@@ -301,88 +309,59 @@ a new run or failure alerts again. Acknowledgements survive panel remounts and
 session switches during this process, but a cold restart starts unread. Opening
 the dashboard alone does not acknowledge every child. Task status stays failed.
 
-
 ## Keybindings & Mouse
 
 ### Keys
 
-`Enter` send · `Tab` complete · `Ctrl+Enter` interrupt and send · `Alt+Up` recall the last message · `Esc` closes local layers before interrupting a running turn, double-`Esc` rewinds on empty idle input · `Ctrl+B` side panel · `Ctrl+O` details · `Ctrl+R` history (`↑`/`↓` and `Ctrl+R` are scoped to the current project) · `Ctrl+V` paste · `Ctrl+Shift+E` fullscreen draft editor · `?` shortcuts · `←` open the session manager (DSH backgrounds the current session first).
-In both the launchpad and chat, `Ctrl+U` deletes from the caret to the current line start, preserving text to the right and whole image chips. It edits only the focused input.
+| Key | Action |
+| --- | --- |
+| `Enter` | Send; while a turn runs, steer the text into it at the next step boundary |
+| `Tab` | Complete `/` and `@`; while a turn runs, queue a follow-up |
+| `Ctrl+Enter` | Interrupt the running turn and send |
+| `Esc` | Close local layers, then interrupt; double-`Esc` on empty idle input rewinds |
+| `Alt+Up` | Recall the last message |
+| `Ctrl+B` / `Ctrl+O` | Side panel / details (reasoning, tool arguments and output) |
+| `Ctrl+R` / `Ctrl+V` | History search / paste; history is scoped to the current project |
+| `Ctrl+Shift+E` | Fullscreen draft editor |
+| `?` / `←` | Shortcuts / session manager (`←` backgrounds the current DSH session first) |
 
-In the launchpad input, `Shift+Enter` (or `Option+Enter`) opens chat and inserts a newline at the caret, keeping the draft and staged images unsent. Continue typing there, then press `Enter` to send.
+`Ctrl+U` deletes from the caret to the current line start (preserving text to the right and whole image chips) in both the launchpad and chat, and `Alt/Option+←/→` / `Alt/Option+Backspace` move or delete by whitespace-delimited words; on macOS, configure your terminal to send Option as Meta. `Alt+Up` / `Alt+Down` also page through question text and approval previews without moving the choice focus, and are remappable in `/settings` → `Shortcuts`.
 
+Text, cursor position and staged image attachments on the launchpad or in chat while the backend starts are preserved when the session becomes ready; press `Enter` after it is ready to send, and an earlier `Enter` keeps the draft without queueing it. Opening a new session while startup is pending clears the previous draft and its images. In the launchpad input, `Shift+Enter` (or `Option+Enter`) opens chat and inserts a newline at the caret, keeping the draft and staged images unsent. Fixed-action permission questions offer only the caller's choices; ordinary questionnaires still accept free text. When DSH ends a turn because its session was disposed, the transcript shows “Session stopped”; user interruption keeps its existing prompt for what to do next. This describes the reported stop reason and does not recover a stuck session or its queued inputs.
 
-In both the launchpad and chat, `Alt/Option+←/→` moves by whitespace-delimited words and `Alt/Option+Backspace` deletes the previous word, like `Ctrl+W`. On macOS, configure your terminal to send Option as Meta.
-
-Use `Alt+Up` / `Alt+Down` to page through question text and details, or approval previews on very short terminals, without moving the choice focus; these keys are remappable in `/settings` → `Shortcuts`. Fullscreen also supports the wheel over the preview. Complete OAuth links remain readable when browser and clipboard helpers are unavailable. Fixed-action permission questions offer only the caller's choices; ordinary questionnaires still accept free text.
-
-Text, cursor position and staged image attachments on the launchpad or in chat while the backend starts are preserved when the session becomes ready. Press `Enter` after it is ready to send; an earlier `Enter` preserves the draft without queuing it. Opening a new session while startup is pending clears the previous draft and its images.
-
-The goal bar stays on one summary line: hovering truncated goal text in fullscreen or split shows the whole objective, and a bare `/goal` prints the full status — objective, phase, rounds or budget, available commands — as a transcript block in the `/plugins` shape. Inline mode sees no pointer events, so that block is how its users read a long objective.
-
-While the model is working: `Enter` steers, `Tab` queues a follow-up, `Ctrl+Enter` interrupts and sends. Input that names a command is still a command — with or without arguments — so `/model` or `/new` reach their own gate (and the `/` overlay sinks the commands that affect the running conversation) instead of silently becoming an interruption; only text that is not a command — and a direct skill gesture such as `/skill-name …` — steers.
-
-When DSH ends a turn because its session was disposed, the transcript shows “Session stopped”; user interruption keeps its existing prompt for what to do next. This describes the reported stop reason and does not recover a stuck session or its queued inputs.
-
-### Terminal input
-
-Windows Neovim/Vim terminals identified by `NVIM` or `VIM_TERMINAL` retain VT input instead of enabling ConPTY mode 9001. For another incompatible embedded host, set `DSH_TUI_DISABLE_WIN32_INPUT_MODE=1` before launch (PowerShell: `$env:DSH_TUI_DISABLE_WIN32_INPUT_MODE="1"`). The same gate applies at startup and after resume. Native Windows Terminal, conhost and VS Code keep their existing mode unless disabled; the opt-out can remove modified-Enter reporting.
-
-Extended key reporting (Kitty keyboard protocol and xterm `modifyOtherKeys`) is enabled for a fixed terminal list: iTerm2, kitty, WezTerm, Ghostty, rio, Orca, tmux, Warp and Windows Terminal. A terminal missing from that list can opt in with `DSH_TUI_FORCE_EXTENDED_KEYS=1`, and `DSH_TUI_DISABLE_EXTENDED_KEYS=1` opts an allowlisted terminal back out for SSH or nested xterm.js hosts (it wins when both are set). Outside native Windows, where win32-input-mode reports Enter's modifiers instead and is not touched by this switch, a terminal without extended keys cannot tell `Shift+Enter` from `Enter`, and `Ctrl+J` is the newline fallback.
-
-
-On native Windows, fragmented Win32 input records are reassembled across short input delays instead of appearing as numeric protocol text. The platform check only reports that this machine might run the private mode (win32-input-mode); a bare `ESC[` fragment is held only after one record has actually been decoded, while a fragment whose own shape is already record-specific holds on its own (which is how even the first record can survive a split). Windows terminals that never enter the mode (mintty, GitBash) therefore keep the classic VT path: a lone `Esc` keeps its normal response time, and a letter typed after a timed-out `ESC[` is not swallowed.
-
-Incomplete records are held for a bounded recovery window (1 second from first capture, never extended by later input; 64 bytes max); past either bound the hold ends and input is handled as before. Unrecognized complete CSI sequences are not inserted as text; after a damaged CSI prefix, a bare ASCII letter can be consumed as its terminator, while normal Win32 key records and bracketed-paste text retain their own boundaries.
-
-A session's very first record can still leave residue if it is split before its record-specific shape forms; once any record has been decoded, every split position is covered. Inside the recovery window, literal input starting with `[digit;…` cannot be told apart from a protocol prefix — it may be held, or re-joined to a preceding `Esc`. To type it, wait for the window to close, or avoid that shape right after `Esc`.
-
-Terminal replies that arrive split are reassembled the same way (native Windows ConPTY is the common source): while the app still has a query awaiting its answer, an unfinished DA1 / DA2 / DSR / DECRPM / XTVERSION tail — even one split again after the introducer `Esc` was flushed — is held across input delays, but only while its shape can still complete into the response type that query expects. It is then consumed as the reply it completes instead of entering the prompt as protocol text.
-
-That claim is evidence-gated, and this is the difference from earlier builds: no query awaiting an answer means nothing is claimed, so a literal `[?61;4c` typed right after `Esc` still enters the prompt exactly as before.
-
-The window is bounded like the record hold (about a second, never extended by later input; 64 bytes max); past either bound it ends, and bytes still shaped like an unfinished reply prefix are dropped rather than shown.
-
-Inside that window, with a query of the matching response type outstanding, same-shaped literal input can still be claimed as a reply; to type it, wait for the window to close (about a second), or avoid that shape while a query is outstanding.
-
-Fragmented SGR mouse reports no longer land in the prompt as text: an incomplete report header is held until the rest arrives, and a report that completes is handled as a mouse event. The hold is armed only while mouse reporting is actually active (fullscreen, with mouse tracking enabled); inline sessions and terminals that never enable tracking keep the existing behavior. The claim window is bounded from first capture (at most 1 second; 64 bytes max), and a continuation arriving inside it is still claimed rather than replayed. Release has no timer: once a parse call sees either bound exceeded, it replays the held bytes as ordinary keys in arrival order — literal input can be delayed, but is never dropped.
+The complete key table (editing, vim mode, image preview, questionnaires, transcript navigation) and the delivery rules for steering, queued follow-ups and interrupts are in [Interaction and commands](docs/interaction.en.md#input-and-global-shortcuts).
 
 ### Mouse and selection
 
-Fullscreen mouse selection stays in the pane where the gesture starts, including chat, sidebar and either diff column. Diagonal, word and line selection copy that pane's text; soft wraps join independently, source newlines remain, and divider drags only resize.
+Fullscreen mouse selection stays in the pane where the gesture starts, including chat, sidebar and either diff column. Drag to select and copy, double/triple click to select a word or line, and click tool cards, timeline ticks, `[Image #N]` previews and file paths (which open a file-action menu; auto-detection does not extract a path from inside a slash-delimited token such as `working/idle/needs-input` or a date such as `2024/01/15`); diagonal, word and line selection copy that pane's text, soft wraps join independently, source newlines remain, and divider drags only resize.
 
-Mouse (fullscreen): drag to select and copy, double/triple click to select a word or line, click tool cards, timeline ticks and `[Image #N]` previews.
-
-Automatic copies keep the text selected; press `Esc` to clear it or start a new selection to replace it. Selection highlighting skips trailing padding and blank rows while preserving spaces within text and code indentation. Inline mode uses the terminal's native selection.
-
-When a fullscreen selection starts in a code block's body, soft-wrapped rows join without adding frame padding or newlines, in both light and full frames. Hard line breaks and the existing hard-line inset remain part of screen copying.
-
-During a fullscreen text drag, the native cursor follows the selected text's edge using your terminal's enabled cursor animation or trail effects. Moving into trailing padding or blank rows keeps it at the nearest selected text edge. Releasing or cancelling the drag restores the focused input's caret.
-
-File paths in prose can open the file-action menu; automatic detection does not extract a path from inside a slash-delimited token such as `working/idle/needs-input` or a date such as `2024/01/15`.
+Automatic copies keep the text selected; press `Esc` to clear it or start a new selection to replace it. Selection highlighting skips trailing padding and blank rows while preserving spaces within text and code indentation, and a fullscreen selection started in a code block joins soft-wrapped rows without adding frame padding or newlines; hard line breaks and their inset remain part of screen copying. During a fullscreen drag the native cursor follows the selected text's edge and returns to the focused input's caret on release; fullscreen drag-copy uses the final highlight (if a live row changes mid-drag, move the selection back to stable text to re-baseline), a stationary selection whose copied text changes is refused, and automatic scroll or resize does not clear that protection. Inline mode uses the terminal's native selection.
 
 ### Pasting and dropped files
 
-**Pasting**: the launchpad accepts clipboard images and pasted image paths as `[Image #N]` attachments; `Enter` sends them with the first message. Commands that do not accept images preserve the draft and its attachments. Image chips behave like chat: arrows step across them, Backspace at the end or Delete at the start removes the whole image, and Ctrl+W never splits a chip. Text pasted on the launchpad is folded to one line. In chat, native and bracketed paste keeps ordinary text and newlines, and never submits itself on arrival. On Windows terminals that deliver a paste as win32-input-mode key records, a record stream leaked into the payload is decoded back into the characters its `Uc` field encodes — newlines included — so the composer's line count matches what was pasted; only records with no character meaning are stripped (a multi-line paste no longer leaves stray `_`), and a complete record is always consumed before an ESC-less tail, so no payload character is deleted along with an orphan escape. Pasted CRLF collapses to a single newline; genuine underscores and bracketed-paste text are untouched.
+The launchpad accepts clipboard images and pasted image paths as `[Image #N]` attachments, sent with the first message; commands that do not accept images preserve the draft and attachments, and pasted text is folded to one line. Image chips behave like chat: arrows step across them, Backspace at the end or Delete at the start removes one whole, and Ctrl+W never splits a chip. In chat, native and bracketed paste keeps ordinary text and newlines and never submits itself, while pasted CRLF collapses to a single newline. On Windows terminals that deliver a paste as win32-input-mode key records, a leaked record stream is decoded back into the characters its `Uc` field encodes (newlines included), with only character-less records stripped.
 
-**Dropped files**: a native Windows desktop drop (Windows Terminal / OpenConsole) arrives as an OSC 8 hyperlink; the parser restores its `file://` URI to a decoded local path before paste hygiene runs, so the `]8;id=…;` parameter bytes never reach the draft. Image paths enter the existing image staging pipeline; other files are inserted as a referenceable path (a path containing whitespace arrives in the composer's quoted `"…"` single-token form). Only `file://` URIs are restored, and it is fail-closed: a remote authority/UNC, a payload carrying several distinct URIs, or a URI that carries several tokens is refused and stays literal text rather than guessed.
-Fullscreen drag-copy uses the final highlight. If a live row changed during a drag,
-move the selection back to stable text to establish a new baseline. A stationary
-selection whose copied text changes is still refused; automatic scroll/resize
-does not clear that protection.
+A native Windows desktop drop (Windows Terminal / OpenConsole) arrives as an OSC 8 hyperlink; the parser restores its `file://` URI to a decoded local path before paste hygiene runs, so the `]8;id=…;` parameter bytes never reach the draft. Image paths enter the existing image staging pipeline, other files are inserted as a referenceable path (quoted as a single `"…"` token when it contains whitespace), and only `file://` URIs are restored — a remote authority/UNC, several distinct URIs, or a URI with several tokens is refused and stays literal text.
+
+### Terminal input
+
+Windows Neovim/Vim terminals identified by `NVIM` or `VIM_TERMINAL` retain VT input instead of enabling ConPTY mode 9001. For another incompatible embedded host, set `DSH_TUI_DISABLE_WIN32_INPUT_MODE=1` before launch (PowerShell: `$env:DSH_TUI_DISABLE_WIN32_INPUT_MODE="1"`); the same gate applies at startup and after resume, and the opt-out can remove modified-Enter reporting. Native Windows Terminal, conhost and VS Code keep their existing mode unless disabled.
+
+Extended key reporting (Kitty keyboard protocol and xterm `modifyOtherKeys`) is enabled for a fixed terminal list: iTerm2, kitty, WezTerm, Ghostty, rio, Orca, tmux, Warp and Windows Terminal. A terminal missing from that list can opt in with `DSH_TUI_FORCE_EXTENDED_KEYS=1`, and `DSH_TUI_DISABLE_EXTENDED_KEYS=1` opts an allowlisted terminal back out for SSH or nested xterm.js hosts (it wins when both are set). Outside native Windows, where win32-input-mode reports Enter's modifiers instead and is not touched by this switch, a terminal without extended keys cannot tell `Shift+Enter` from `Enter`, and `Ctrl+J` is the newline fallback.
+
+Fragmented input is reassembled instead of leaking into the prompt. On native Windows, Win32 input records split across short input delays are rejoined (a bare `ESC[` fragment is held only after one record has actually been decoded, while a fragment whose own shape is already record-specific holds on its own); terminals that never enter the mode keep the classic VT path, so a lone `Esc` keeps its response time. Split terminal replies (DA1 / DA2 / DSR / DECRPM / XTVERSION) are held only while a query of the matching response type is outstanding, and fragmented SGR mouse reports only while fullscreen mouse tracking is active. Every hold is bounded (about 1 second from first capture, never extended by later input; 64 bytes max), after which input is handled as before — SGR bytes replay as ordinary keys in arrival order. Inside a window, literal input starting with `[digit;…` can be held or joined to a preceding `Esc`, so wait for the window to close or avoid that shape right after `Esc`. Unknown complete CSI sequences are not inserted as text, and after a damaged CSI prefix a bare ASCII letter can be consumed as its terminator; the very first record can still leave residue if split before its record-specific shape forms.
 
 ### Display and session ownership
 
-The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy.
-
-If resume reports that another DSH process owns the writer, release the session in that process (for example, dsh web) and retry in the same TUI. The foreground session stays intact; do not delete session or lock files to bypass single-writer protection.
-
+The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy. If resume reports that another DSH process owns the writer, release the session in that process (for example, dsh web) and retry in the same TUI; the foreground session stays intact, and deleting session or lock files to bypass single-writer protection is not supported.
 
 Full reference: [Interaction and commands](docs/interaction.en.md).
 
 ## Built-in Commands
 
 `/resume` · `/home` · `/agentview` · `/bg` · `⌸` open the same session manager: workspace rail, live state, filter, ★ pins. Also `/model` `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/settings` `/setup` `/status` `/cost` `/jobs` `/skills` `/mcp` `/auth` `/login` `/update`.
+
+Plugin slash-command results, including errors, remain as local transcript blocks for scrolling and copying during the current session, with indentation and line breaks preserved. Each report retains at most 200 lines, 65,536 UTF-16 code units and 4,000 terminal cells per line, plus a visible truncation marker; the rows are not sent as model input or replayed as history, and older blocks are evicted within the shared 600-row budget. Explicit report layouts such as `/goal` keep their existing formatting.
 
 ### Sessions and kernels
 
@@ -448,7 +427,6 @@ Runtime path, module boundaries, performance notes and persistence locations: [A
 - `/model` changes the next request’s route in the same session; history and session ID are preserved. The last used route is recorded when the next request starts. On DSH 0.2.2, API/plugin selections also update the next-model readout; late events from a previously fixed step do not overwrite the selected model's capacity metadata. DSH versions before `0.1.2-alpha.3` refuse switching and prompt an upgrade because their subagents inherit the original route.
 - `Ctrl+V` needs platform clipboard tools; unsupported bitmap formats are rejected.
 - Windows Terminal/ConPTY sixel frames check the last transmitted raster’s cursor position before parking, using measured cell geometry and encoded band controls. Detected drift uses the same physical clear and redraw as `Ctrl+L`. Probes allow one pending reply (500 ms), skip resize/handoff, and pause for 60 seconds after an unanswered query or three repairs within 10 seconds. Set `DSH_TUI_SIXEL_CURSOR_HEAL=0` to disable; `DSH_TUI_DEBUG` records probe/recovery decisions. This bounded mitigation cannot detect every kind of pixel corruption or repair ConPTY itself.
-
 - Shutdown drains only the actual renderer-owned input after terminal cleanup and a 150-ms settle window. Embedders retaining only `unmount` keep that input lease; wrappers replacing the method must pass the renderer’s `shutdownInput` lease to `finishExit`. Custom input drains its own buffered bytes; a device-specific kernel drain can be supplied as the bounded synchronous `render({ drainStdin })` callback. Revoked/replaced owners and non-TTY input are not drained. The window does not guarantee arbitrary SSH latency.
 - Local Windows copying uses PowerShell with UTF-8 stdin. Copies run in order; each PowerShell attempt has a two-second timeout (Windows PowerShell, then PowerShell 7). If both fail, OSC 52 remains the fallback and requires terminal support. SSH never writes the remote native clipboard.
 - Catchable exits explicitly end synchronized output (DEC 2026) as part of terminal cleanup, even without a final frame. SIGKILL, native aborts and a fully blocked JavaScript event loop cannot guarantee in-process cleanup; recovery then requires the terminal or an external supervisor.
@@ -463,62 +441,32 @@ Full list: [Architecture and limitations → Known limitations](docs/architectur
 
 ## Development
 
-`pnpm dev` keeps the full install/build/pack checks by default. For explicit local
-iteration, set `DSH_TUI_DEV_FAST=1` (for example,
-`DSH_TUI_DEV_FAST=1 pnpm dev -- --no-launch`). A miss runs frozen install,
-`compile`, pack without repeating `prepare`, and isolated profile installation.
-An unchanged hit skips all four stages only while source/config and compiler-loader contents,
-Node/pnpm/npm/dsh versions, compiled and vendor output, the tarball, and the installed
-package/profile match. Replacing pnpm/npm/dsh without changing its reported version
-requires one normal (non-fast) development run.
-Internal document links such as `CLAUDE.md -> AGENTS.md` are fingerprinted;
-external, excluded, dangling or cyclic links and unreadable inputs disable reuse
-with a diagnostic. Failures invalidate the success stamp before work begins.
-The script prints stage durations and cache hits. Run normal `pnpm build` and
-focused regressions before publishing; fast mode does not change release gates.
-The monorepo development host (`pnpm tui`, `scripts/run.ts`) enables heap
-forensics only with `DSH_TUI_HEAP_WATCH=1`; unset it or use `0` to disable it.
-It samples every 15 seconds and takes one snapshot at each heap threshold of
-1024, 1536, 2048, 2560 and 3072 MiB. Its own completed files in `$DSH_HOME`
-retain at most four 64-KiB logs and two snapshots totaling at most 1024 MiB.
-`DSH_TUI_HEAP_MAX_MB` changes the snapshot budget (integer 1–16384; invalid
-values use 1024). A single oversized snapshot is removed too; the latest
-diagnostic may therefore be a log only. Snapshot creation still blocks and
-uses extra memory and temporary disk space; this does not fix memory leaks.
-Files use a process-unique `dsh-tui-heap-watch-` prefix. Manual/legacy files
-are untouched; incomplete `.writing` files are removed only after their
-owner PID is confirmed absent. Live or uncheckable owners are preserved,
-and cleanup failures are nonfatal, so quotas apply to successful cleanup of
-completed files, not peak usage or uncertain crash leftovers.
-
-
-CI uses Node 24 and pnpm 11. The package supports Node `^22.19 || >=24`.
-
-The launcher checks the manifest’s Node range before loading the application. Known unsupported versions (including Node 23 and prereleases) stop with Node upgrade instructions. Missing or unrecognized ranges allow startup for compatibility with migrated launchers; `doctor` reports that compatibility cannot be determined. `help` and `version` remain available.
-
-TUI entry points use production React even when the workspace sets
-`NODE_ENV=development`. For renderer debugging, explicitly set
-`DSH_TUI_REACT_DEV=1` (for example, `DSH_TUI_REACT_DEV=1 pnpm dev` or
-`DSH_TUI_REACT_DEV=1 pnpm tui`). This selects development React before it
-loads; its render instrumentation can accumulate memory in long sessions.
-
 ```sh
 pnpm install --frozen-lockfile
 pnpm build
 pnpm smoke
 ```
 
-`lib/types/` is ignored generated output. `pnpm build` recompiles it from a
-clean output directory and runs the build gates. **Git URL installs are not
-supported.** The source manifest keeps `@dsh-std/*` as workspace deps and
-`vendor/dsh-std` as a submodule. pnpm ≥11 also refuses git-hosted `prepare`
-scripts by default. Install the registry package instead:
-`dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui`. Rendering,
-questionnaire, or tool-card changes also need the matching regression scripts.
+`lib/types/` is ignored generated output; `pnpm build` recompiles it from a clean output directory and runs the build gates. **Git URL installs are not supported**: the source manifest keeps `@dsh-std/*` as workspace deps and `vendor/dsh-std` as a submodule, and pnpm ≥11 also refuses git-hosted `prepare` scripts by default. Install the registry package instead: `dsh plugin --profile dsh-tui add @deepseek-harness-tui/dsh-tui`. Rendering, questionnaire or tool-card changes also need the matching regression scripts.
 
-From a source checkout, the root `Makefile` wraps the common commands (`make help`);
-`make install` installs a missing dsh at the validated version, then builds and packs
-the checkout and installs it into the local dsh's `dsh-tui` profile (see [getting started](docs/getting-started.en.md#develop-from-source)).
+- **Fast local iteration** — `pnpm dev` keeps the full install/build/pack checks by default; set `DSH_TUI_DEV_FAST=1` for explicit local iteration (for example, `DSH_TUI_DEV_FAST=1 pnpm dev -- --no-launch`). An unchanged hit skips frozen install, `compile`, pack and isolated profile installation only while source/config and compiler-loader contents, Node/pnpm/npm/dsh versions, compiled and vendor output, the tarball, and the installed package/profile all match; replacing pnpm/npm/dsh without changing its reported version needs one normal run. Failures invalidate the success stamp before work begins, and fast mode never changes release gates: run normal `pnpm build` and focused regressions before publishing.
+- **Node versions** — CI uses Node 24 and pnpm 11; the package supports Node `^22.19 || >=24`. The launcher checks the manifest’s Node range before loading the application: known unsupported versions (including Node 23 and prereleases) stop with Node upgrade instructions, while missing or unrecognized ranges allow startup for compatibility with migrated launchers and `doctor` reports that compatibility cannot be determined. `help` and `version` remain available.
+- **React builds** — TUI entry points use production React even when the workspace sets `NODE_ENV=development`; set `DSH_TUI_REACT_DEV=1` (for example, `DSH_TUI_REACT_DEV=1 pnpm dev`) to debug the renderer. Its render instrumentation can accumulate memory in long sessions.
+- **Heap forensics** — the monorepo development host (`pnpm tui`, `scripts/run.ts`) enables heap forensics only with `DSH_TUI_HEAP_WATCH=1`. It samples every 15 seconds and takes one snapshot at each heap threshold of 1024, 1536, 2048, 2560 and 3072 MiB, keeping at most four 64-KiB logs and two snapshots totaling at most 1024 MiB under `$DSH_HOME`; `DSH_TUI_HEAP_MAX_MB` (integer 1–16384; invalid values use 1024) changes the snapshot budget. Files use a process-unique `dsh-tui-heap-watch-` prefix; manual and legacy files are untouched, an oversized snapshot is removed (so the latest diagnostic may be a log only), and incomplete `.writing` files are removed only after their owner PID is confirmed absent (live or uncheckable owners are preserved, and cleanup failures are nonfatal). Snapshot creation still blocks and uses extra memory and disk space, and this does not fix memory leaks.
+- **Source checkout** — the root `Makefile` wraps the common commands (`make help`); `make install` installs a missing dsh at the validated version, then builds and packs the checkout and installs it into the local dsh's `dsh-tui` profile (see [getting started](docs/getting-started.en.md#develop-from-source)).
+
+### Storage migration and read budgets
+
+- The SQLite migration script uses the official `node:sqlite.backup()` API on supported Node 22.19+ and Node 24+ builds, probes that capability before opening the source read-only, and includes committed WAL data in a consistent snapshot; it never copies a live database/WAL pair by hand. A build missing the API reports a migration-specific prerequisite.
+- Session-tree reads validate packed rows and check their entire member count against the remaining scan budget before expanding events. Oversized rows report truncation, malformed rows report failure, and the logical budget does not eliminate physical JSON/frame parsing or validation.
+- Development `@deepseek-ai/*` release-age exceptions list only exact package versions in the current lockfile (including the legacy SQLite island); all other versions retain the 24-hour delay. Regenerate with `node scripts/verify-release-age-cohort.mjs --write` after an intentional lockfile update, then review the cohort diff.
+
+### Bounded update installation
+
+- `/update` and `dsh-tui update` give each installer invocation (profile and engine) a **30-minute wall-clock limit**. Set `DSH_TUI_UPDATE_TIMEOUT_MS` to a positive integer in milliseconds to change it (invalid values use the default). Output activity does not reset this deadline, only the final process exit code establishes success (a printed `Done` does not), and Ctrl+C cancels the owned installer.
+- On POSIX, cancellation terminates its own process group, then force-kills remaining descendants after two seconds. Windows uses a dedicated PowerShell/native supervisor with a private Job Object: the installer joins that job atomically while suspended and verified membership is required before it runs, and the supervisor retains the job handle after the root exits so cancellation and timeout also terminate orphaned descendants holding output pipes. It does not enable job breakaway or kill processes by name or an exited root PID.
+- Windows requires Windows 10 / Server 2016 or later and Windows PowerShell with `Add-Type`/native interop available. Startup or job-membership failures stop the installation before running an unowned installer, and a cleanup failure is reported as unconfirmed, never as proof that all writes stopped. Timeout, cancellation or unconfirmed cleanup returns nonzero and prevents retries, stale-file removal, repair and TUI replacement; a partial installation may remain, so check and repair that profile before using the recovery command printed at update start and on failure. `~/.dsh-tui/restart.log` records installer category, PID, termination reason and last output timestamp before any restart.
+- The Windows installer process ownership workflow runs the real native regression on `windows-latest` with Node 24 and no dependency installation. To run it locally on Windows: `node scripts/verify-update-process-windows.mjs`. It covers orphan descendants, timeout/cancellation, nested jobs, failure diagnostics, streams, arguments and an unrelated process; a Linux run explicitly skips native acceptance.
 
 ## Plugin Ecosystem
 
@@ -645,49 +593,3 @@ Community, related projects, and companion tools built by friends:
 ## License
 
 [MIT](LICENSE)
-
-### Storage migration and read budgets
-
-The SQLite migration script uses the official `node:sqlite.backup()` API on
-supported Node 22.19+ and Node 24+ builds. It probes that capability before
-opening the source read-only and includes committed WAL data in a consistent
-snapshot; it never copies a live database/WAL pair by hand. A build missing the
-API reports a migration-specific prerequisite. Session-tree reads validate packed
-rows and check their entire member count against the remaining scan budget before
-expanding events. Oversized rows report truncation; malformed rows report failure.
-The logical budget does not eliminate physical JSON/frame parsing or validation.
-Development `@deepseek-ai/*` release-age exceptions list only exact package versions in the current
-lockfile (including the legacy SQLite island); all other versions retain the
-24-hour delay. Regenerate with `node scripts/verify-release-age-cohort.mjs --write`
-after an intentional lockfile update, then review the cohort diff.
-
-### Bounded update installation
-
-`/update` and `dsh-tui update` give each installer invocation (profile and engine) a **30-minute
-wall-clock limit**. Set `DSH_TUI_UPDATE_TIMEOUT_MS` to a positive integer in
-milliseconds to change it (invalid values use the default). Output activity does
-not reset this deadline; a quiet but healthy installation can use the full limit.
-Only the final process exit code establishes success: a printed `Done` does not.
-Ctrl+C cancels the owned installer. On POSIX, cancellation terminates its own
-process group, then force-kills remaining descendants after two seconds. Windows
-uses a dedicated PowerShell/native supervisor with a private Job Object. The
-installer joins that job atomically while suspended; verified membership is required
-before it runs. The supervisor retains the job handle after the root exits, so
-cancellation and timeout also terminate orphaned descendants holding output pipes.
-It does not enable job breakaway or kill processes by name or an exited root PID.
-
-Windows requires Windows 10 / Server 2016 or later and Windows PowerShell with
-`Add-Type`/native interop available. Startup or job-membership failures stop the
-installation before running an unowned installer. A cleanup failure is reported as
-unconfirmed, never as proof that all writes stopped. Timeout, cancellation, or
-unconfirmed cleanup returns nonzero and prevents retries, stale-file removal,
-repair, and TUI replacement. A partial installation may remain: check/repair that
-profile before using the recovery command printed at update start and on failure.
-`~/.dsh-tui/restart.log` records installer category, PID, termination reason and last
-output timestamp before any restart.
-
-The focused **Windows installer process ownership** workflow runs the real native
-regression on `windows-latest`, with Node 24 and no dependency installation. To run
-it locally on Windows: `node scripts/verify-update-process-windows.mjs`. It checks
-orphan descendants, timeout/cancellation, nested jobs, failure diagnostics, streams,
-arguments and an unrelated process; a Linux run explicitly skips native acceptance.
