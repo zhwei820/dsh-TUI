@@ -344,6 +344,10 @@ export interface SubagentTranscriptPage {
   readonly skippedFromStart: number
   /** Opaque cursor when the native source has no absolute record count. */
   readonly sourceCursor?: string
+  /** The child's initial task (the delegating agent's prompt) when the page
+   *  starts AFTER it (older pages remain): the views pin it above the
+   *  transcript until the oldest page, which holds it in place, is loaded. */
+  readonly task?: string
 }
 
 /** An older slice request: `count` messages ending just before

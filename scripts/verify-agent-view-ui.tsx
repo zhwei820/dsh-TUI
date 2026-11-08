@@ -711,7 +711,7 @@ console.log('--- Chat: source stack + parent state preservation ---')
     const beforeRows = lines().filter(l => l.includes('please delegate') || l.includes('delegated') || l.includes('chat level child'))
     // card ⤢ click → Agent View (source transcript-card)
     check('C1 转录卡主屏查看动作（⤢ 字形）可定位', await click({ screen, lines, rerender: () => {}, stdin, term } as unknown as Frame, '⤢'))
-    check('C1 进入 Agent View（顶栏出现）', await settled(() => screen().includes('read-only') && screen().includes('from transcript card')), lines().slice(0, 3).join('|'))
+    check('C1 进入 Agent View（顶栏出现）', await settled(() => screen().includes('⤢ Agent(chat level child)') && screen().includes('from transcript card') && !screen().includes('read-only') /* a composer is mounted: not read-only */), lines().slice(0, 3).join('|'))
     check('C1 场景读同一 history（子答案可见）', await settled(() => screen().includes('child answer in history')))
     check('C1 场景内消息流叶子', screen().includes('parent → child'))
     // composer submit through the channel-provided capability

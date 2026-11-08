@@ -647,6 +647,19 @@ console.log('--- W9: detail transcript shows the delegated prompt ---')
       check('W9 a later prompt is labelled as a follow-up', flat.includes(t('subagent-followup-label')) && flat.includes('Now fix the first one.'))
     },
   )
+  // Paging from the middle: the task is not on the newest page, the reader
+  // hands it over separately and the view pins it above the load-older link.
+  const middle = async (): Promise<Record<string, unknown>> => historyPage(events.slice(1, 4), { hasOlder: true, skippedFromStart: 500, task: TASK })
+  await withTerminal(
+    () => React.createElement(SubagentDetailScene, { subagent: makeRow('agent-middle', { status: 'running', completedAt: undefined }), onBack: () => {}, loadTranscript: middle as never }),
+    async frame => {
+      check('W9 pinned task above the load-older link while older pages remain', await settled(() => frame.screen().includes(t('subagent-prompt-label'))), frame.lines().slice(0, 14).join('|'))
+      const lines = frame.lines()
+      const taskRow = lines.findIndex(line => line.includes(t('subagent-prompt-label')))
+      const olderRow = lines.findIndex(line => line.includes('▸'))
+      check('W9 … in full, before the older-page link', taskRow >= 0 && olderRow > taskRow && lines.map(line => line.trim()).join(' ').includes('END-OF-TASK'), `${taskRow}/${olderRow}`)
+    },
+  )
 }
 
 // ── W5: side-panel Detail composer key routing ────────────────────────────
