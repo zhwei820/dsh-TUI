@@ -68,6 +68,8 @@ const GROUPS = {
     ['verify-onboarding-wizard', ['node', '--import', 'tsx/esm', 'scripts/verify-onboarding-wizard.tsx']],
 // 接入判定是纯函数：0/1/N 三分支、差分幂等、provider 过滤、默认预选与勾选落点。
     ['verify-onboarding-provider-plan', ['node', '--import', 'tsx/esm', 'scripts/verify-onboarding-provider-plan.ts']],
+// 启动时是否弹引导：已有 key（环境/凭据库）或已登录账号就不弹；缺席/失败/超时照旧弹。
+    ['verify-onboarding-account', ['node', '--import', 'tsx/esm', 'scripts/verify-onboarding-account.ts']],
 // Chat 集成层：两个屏幕在**真实 Chat** 里的编排契约（/setup 开向导、提交落点、
 // 开整屏界面的动作要先收掉当前屏、覆盖层不收、记账 skipped/done、最小模式、
 // 首启横幅不 stale）。这三类缺陷是单独挂组件的回归测不到的——先有 bug 才有它。

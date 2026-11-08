@@ -66,6 +66,7 @@ import { adoptHeldInputs, collectHeldInputs, heldInputsResumeCommand, takeHeldIn
 import { armFirstFrameAck, beginHandoffAck, handoffAttemptId, ownsAltScreenExit } from '../handoffAck.js'
 import { DSH_BACKEND_ID, HOST_NOTICE_ENV, KERNEL_SWITCH_HANDOFF_ENV, RESUME_BACKEND_ENV, RESUME_RETRY_ENV, parseBackendId, readKernelPrefs, resolveRememberedBackend, resolveResumeTarget, writeKernelPrefs, type KernelBackendId } from '../kernelPrefs.js'
 import { shouldOfferOnboarding } from '../onboardingPrefs.js'
+import { accountConfigured } from './onboarding-account.js'
 import { resolveSessionCwd } from '../utils/workspaceRoot.js'
 import { LAUNCH_PROMPT_SENT_ENV, beginRestartAttempt, blockedUpdateMessages, checkForTuiUpdate, describeHostStepReason, describeLauncherStepReason, deliverEngineSkipReport, idleReportMessages, installedTuiVersion, isBootDeadlockTarget, isStandaloneRuntime, isVersionNewer, logRestartEvent, resolveDshProfileName, resolveUpdatePlan, restartTui, updatePlanLayers, updatePlanState, updatePlanSuite, updateTuiAndRestart, writeHandoffNotice, writeLastRunRecord, type TuiRestartOptions, type UpdatePlan } from '../update.js'
 import { getLang, isLang, resolveStartupLang, setLang, t, writeLangPref } from '../i18n.js'
@@ -2677,9 +2678,11 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
   /**
    * The first-run guide. Gated on its own preference (not on `homeSeen`): the
    * two answer different questions, and an install that already knows its
-   * workspace may still never have configured a key.
+   * workspace may still never have configured a key. An install that already
+   * has an account (key or signed-in OAuth) is not offered it on boot: Esc
+   * records nothing, so it would otherwise re-ask on every launch.
    */
-  const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding()
+  const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding() && !(await accountConfigured(ctx))
   // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免手选的皮肤先画一屏
   // 默认蓝再变色。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
   setActiveBrand(resolveBrand(config.brand))
