@@ -363,7 +363,9 @@ export function buildHostDescriptor(options: HostDescriptorOptions): HostDescrip
         ? supportSpec(coordinate, undefined, options.legacyDecisionFeatures)
         : supportSpec(coordinate, lifecycle)
       try {
-        definition.validateSupport(spec)
+        // dsh-std core passes the declared coordinate as the validation
+        // context (ProtocolDefinition.validateSupport(spec, context)).
+        definition.validateSupport(spec, { apiVersion: coordinate.apiVersion, kind: coordinate.kind })
       } catch (error) {
         dropped.push(key)
         warnings.push(`${key}: support spec rejected by its definition (${error instanceof Error ? error.message : String(error)})`)

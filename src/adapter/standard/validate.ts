@@ -141,7 +141,7 @@ export function validateHost(index: ContractIndex, host: HostDescriptor): void {
     const entry = index.lookupContract(contract)
     const definition = index.protocols.resolve(contract)
     if (entry === undefined || definition === undefined) throw new Error(`host declares an unknown protocol: ${key}`)
-    definition.validateSupport(Object.hasOwn(contract, 'spec') ? contract.spec : undefined)
+    definition.validateSupport(Object.hasOwn(contract, 'spec') ? contract.spec : undefined, { apiVersion: contract.apiVersion, kind: contract.kind })
     if ('package' in entry) {
       if (contract.definition.source !== 'dsh-std' || contract.definition.package !== entry.package) {
         throw new Error(`host dsh-std definition source mismatch: ${key}`)
