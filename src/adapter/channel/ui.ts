@@ -99,10 +99,12 @@ export function createChannelUi(channel: ChannelUi, mode: AdapterMode, lease: Ch
             ...projected,
             ...(history === undefined ? {} : { history: (id: string, window?: import('../../agent/capabilities.js').SubagentTranscriptWindow) => { check('read-only'); return history.call(control, id, window) } }),
             ...(message === undefined ? {} : {
+              // methods() copies only the listed functions; the two plain
+              // values are carried after it.
               message: Object.freeze({
+                ...methods(message, { listTargets: 'read-only', submit: 'mutate', messages: 'read-only' } as Readonly<Record<keyof typeof message, HostEffectClass>>),
                 via: message.via,
                 steer: message.steer,
-                ...methods(message, { listTargets: 'read-only', submit: 'mutate', messages: 'read-only' } as Readonly<Record<keyof typeof message, HostEffectClass>>),
               }),
             }),
           })
