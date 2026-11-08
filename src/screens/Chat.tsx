@@ -1946,6 +1946,13 @@ export function Chat({
       else setSubagentDetailId(source.agentId)
     }
   }, [])
+  /** 子代理场景顶栏「← 主代理」：收起所有代理场景（Agent View / Detail /
+   *  Dashboard），直接回主代理聊天，不像 Esc/✕ 那样沿来源栈逐级返回。 */
+  const returnToMainAgent = React.useCallback((): void => {
+    setAgentView(null)
+    setSubagentDetailId(null)
+    setSubagentDashboardOpen(false)
+  }, [])
   /**
    * Hidden `/deepseek` easter egg: each invocation bumps this key so the
    * logo header remounts and replays the whale spout + text shimmer.
@@ -6762,6 +6769,7 @@ export function Chat({
         // Switching to a sibling or the parent swaps the viewed agent in
         // place; Esc still returns to the original entry point.
         onSwitchAgent={switchViewedAgent}
+        onReturnToMain={returnToMainAgent}
       />
     )
     return withTitle(fullscreen ? viewScene : <AlternateScreen>{viewScene}</AlternateScreen>)
@@ -6787,6 +6795,7 @@ export function Chat({
         onInterrupt={(id) => channel.subagentControl?.interrupt(id)}
         {...(channel.subagentControl?.history === undefined ? {} : { loadTranscript: channel.subagentControl.history })}
         onOpenView={() => openAgentView(subagent.agentId, { kind: 'agent-detail', agentId: subagent.agentId })}
+        onReturnToMain={returnToMainAgent}
         messages={detailMessages}
         {...(detailControl === undefined ? {} : { compose: { control: detailControl, target: detailTarget } })}
         onBack={() => {

@@ -16,7 +16,7 @@ import {
 import { t } from '../i18n.js'
 import { agentTitle } from './Chat/subagentCardModel.js'
 import { Divider } from './design-system/Divider.js'
-import { ExitButton, isPanelPlainReturn } from './SubagentDashboard.js'
+import { ExitButton, isPanelPlainReturn, MainAgentButton } from './SubagentDashboard.js'
 import { isPlainReturnInput } from '../utils/modifiers.js'
 import { actionMatches } from '../utils/keymap.js'
 import { toolNameColor } from './messages/AssistantToolUseMessage.js'
@@ -184,6 +184,9 @@ export interface SubagentDetailSceneProps {
   loadTranscript?: TranscriptLoader
   /** 打开主屏只读 Agent View。 */
   onOpenView?: () => void
+  /** 顶栏「← 主代理」：一步回主代理聊天（不经来源栈）。缺省不显示——侧栏
+   *  形态本来就挨着聊天，不传。 */
+  onReturnToMain?: () => void
   /** 代理↔代理消息流：非空时出现 Messages 页。 */
   messages?: readonly AgentMessageView[]
   /** 发送能力：存在才渲染 composer；独立草稿，不经父 PromptInput。 */
@@ -210,6 +213,7 @@ export function SubagentDetailScene({
   onInterrupt,
   loadTranscript,
   onOpenView,
+  onReturnToMain,
   messages = [],
   compose,
   variant = 'default',
@@ -522,6 +526,7 @@ export function SubagentDetailScene({
             <Text color="subtle">⤢</Text>
           </Box>
         )}
+        {onReturnToMain !== undefined && <MainAgentButton onClick={onReturnToMain} />}
         {/* 可点击退出（Esc/Enter 的鼠标等价），hover 提亮 */}
         <ExitButton onClick={onBack} />
       </Box>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Text, useInput, ScrollBox, type ScrollBoxHandle, useTerminalSize } from '../ui.js'
+import { Box, NoSelect, Text, useInput, ScrollBox, type ScrollBoxHandle, useTerminalSize } from '../ui.js'
 import { SubagentCard, teamStatusGlyph } from './SubagentCard.js'
 import type { SubagentState } from '../dsh-adapter/subagents.js'
 import type { Theme } from '../theme.js'
@@ -64,6 +64,22 @@ export function ExitButton({ onClick }: { onClick: () => void }): React.ReactNod
     >
       <Text color={hovered ? 'text' : 'subtle'}>{' ✕'}</Text>
     </Box>
+  )
+}
+
+/** 可点击「← 主代理」：从子代理整屏场景一步回到主代理聊天（不经来源栈）。
+ *  `compact` 只留箭头，给窄终端的顶栏让出名字。noSelect：它是按钮不是正文，
+ *  拖选跨过顶栏时不能把按钮文字带进复制。 */
+export function MainAgentButton({ onClick, compact = false }: { onClick: () => void; compact?: boolean }): React.ReactNode {
+  const [hovered, setHovered] = React.useState(false)
+  return (
+    <NoSelect
+      onClick={onClick}
+      onMouseEnter={(): void => setHovered(true)}
+      onMouseLeave={(): void => setHovered(false)}
+    >
+      <Text color={hovered ? 'accent' : 'subtle'}>{compact ? '←' : t('agent-view-main-agent')}</Text>
+    </NoSelect>
   )
 }
 

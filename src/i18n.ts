@@ -2085,6 +2085,7 @@ const dict = {
   'agent-view-live': { zh: '实时', en: 'live' },
   'agent-view-history': { zh: '历史', en: 'history' },
   'agent-view-back': { zh: '返回来源', en: 'back to source' },
+  'agent-view-main-agent': { zh: '← 主代理', en: '← main agent' },
   'agent-view-open-action': { zh: '主屏查看', en: 'open in main view' },
   'agent-view-source-chat': { zh: '来自聊天', en: 'from chat' },
   'agent-view-source-dashboard': { zh: '来自代理面板', en: 'from agents panel' },

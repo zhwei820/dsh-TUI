@@ -10,7 +10,7 @@ import {
   type TranscriptLoader,
 } from '../components/messages/subagentTranscript.js'
 import { AgentMessageComposer } from '../components/AgentMessageComposer.js'
-import { ExitButton } from '../components/SubagentDashboard.js'
+import { ExitButton, MainAgentButton } from '../components/SubagentDashboard.js'
 import { t } from '../i18n.js'
 import { agentTitle } from '../components/Chat/subagentCardModel.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView, AgentViewSource } from '../components/messages/agentTeam.js'
@@ -95,6 +95,10 @@ export interface AgentTranscriptSceneProps {
    *  source stack is preserved — Esc still returns to the original entry
    *  point. Absent = the panel renders read-only rows without switching. */
   onSwitchAgent?: (agentId: string) => void
+  /** Leave every agent scene straight to the main agent's chat (the header's
+   *  「← 主代理」 button), skipping the source stack Esc/✕ walk back through.
+   *  Absent = no button. */
+  onReturnToMain?: () => void
 }
 
 /**
@@ -105,7 +109,7 @@ export interface AgentTranscriptSceneProps {
  * The body uses the same transcript pager as the Detail page, with the
  * live SubagentState tail merged in.
  */
-export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, loadTranscript, messages = [], compose, roster, onSwitchAgent }: AgentTranscriptSceneProps): React.ReactNode {
+export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, loadTranscript, messages = [], compose, roster, onSwitchAgent, onReturnToMain }: AgentTranscriptSceneProps): React.ReactNode {
   React.useEffect(() => {
     if (subagent.status === 'failed') onFailureRead?.(subagent)
   }, [subagent, onFailureRead])
@@ -273,6 +277,7 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
         <Box flexShrink={1} minWidth={0}><Text bold wrap="truncate-end">{headerLabel}</Text></Box>
         <Box flexShrink={0}><Text dimColor>{headerBadges}</Text></Box>
         <Box flexGrow={1} />
+        {onReturnToMain !== undefined && <Box flexShrink={0}><MainAgentButton onClick={onReturnToMain} compact={headerWidth < 44} /></Box>}
         <Box flexShrink={0}><ExitButton onClick={onExit} /></Box>
       </Box>
       {/* The `o` hint only when older records actually remain: an always-on
