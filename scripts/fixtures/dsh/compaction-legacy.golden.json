@@ -42,6 +42,7 @@
         "cacheKnown": false,
         "retries": 0,
         "durationMs": 900,
+        "endedAt": 1767583800920,
         "outcome": "completed"
       }
     },
@@ -123,6 +124,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 120,
+        "endedAt": 1767583801260,
         "outcome": "error"
       }
     },
@@ -275,6 +277,7 @@
         "cacheKnown": false,
         "retries": 0,
         "durationMs": 900,
+        "endedAt": 1767583800920,
         "outcome": "completed"
       }
     },
@@ -356,6 +359,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 120,
+        "endedAt": 1767583801260,
         "outcome": "error"
       }
     },

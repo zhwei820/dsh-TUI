@@ -42,6 +42,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 1060,
+        "endedAt": 1767576601060,
         "effort": "medium",
         "outcome": "completed"
       }
@@ -97,6 +98,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 390,
+        "endedAt": 1767576661510,
         "effort": "medium",
         "outcome": "completed"
       }
@@ -139,6 +141,7 @@
         "cacheKnown": false,
         "retries": 0,
         "durationMs": 120,
+        "endedAt": 1767618000140,
         "effort": "high",
         "outcome": "interrupted"
       }
@@ -302,6 +305,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 1060,
+        "endedAt": 1767576601060,
         "effort": "medium",
         "outcome": "completed"
       }
@@ -357,6 +361,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 390,
+        "endedAt": 1767576661510,
         "effort": "medium",
         "outcome": "completed"
       }
@@ -399,6 +404,7 @@
         "cacheKnown": false,
         "retries": 0,
         "durationMs": 120,
+        "endedAt": 1767618000140,
         "effort": "high",
         "outcome": "interrupted"
       }

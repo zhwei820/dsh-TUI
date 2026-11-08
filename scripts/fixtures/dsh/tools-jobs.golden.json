@@ -243,6 +243,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 7700,
+        "endedAt": 1767618007720,
         "outcome": "completed"
       }
     },
@@ -577,6 +578,7 @@
         "cacheKnown": true,
         "retries": 0,
         "durationMs": 7700,
+        "endedAt": 1767618007720,
         "outcome": "completed"
       }
     },
