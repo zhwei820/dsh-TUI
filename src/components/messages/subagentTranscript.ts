@@ -19,6 +19,9 @@ export type TranscriptLeaf =
   | { kind: 'thinking'; key: string; text: string }
   | { kind: 'thinking-unavailable'; key: string; tokens: number | undefined }
   | { kind: 'text'; key: string; text: string }
+  /** A prompt the child received: the first one is the delegating agent's
+   *  task, later ones are follow-ups to a continuable child. */
+  | { kind: 'prompt'; key: string; text: string }
   | { kind: 'tool'; key: string; tool: ToolRow }
   | { kind: 'agent-message'; key: string; message: AgentMessageView }
 
@@ -85,6 +88,16 @@ export function foldTranscriptLeaves(events: readonly AgentEvent[], into: Transc
   for (const event of events) {
     const at = eventTime(event)
     if (at !== undefined) flushMessages(at)
+    // The prompts it was given (the delegating agent's task first). Relayed
+    // team messages arrive through the agent-message feed instead, and
+    // host-side bookkeeping (compaction, notices, command output) is not a
+    // prompt.
+    if (event.type === 'user.message') {
+      if ((event.source === 'user' || event.source === 'injected') && event.text.trim() !== '') {
+        into.push({ kind: 'prompt', key: event.anchor, text: event.text })
+      }
+      continue
+    }
     if (event.type === 'tool.call') {
       if (event.presentation !== undefined && TRANSCRIPT_SUPPRESSED_CARDS.has(event.presentation.card)) continue
       into.push({ kind: 'tool', key: event.callId, tool: {
@@ -136,7 +149,7 @@ export function foldTranscriptLeaves(events: readonly AgentEvent[], into: Transc
 }
 
 const eventTime = (event: AgentEvent): number | undefined =>
-  event.type === 'tool.call' || event.type === 'tool.result' || event.type === 'assistant.message' ? event.time : undefined
+  event.type === 'tool.call' || event.type === 'tool.result' || event.type === 'assistant.message' || event.type === 'user.message' ? event.time : undefined
 
 /** The transcript page's load state. `ready` keeps its rows while a newer
  *  page reloads (settlement) and while an older window prepends. */

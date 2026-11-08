@@ -1371,6 +1371,8 @@ const dict = {
   'statusline-hint-working': { zh: 'esc 中断', en: 'esc to interrupt' },
   'statusline-hint-interrupting': { zh: '中断中…', en: 'interrupting…' },
   'statusline-hint-shortcuts': { zh: '? 查看快捷键', en: '? for shortcuts' },
+  'subagent-prompt-label': { zh: '主代理交给它的任务', en: 'Task from the delegating agent' },
+  'subagent-followup-label': { zh: '追加的提示', en: 'Follow-up prompt' },
   'subagent-running-list': { zh: '{{count}} 个子代理运行中', en: { one: '{{count}} agent running', other: '{{count}} agents running' } },
   'subagent-running-list-hint': { zh: '（点击查看详情）', en: '(click to open)' },
   'subagent-running-list-more': { zh: '还有 {{count}} 个…', en: '… {{count}} more' },

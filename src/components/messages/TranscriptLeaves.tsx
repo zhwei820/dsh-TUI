@@ -207,6 +207,27 @@ export function ToolLeafRow({
 }
 
 /** An assistant text row (`●` bullet + markdown body). */
+/**
+ * A prompt the child agent received (its delegating agent's task, or a
+ * later follow-up): a labelled block with the COMPLETE text — wrapped, never
+ * truncated — so the reader sees exactly what the agent was asked to do.
+ */
+export function PromptLeafRow({ text, first, marginTopOnTurn }: {
+  text: string
+  /** The first prompt is the delegating task; later ones are follow-ups. */
+  first: boolean
+  marginTopOnTurn: boolean
+}): React.ReactNode {
+  return (
+    <Box flexDirection="column" marginTop={marginTopOnTurn ? 1 : 0}>
+      <Text color="suggestion" bold>{`❯ ${t(first ? 'subagent-prompt-label' : 'subagent-followup-label')}`}</Text>
+      <Box paddingLeft={2} flexDirection="column">
+        <Text wrap="wrap">{text}</Text>
+      </Box>
+    </Box>
+  )
+}
+
 export function AssistantTextLeafRow({
   text,
   marginTopOnTurn,

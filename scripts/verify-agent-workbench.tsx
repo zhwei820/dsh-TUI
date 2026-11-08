@@ -589,9 +589,8 @@ console.log('--- W8: detail transcript page ---')
     () => React.createElement(SubagentDetailScene, props(1)),
     async frame => {
       await settled(() => frame.screen().includes(t('subagent-tab-summary')))
-      frame.stdin.write('\x1b[C')
-      await sleep(30) // 固定窗:pacing 逐页
-      frame.stdin.write('\x1b[C')
+      // With a transcript source the scene opens straight on the Transcript
+      // page (task → steps → answer), no paging needed.
       check('W8 进入转录页（历史已载入）', await settled(() => frame.screen().includes('history row')), frame.lines().slice(0, 12).join('|'))
       const loadOlderHint = 'o ' + t('subagent-transcript-load-older', { count: 400 })
       check('W8 页脚提示 o 载入更早', frame.screen().includes(loadOlderHint), frame.lines().slice(-3).join('|'))
@@ -613,6 +612,39 @@ console.log('--- W8: detail transcript page ---')
       }
       await sleep(100) // 固定窗:探针 负向断言：给错误的跟尾留出发生的时间
       check('W8 运行中新输出不把转录页拽到底部', frame.screen().includes('detail older row') && !frame.screen().includes('live out 3'), frame.lines().slice(4, 14).join('|'))
+    },
+  )
+}
+
+// ── W9: the task it was given, the steps, the answer ─────────────────────
+console.log('--- W9: detail transcript shows the delegated prompt ---')
+{
+  const { foldTranscriptLeaves } = await import('../src/components/messages/subagentTranscript.js')
+  const TASK = 'Audit the auth module. ' + 'Check every login path and report weak spots. '.repeat(6) + 'END-OF-TASK'
+  const events = [
+    ev('user.message', { anchor: 'u1', id: 'u1', seq: 1, time: NOW - 9_000, source: 'user', text: TASK, blocks: [] }),
+    ev('tool.call', { callId: 'c1', name: 'Read', argsJson: '{"file_path":"src/auth.ts"}', time: NOW - 8_000 }),
+    ev('tool.result', { callId: 'c1', isError: false, text: 'export function login() {}', time: NOW - 7_900 }),
+    ev('assistant.message', { anchor: 'a1', time: NOW - 7_000, blocks: [{ type: 'text', text: 'FINAL-ANSWER: two weak spots found.' }] }),
+    ev('user.message', { anchor: 'u2', id: 'u2', seq: 9, time: NOW - 5_000, source: 'compaction', text: 'summary of earlier turns', blocks: [] }),
+    ev('user.message', { anchor: 'u3', id: 'u3', seq: 10, time: NOW - 4_000, source: 'user', text: 'Now fix the first one.', blocks: [] }),
+  ]
+  const leaves: Array<{ kind: string; key: string; text?: string }> = []
+  foldTranscriptLeaves(events as never, leaves as never)
+  check('W9 fold: prompts become leaves, in order', leaves.map(leaf => leaf.kind).join(',') === 'prompt,tool,text,prompt', leaves.map(leaf => leaf.kind).join(','))
+  check('W9 fold: the task text is kept whole', leaves[0]?.text === TASK)
+  check('W9 fold: host bookkeeping (compaction) is not a prompt', !leaves.some(leaf => leaf.text === 'summary of earlier turns'))
+
+  const { SubagentDetailScene } = (await import('../src/components/SubagentDetailScene.js')) as unknown as { SubagentDetailScene: React.ComponentType<Record<string, unknown>> }
+  const loader = async (): Promise<Record<string, unknown>> => historyPage(events)
+  await withTerminal(
+    () => React.createElement(SubagentDetailScene, { subagent: makeRow('agent-prompt', { status: 'completed' }), onBack: () => {}, loadTranscript: loader as never }),
+    async frame => {
+      check('W9 opens on the transcript with the delegated task', await settled(() => frame.screen().includes(t('subagent-prompt-label'))), frame.lines().slice(0, 14).join('|'))
+      const flat = frame.lines().map(line => line.trim()).join(' ')
+      check('W9 the task is shown in full (wrapped, not truncated)', flat.includes('Audit the auth module.') && flat.includes('END-OF-TASK'), flat.slice(0, 400))
+      check('W9 the steps and the final answer follow', flat.includes('Read') && flat.includes('FINAL-ANSWER: two weak spots found.'))
+      check('W9 a later prompt is labelled as a follow-up', flat.includes(t('subagent-followup-label')) && flat.includes('Now fix the first one.'))
     },
   )
 }

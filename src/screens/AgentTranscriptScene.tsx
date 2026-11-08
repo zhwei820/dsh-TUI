@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Text, useInput, ScrollBox, type ScrollBoxHandle, useTerminalSize } from '../ui.js'
 import type { SubagentState } from '../dsh-adapter/subagents.js'
-import { AgentMessageLeafRow, AssistantTextLeafRow, ThinkingLeafRow, ToolLeafRow } from '../components/messages/TranscriptLeaves.js'
+import { AgentMessageLeafRow, AssistantTextLeafRow, PromptLeafRow, ThinkingLeafRow, ToolLeafRow } from '../components/messages/TranscriptLeaves.js'
 import {
   mergeLiveWindow,
   OUTPUT_WINDOW_CAP,
@@ -322,6 +322,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
               {transcript.status === 'ready' && (() => {
                 const merged = mergeLiveWindow(transcript.leaves, subagent, true)
                 const liveStart = merged.findIndex(row => row.kind === 'live')
+                // The delegating task is the first prompt of the WHOLE log; with
+                // older pages still unloaded the first visible one is a follow-up.
+                const firstPromptKey = transcript.hasOlder ? undefined : merged.find(row => row.kind === 'prompt')?.key
                 if (merged.length === 0) return <Text dimColor>{t('subagent-transcript-empty')}</Text>
                 return (
                   <>
@@ -363,6 +366,9 @@ export function AgentTranscriptScene({ subagent, onFailureRead, source, onExit, 
                       }
                       if (row.kind === 'text') {
                         return <AssistantTextLeafRow key={`text-${row.key}`} text={row.text} marginTopOnTurn={margin} />
+                      }
+                      if (row.kind === 'prompt') {
+                        return <PromptLeafRow key={`prompt-${row.key}`} text={row.text} first={firstPromptKey === row.key} marginTopOnTurn={margin} />
                       }
                       if (row.kind === 'agent-message') {
                         return <AgentMessageLeafRow key={`am-${row.key}`} message={row.message} selfAgentId={agentId} marginTopOnTurn={margin} />

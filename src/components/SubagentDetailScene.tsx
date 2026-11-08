@@ -1,7 +1,7 @@
 import React from 'react'
 import { Box, Text, useInput, ScrollBox, type ScrollBoxHandle, useTerminalSize } from '../ui.js'
 import type { SubagentOutputLine, SubagentState } from '../dsh-adapter/subagents.js'
-import { AgentMessageLeafRow, AssistantTextLeafRow, ThinkingLeafRow, ToolLeafRow } from './messages/TranscriptLeaves.js'
+import { AgentMessageLeafRow, AssistantTextLeafRow, PromptLeafRow, ThinkingLeafRow, ToolLeafRow } from './messages/TranscriptLeaves.js'
 import { AgentMessageFlowRow } from './messages/AgentMessageFlow.js'
 import { AgentMessageComposer, type ComposerKeyHandler } from './AgentMessageComposer.js'
 import type { AgentComposeTarget, AgentMessageControl, AgentMessageView } from './messages/agentTeam.js'
@@ -225,7 +225,9 @@ export function SubagentDetailScene({
   // 主屏 Agent View 盖过 Detail 时组件会卸载；从 Agent View 回来时按记忆
   // 恢复页码与滚动位置。
   const remembered = subagentDetailMemory.read(subagent.agentId)
-  const [page, setPage] = React.useState<DetailPage>(remembered === undefined ? 'summary' : remembered.page as DetailPage)
+  // First open lands on the full transcript when there is one: the task it
+  // was given, every step it took, and its final answer, top to bottom.
+  const [page, setPage] = React.useState<DetailPage>(remembered === undefined ? (loadTranscript !== undefined ? 'transcript' : 'summary') : remembered.page as DetailPage)
   // Pages follow the capabilities: no transcript source, no Transcript page;
   // no agent messages, no Messages page.
   const pages: readonly DetailPage[] = [
@@ -666,6 +668,9 @@ export function SubagentDetailScene({
               {transcript.status === 'ready' && (() => {
                 const merged = mergeLiveWindow(transcript.leaves, subagent, true)
                 const liveStart = merged.findIndex(row => row.kind === 'live')
+                // The delegating task is the first prompt of the WHOLE log; with
+                // older pages still unloaded the first visible one is a follow-up.
+                const firstPromptKey = transcript.hasOlder ? undefined : merged.find(row => row.kind === 'prompt')?.key
                 if (merged.length === 0) return <Text dimColor>{t('subagent-transcript-empty')}</Text>
                 return (
                   <>
@@ -716,6 +721,9 @@ export function SubagentDetailScene({
                       }
                       if (row.kind === 'text') {
                         return <AssistantTextLeafRow key={`text-${row.key}`} text={row.text} marginTopOnTurn={margin} />
+                      }
+                      if (row.kind === 'prompt') {
+                        return <PromptLeafRow key={`prompt-${row.key}`} text={row.text} first={firstPromptKey === row.key} marginTopOnTurn={margin} />
                       }
                       if (row.kind === 'agent-message') {
                         return <AgentMessageLeafRow key={`am-${row.key}`} message={row.message} selfAgentId={subagent.agentId} marginTopOnTurn={margin} />
