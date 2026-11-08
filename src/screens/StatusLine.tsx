@@ -527,7 +527,7 @@ const selectionBadge = formatSelectionBadge(channel.selection)
           id: 'tokens' as const,
           node: (
             <Text color="inactiveShimmer">
-              {formatTokens(channel.tokens.input)}→{formatTokens(channel.tokens.output)}
+              {formatTokens(channel.tokens.input)}→{formatTokens(channel.tokens.output)} {t('status-tokens-unit')}
             </Text>
           ),
         }]

@@ -61,6 +61,7 @@ import { ensureLegacySessionEventTypes, snapshotLiveSessionEvents } from './comp
 import { clearResumeTarget, resumeTargetFromArgv, stripResumeArgs, writeResumeTarget } from '../sessionHistory.js'
 import { cmdlineArgsOf, initialPromptFromCmdlineArgs } from './startup-args.js'
 import { readHomePrefs } from '../homePrefs.js'
+import { markWelcomeSeen, readWelcomeSeen } from '../welcomePrefs.js'
 import { handoffEventTag, formatHandoffNotice } from '../handoffEvents.js'
 import { adoptHeldInputs, collectHeldInputs, heldInputsResumeCommand, takeHeldInputs, writeHeldInputs } from '../heldInputs.js'
 import { armFirstFrameAck, beginHandoffAck, handoffAttemptId, ownsAltScreenExit } from '../handoffAck.js'
@@ -2667,6 +2668,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
    * so a process that dies before the first frame does not consume it.
    */
   const homeSeen = readHomePrefs().seen === true
+  const welcomeSeen = readWelcomeSeen()
   /**
    * 「普通启动」在这里有两档口径，差在**工作区目标算不算**：
    *
@@ -2722,6 +2724,9 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
     openHomeOnBoot,
     launchpadOnBoot,
     classicSplash: bootedLaunchpad,
+    // The welcome box greets the first launch only (~/.dsh-tui/welcome.json).
+    welcomeBox: !welcomeSeen,
+    onWelcomeShown: () => { if (!welcomeSeen) markWelcomeSeen() },
     promptSuggestions: config.promptSuggestions !== false,
     onboardingOnBoot,
     // The dsh-tui-extensions row's services (managed dialogs, status line,

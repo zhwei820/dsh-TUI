@@ -442,6 +442,8 @@ export function Chat({
   openHomeOnBoot,
   launchpadOnBoot,
   classicSplash,
+  welcomeBox,
+  onWelcomeShown,
   promptSuggestions,
   onboardingOnBoot,
   starPrompt,
@@ -590,6 +592,11 @@ export function Chat({
   /** Classic DSH splash (whale + wordmark) over the welcome box; the
    *  host passes the `launchpad` setting (see LogoHeader). */
   classicSplash?: boolean
+  /** The compact welcome box above the transcript (default on). The host
+   *  shows it on the first launch only and turns it off afterwards. */
+  welcomeBox?: boolean
+  /** The welcome box was actually shown (the host records it, one-shot). */
+  onWelcomeShown?(): void
   /** Prompt suggestion after each turn (the host passes cordis
    *  `promptSuggestions`, on by default; omitted = off): one side call,
    *  Tab to take it. */
@@ -1561,6 +1568,11 @@ export function Chat({
   /** ctrl+r history-search entries (loaded on open, persists). */
   const [historyEntries, setHistoryEntries] = React.useState<readonly HistoryEntry[]>([])
   const [historyFill, setHistoryFill] = React.useState<string | null>(null)
+  // The one-shot welcome box: once it has been on screen, the host records
+  // it so later launches open straight onto the conversation.
+  React.useEffect(() => {
+    if (classicSplash !== true && welcomeBox !== false) onWelcomeShown?.()
+  }, [])
   // Prompt suggestion: when a turn settles, one side call
   // proposes the user's likely next message — shown under the input, taken
   // with Tab on an empty input. Pure UI state; a new turn or typing drops it.
@@ -7188,6 +7200,7 @@ export function Chat({
           // (see suppressLogoIntroRef).
           skipIntro={suppressLogoIntroRef.current || channel.rows.length > 30}
           classic={classicSplash === true}
+          welcome={welcomeBox !== false}
         />
         {/* The startup loaded-context panel: before the first message the
             transcript is empty, so the inventory of what this conversation

@@ -17,22 +17,26 @@ export const ALL_PLUGIN_FIELDS = '*'
 const PLUGIN_FIELD_KEY = /^[a-z][a-z0-9_-]*(:[a-z][a-z0-9_-]*)*$/u
 
 /**
- * Quiet defaults: a quiet footer — the context readout, the goal
- * chip, and `? for shortcuts` / the session-mode line under the input. Every
- * other field (model, effort, cwd, cache, cost, the segmented context bar)
- * stays one `/settings → statusBar.*` switch away.
+ * Quiet defaults: the current folder and Git branch, the context readout,
+ * the session's cumulative tokens and estimated ¥ cost, the goal chip, and
+ * `? for shortcuts` / the session-mode line under the input. Every other
+ * field (model, effort, cache, the segmented context bar) stays one
+ * `/settings → statusBar.*` switch away.
  */
 export const DEFAULT_STATUS_BAR: Readonly<StatusBarConfig> = Object.freeze({
   compact: true,
   model: false,
   thinking: false,
-  cwd: false,
+  // Current folder and Git branch stay in view (user ask, 2026-11-08).
+  cwd: true,
   contextUsage: true,
   cache: false,
-  tokens: false,
-  cost: false,
+  // Session totals stay in view (user ask, 2026-11-08): cumulative tokens
+  // in→out and the estimated ¥ spend.
+  tokens: true,
+  cost: true,
   tps: false,
-  gitBranch: false,
+  gitBranch: true,
   sessionTitle: false,
   sessionId: false,
   goal: true,

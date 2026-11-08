@@ -1371,6 +1371,7 @@ const dict = {
   'statusline-hint-working': { zh: 'esc 中断', en: 'esc to interrupt' },
   'statusline-hint-interrupting': { zh: '中断中…', en: 'interrupting…' },
   'statusline-hint-shortcuts': { zh: '? 查看快捷键', en: '? for shortcuts' },
+  'status-tokens-unit': { zh: 'tokens', en: 'tokens' },
   'turn-worked-for': { zh: '已工作 {{duration}}', en: 'Worked for {{duration}}' },
   'turn-done-at': { zh: '完成于 {{time}}', en: 'done {{time}}' },
   'statusline-hint-suggestion': { zh: '↹ Tab：{{text}}', en: '↹ Tab: {{text}}' },
