@@ -21,7 +21,7 @@ import { isMinimalUiMode } from '../minimalUiMode.js'
 import { noteFrameCause, noteListGeometry } from '../ink/geometry-trace.js'
 import { getTerminalFlushTick } from '../ink/flush-tick.js'
 import { TurnInterruptedRow } from './TurnInterruptedRow.js'
-import { TurnUsageRow } from './TurnUsageRow.js'
+import { TurnUsageRow, TurnWorkedRow, workedLineEligible } from './TurnUsageRow.js'
 import { LogoV2 } from './LogoV2.js'
 import { WelcomeBox } from './WelcomeBox.js'
 import type { Brand } from '../branding.js'
@@ -667,7 +667,9 @@ export function MessageList({
     // pure PRESENTATION gate — filtering here (not render-null) keeps the
     // row out of the window entirely, so no cached height or mounted node
     // survives the toggle. The ledger data itself is collected regardless.
-    if (!turnUsageRow) out = out.filter(row => row.kind !== 'turn-summary')
+    // Off: only long completed turns keep their row, rendered as the compact
+    // `✻ Worked for … · done …` line (TurnWorkedRow).
+    if (!turnUsageRow) out = out.filter(row => row.kind !== 'turn-summary' || workedLineEligible(row.turnUsage))
     // --- consecutive-job groups ------------------------------------------
     // A batch of run_in_background calls lands as N adjacent job cards (the
     // projection pushes the whole roster in one sync) and EVERY card pays
@@ -1656,6 +1658,7 @@ export function MessageList({
               toolLiveOutputDropped={tool?.liveOutputDropped}
               fullscreen={fullscreen}
               turnUsage={row.turnUsage}
+              turnLedger={turnUsageRow}
               subagent={subagent}
               subagentGroupIndex={subagentSlot?.index}
               subagentGroupCount={subagentSlot?.memberIds.length}
@@ -1764,6 +1767,8 @@ type MemoRowProps = {
   /** Turn-summary payload (kind === 'turn-summary'); set-once immutable
    *  ref created at turn.end, so a plain ref compare is complete. */
   turnUsage: TurnUsageSummary | undefined
+  /** Detailed ledger (`turnUsageRow` on) vs the compact worked-for line. */
+  turnLedger: boolean
   // SubagentRow, stable ref (subagent lifecycle events update the store, not
   // the row ref itself, so a plain ref compare stays correct).
   subagent: SubagentRow | undefined
@@ -1857,6 +1862,7 @@ function TranscriptRow({
   toolLiveOutputDropped,
   fullscreen,
   turnUsage,
+  turnLedger,
   subagent,
   subagentGroupIndex,
   subagentGroupCount,
@@ -2113,6 +2119,13 @@ function TranscriptRow({
       // the transcript's right margin (an auto-width row has nothing to push
       // against).
       if (turnUsage === undefined) return null
+      if (!turnLedger) {
+        return (
+          <Box marginTop={marginTopOnTurn ? 1 : 0} ref={ref}>
+            <TurnWorkedRow usage={turnUsage} lang={getLang()} />
+          </Box>
+        )
+      }
       return (
         <Box paddingLeft={2} width="100%" flexDirection="row" justifyContent="flex-end" ref={ref}>
           <TurnUsageRow usage={turnUsage} />

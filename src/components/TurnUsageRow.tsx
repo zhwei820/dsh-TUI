@@ -43,3 +43,36 @@ export function TurnUsageRow({ usage }: { usage: TurnUsageSummary }): React.Reac
     <Text color="subtle" wrap="truncate">{turnUsageParts(usage, { model: true }).join(' · ')}</Text>
   )
 }
+
+/** Shortest turn that earns the compact `✻ Worked for …` line: quick
+ *  exchanges finish while the user is still reading, so a line per turn
+ *  would be noise. */
+export const WORKED_LINE_MIN_MS = 10_000
+
+/** Whether a turn closes with the compact line (the detailed ledger off). */
+export function workedLineEligible(usage: TurnUsageSummary | undefined): boolean {
+  return usage !== undefined && usage.outcome === 'completed' && usage.durationMs >= WORKED_LINE_MIN_MS
+}
+
+/** `7:46 AM` / `07:46` in the active language; undefined without a stamp. */
+export function formatTurnEnd(endedAt: number | undefined, lang: string): string | undefined {
+  if (endedAt === undefined || !Number.isFinite(endedAt)) return undefined
+  return new Date(endedAt).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+/**
+ * The compact closing line of a long turn: `✻ Worked for 1m 14s · done
+ * 7:46 AM`. Shown when the detailed ledger (`turnUsageRow`) is off; a quiet
+ * left-aligned note of how long the work took and when it finished — the
+ * useful part when the user looks back at the screen later.
+ */
+export function TurnWorkedRow({ usage, lang }: { usage: TurnUsageSummary; lang: string }): React.ReactNode {
+  const end = formatTurnEnd(usage.endedAt, lang)
+  const worked = t('turn-worked-for', { duration: formatDuration(usage.durationMs) })
+  return (
+    <Text color="subtle" wrap="truncate-end">
+      <Text color="accent">✻ </Text>
+      {end === undefined ? worked : `${worked} · ${t('turn-done-at', { time: end })}`}
+    </Text>
+  )
+}

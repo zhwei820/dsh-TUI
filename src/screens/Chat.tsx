@@ -410,6 +410,9 @@ function peekKey(image: TranscriptImage, title: string | undefined): string {
 /** Distinguishes reveal keyspaces of concurrently mounted Chat roots. */
 let revealRootSequence = 0
 
+/** A turn at least this long earns the `※ recap:` row when it settles. */
+const AUTO_RECAP_TURN_MS = 60_000
+
 export function Chat({
   channel,
   questionStore,
@@ -1683,13 +1686,8 @@ export function Chat({
   // the dim AutoRecapRow. Failures stay silent in auto mode — `/recap`
   // surfaces them; the summary never enters the transcript or session log.
   const autoRecapSessionId = channel.agentId
-  React.useEffect(() => {
-    // A session switch retires the previous recap outright — an old
-    // session's 回顾 has no place above a new conversation.
-    setRecap(null)
-    if (!channel.autoRecapOnOpen) return
-    // No conversation yet (/new): nothing to recap, don't even fire.
-    if (!channel.rows.some(row => row.kind === 'user' || row.kind === 'assistant')) return
+  /** Launch the auto recap (the dim `※ recap:` row); returns its abort. */
+  const startAutoRecap = (): (() => void) => {
     recapAbortRef.current?.abort()
     const controller = new AbortController()
     recapAbortRef.current = controller
@@ -1710,7 +1708,34 @@ export function Chat({
       if (!controller.signal.aborted) setRecap(null)
     })
     return () => controller.abort()
+  }
+  React.useEffect(() => {
+    // A session switch retires the previous recap outright — an old
+    // session's 回顾 has no place above a new conversation.
+    setRecap(null)
+    if (!channel.autoRecapOnOpen) return
+    // No conversation yet (/new): nothing to recap, don't even fire.
+    if (!channel.rows.some(row => row.kind === 'user' || row.kind === 'assistant')) return
+    return startAutoRecap()
   }, [autoRecapSessionId])
+  // A long turn (≥ AUTO_RECAP_TURN_MS) gets the same recap when it settles:
+  // the user likely stepped away while it ran, and `※ recap:` catches them
+  // up on return. Same switch as the open-time recap (`recapOnOpen`).
+  const recapTurnStartRef = React.useRef<number | undefined>(channel.working ? Date.now() : undefined)
+  const recapWasWorkingRef = React.useRef(channel.working)
+  React.useEffect(() => {
+    const was = recapWasWorkingRef.current
+    recapWasWorkingRef.current = channel.working
+    if (channel.working) {
+      if (!was) recapTurnStartRef.current = Date.now()
+      return
+    }
+    const startedAt = recapTurnStartRef.current
+    recapTurnStartRef.current = undefined
+    if (!was || startedAt === undefined || !channel.autoRecapOnOpen) return
+    if (Date.now() - startedAt < AUTO_RECAP_TURN_MS) return
+    startAutoRecap()
+  }, [channel.working])
   // The user starts a new message → the auto recap has served its purpose
   // (catching them up) and bows out. A newer user row is the signal; the
   // assistant's own streamed rows (and a teammate's message) don't count.

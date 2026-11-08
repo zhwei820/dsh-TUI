@@ -249,6 +249,9 @@ const GROUPS = {
 // 推荐回复（简洁风格）：解析契约、回合结束请求一次、提示行 ↹ Tab 显示（输入框内不放占位）、
 // Tab 填入、新回合/打字撤掉。
     ["verify-prompt-suggestion", ['node', '--import', 'tsx/esm', 'scripts/verify-prompt-suggestion.tsx']],
+// 回合收尾行：长回合 ✻ Worked for … · done …（短/中断回合不显示、turnUsageRow 换回详细用量）；
+// ≥60s 的回合结束后自动 ※ recap。
+    ["verify-turn-worked", ['node', '--import', 'tsx/esm', 'scripts/verify-turn-worked.tsx']],
 // 子代理流投影批处理：chunk 风暴的 snapshot+行投影必须按 16ms 帧
 // 对齐合并（token 率 100-300/s 下的全量深拷贝热路径），且生命周期
 // 事件（tool/call、subagent/end）保持同步立即可见。
