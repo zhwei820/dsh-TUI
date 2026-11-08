@@ -295,6 +295,8 @@ the dashboard alone does not acknowledge every child. Task status stays failed.
 
 ## Keybindings & Mouse
 
+### Keys
+
 `Enter` send · `Tab` complete · `Ctrl+Enter` interrupt and send · `Alt+Up` recall the last message · `Esc` closes local layers before interrupting a running turn, double-`Esc` rewinds on empty idle input · `Ctrl+B` side panel · `Ctrl+O` details · `Ctrl+R` history (`↑`/`↓` and `Ctrl+R` are scoped to the current project) · `Ctrl+V` paste · `Ctrl+Shift+E` fullscreen draft editor · `?` shortcuts · `←` open the session manager (DSH backgrounds the current session first).
 In both the launchpad and chat, `Ctrl+U` deletes from the caret to the current line start, preserving text to the right and whole image chips. It edits only the focused input.
 
@@ -312,6 +314,8 @@ The goal bar stays on one summary line: hovering truncated goal text in fullscre
 While the model is working: `Enter` steers, `Tab` queues a follow-up, `Ctrl+Enter` interrupts and sends. Input that names a command is still a command — with or without arguments — so `/model` or `/new` reach their own gate (and the `/` overlay sinks the commands that affect the running conversation) instead of silently becoming an interruption; only text that is not a command — and a direct skill gesture such as `/skill-name …` — steers.
 
 When DSH ends a turn because its session was disposed, the transcript shows “Session stopped”; user interruption keeps its existing prompt for what to do next. This describes the reported stop reason and does not recover a stuck session or its queued inputs.
+
+### Terminal input
 
 Windows Neovim/Vim terminals identified by `NVIM` or `VIM_TERMINAL` retain VT input instead of enabling ConPTY mode 9001. For another incompatible embedded host, set `DSH_TUI_DISABLE_WIN32_INPUT_MODE=1` before launch (PowerShell: `$env:DSH_TUI_DISABLE_WIN32_INPUT_MODE="1"`). The same gate applies at startup and after resume. Native Windows Terminal, conhost and VS Code keep their existing mode unless disabled; the opt-out can remove modified-Enter reporting.
 
@@ -333,10 +337,10 @@ The window is bounded like the record hold (about a second, never extended by la
 Inside that window, with a query of the matching response type outstanding, same-shaped literal input can still be claimed as a reply; to type it, wait for the window to close (about a second), or avoid that shape while a query is outstanding.
 
 Fragmented SGR mouse reports no longer land in the prompt as text: an incomplete report header is held until the rest arrives, and a report that completes is handled as a mouse event. The hold is armed only while mouse reporting is actually active (fullscreen, with mouse tracking enabled); inline sessions and terminals that never enable tracking keep the existing behavior. The claim window is bounded from first capture (at most 1 second; 64 bytes max), and a continuation arriving inside it is still claimed rather than replayed. Release has no timer: once a parse call sees either bound exceeded, it replays the held bytes as ordinary keys in arrival order — literal input can be delayed, but is never dropped.
-A completed text-only assistant reply containing only a leading `⏵` status line remains visible in the conversation and can be selected for copying. Live status lines and status lines followed by a real answer stay out of the transcript body.
 
+### Mouse and selection
 
-Plugin slash-command results, including errors, remain as local transcript blocks for scrolling and copying during the current session. Indentation and line breaks are preserved. Each report retains at most 200 lines, 65,536 UTF-16 code units and 4,000 terminal cells per line, plus a visible truncation marker. The local display rows are not sent as model input or replayed as conversation history. The backend may separately persist command audit events and their results. Older local report blocks are evicted within the shared 600-row budget. Explicit built-in report layouts (such as `/goal`) keep their existing formatting.
+Fullscreen mouse selection stays in the pane where the gesture starts, including chat, sidebar and either diff column. Diagonal, word and line selection copy that pane's text; soft wraps join independently, source newlines remain, and divider drags only resize.
 
 Mouse (fullscreen): drag to select and copy, double/triple click to select a word or line, click tool cards, timeline ticks and `[Image #N]` previews.
 
@@ -348,6 +352,8 @@ During a fullscreen text drag, the native cursor follows the selected text's edg
 
 File paths in prose can open the file-action menu; automatic detection does not extract a path from inside a slash-delimited token such as `working/idle/needs-input` or a date such as `2024/01/15`.
 
+### Pasting and dropped files
+
 **Pasting**: the launchpad accepts clipboard images and pasted image paths as `[Image #N]` attachments; `Enter` sends them with the first message. Commands that do not accept images preserve the draft and its attachments. Image chips behave like chat: arrows step across them, Backspace at the end or Delete at the start removes the whole image, and Ctrl+W never splits a chip. Text pasted on the launchpad is folded to one line. In chat, native and bracketed paste keeps ordinary text and newlines, and never submits itself on arrival. On Windows terminals that deliver a paste as win32-input-mode key records, a record stream leaked into the payload is decoded back into the characters its `Uc` field encodes — newlines included — so the composer's line count matches what was pasted; only records with no character meaning are stripped (a multi-line paste no longer leaves stray `_`), and a complete record is always consumed before an ESC-less tail, so no payload character is deleted along with an orphan escape. Pasted CRLF collapses to a single newline; genuine underscores and bracketed-paste text are untouched.
 
 **Dropped files**: a native Windows desktop drop (Windows Terminal / OpenConsole) arrives as an OSC 8 hyperlink; the parser restores its `file://` URI to a decoded local path before paste hygiene runs, so the `]8;id=…;` parameter bytes never reach the draft. Image paths enter the existing image staging pipeline; other files are inserted as a referenceable path (a path containing whitespace arrives in the composer's quoted `"…"` single-token form). Only `file://` URIs are restored, and it is fail-closed: a remote authority/UNC, a payload carrying several distinct URIs, or a URI that carries several tokens is refused and stays literal text rather than guessed.
@@ -355,6 +361,8 @@ Fullscreen drag-copy uses the final highlight. If a live row changed during a dr
 move the selection back to stable text to establish a new baseline. A stationary
 selection whose copied text changes is still refused; automatic scroll/resize
 does not clear that protection.
+
+### Display and session ownership
 
 The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy.
 
@@ -367,14 +375,20 @@ Full reference: [Interaction and commands](docs/interaction.en.md).
 
 `/resume` · `/home` · `/agentview` · `/bg` · `⌸` open the same session manager: workspace rail, live state, filter, ★ pins. Also `/model` `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/settings` `/setup` `/status` `/cost` `/jobs` `/skills` `/mcp` `/auth` `/login` `/update`.
 
+### Sessions and kernels
+
 On DSH, `/fork` keeps the current session open and creates a resumable copy; a copy with history records its parent and appears in the same session family.
 
-`/dsh` switches directly to the DSH kernel, just like choosing it in `/kernel`: the choice is remembered and the process restarts into a new session. A running turn blocks switching; when DSH is already current the session is kept. Availability checks follow the same picker flow.
+`/dsh` switches directly to the DSH kernel, just like choosing it in `/kernel`: the choice is remembered and the process restarts into a new session. A running turn blocks switching; when DSH is already current the session is kept. Availability checks follow the same picker flow. DSH is the only built-in kernel; installed plugin backends appear in the same picker and can also be selected with `--backend <id>` (experimental).
+
+### Model and effort
 
 `/model` shows models and reasoning effort on one page. DSH has provider tabs with **Recently used** first, moving the current model to the top; `Tab` / `Shift+Tab` select the next / previous provider. `↑/↓` select a model, `←/→` adjust its effort, `Enter` applies the model and any explicit effort draft, and `Esc` cancels. Changing only the model preserves the backend's preference handling. Mouse users can click the available tabs, models, effort levels, and select/cancel hints; clicking an effort level immediately applies the focused model and that effort and closes the picker. The wheel moves through models.
 
 Short terminals keep the focused model and select/cancel actions visible, hiding descriptions and neighboring models first, then the effort row when only two rows remain.
 Shortcuts sit below the title and effort levels have their own section; the picker uses the terminal background while covering the text underneath.
+
+### Session manager
 
 The session manager focuses the most recently used session in the current workspace; if there is no history, it focuses the new-session card. Moving between the workspace rail and session list preserves the selected session, including when the mouse enters the list. Switching to another workspace selects its latest session; switching back also starts from its latest session instead of restoring an earlier selection. Press `←` to move to the workspace rail. DST preloads the session list in the background after startup and updates the cache on success. The manager paints the last successful list immediately. Opening `/resume` while that read is pending shares the request and receives results that have already arrived. This first-paint snapshot survives restarts and is isolated by backend and storage directory. With or without a snapshot, the current workspace loads first before other workspaces are filled in. Fresh sessions and titles merge into the list immediately; cached rows from other workspaces remain until the full read finishes. Background updates preserve a session the user has selected manually. The browser groups sessions by their own cwd. DSH resolves the current workspace's metadata first and publishes it before reading other workspaces' logs, even when it has fewer than 32 sessions. Titles that require a deeper DSH log scan appear first with a fallback name and update in place when recovery finishes.
 The session manager shows the selected workspace's absolute path once, beneath the source tabs (wrapping when needed; hover reveals exceptionally long paths). Session rows show their title and essential status/time instead of repeating the directory; DSH size and model remain in the title tooltip.
@@ -392,9 +406,11 @@ data in the same PID namespace; uncertain identities remain occupied. Reuse by
 another process can still retain a stale claim, so this is not a general fix for
 PID reuse across platforms.
 
+### Background work
+
 **Background jobs**: card headers open the focused task panel. Click the card body or use `Ctrl+O` to toggle the command between its first statement and full script. Commands and output use separate colored edges with `❯` (`>` on Windows) and `≡` on their first rows; output always stays at the latest two visible rows. `/jobs` and the side panel keep the full output scrollable, while `e` toggles the focused command. Consecutive blank script lines collapse to one.
 
-**Background sessions**: On the DSH backend, `/bg` or `←` on an empty prompt backgrounds the current session and opens the session manager; `Esc` returns to it. Background sessions run in this process and stop when the TUI exits. Logs survive. On other kernels, those entries open the session manager without backgrounding the session.
+**Background sessions**: On the DSH backend, `/bg` or `←` on an empty prompt backgrounds the current session and opens the session manager; `Esc` returns to it. Background sessions run in this process and stop when the TUI exits. Logs survive. On plugin backends, those entries open the session manager without backgrounding the session.
 
 Full commands: [Interaction and commands](docs/interaction.en.md).
 
@@ -413,7 +429,7 @@ dsh profile → dsh-base → dsh-TUI Cordis patch → agent preset + DSH service
   → session/event → Channel projection → React components → Ink/Yoga renderer → terminal
 ```
 
-The TUI handles interaction and presentation. The session log is the source of truth. DSH services own models, tools, and persistence. Long sessions render in O(visible window).
+The TUI handles interaction and presentation. The session log is the source of truth. DSH services own models, tools, and persistence. Long sessions render in O(visible window). A completed text-only assistant reply whose only line is a leading `⏵` status line stays in the conversation and can be selected for copying; live status lines and status lines followed by a real answer stay out of the transcript body.
 
 Runtime path, module boundaries, performance notes and persistence locations: [Architecture and limitations](docs/architecture.en.md).
 
