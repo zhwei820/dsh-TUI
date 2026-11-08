@@ -108,6 +108,15 @@ function fixture(jobs?: unknown, options: { throwOnEvent?: string; effectCleanup
   bindChannelCommands(raw, mount.channel)
   assert.equal(mount.channel.backendModes(), undefined, 'DSH keeps its shared mode pipeline')
   assert.equal(mount.channel.backendMcp(), undefined, 'DSH reports MCP status without server controls')
+  // The subagent send path must survive the UI projection: without it every
+  // agent view renders read-only with no composer.
+  assert.ok(raw.subagentControl.message !== undefined, 'the DSH channel serves subagent messaging')
+  const sendPath = mount.channel.subagentControl.message
+  assert.ok(sendPath !== undefined, 'subagentControl.message survives the UI projection')
+  assert.equal(sendPath.via, raw.subagentControl.message.via)
+  assert.equal(sendPath.steer, raw.subagentControl.message.steer)
+  assert.ok(Array.isArray(sendPath.messages()), 'messages() reads through the projection')
+  assert.equal(typeof sendPath.submit, 'function')
   mount.channel.setWhale(false)
   assert.equal(raw.whale, false)
   // The minimal-UI flag: `minimal` stays a live deprecated alias of

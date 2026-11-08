@@ -88,10 +88,24 @@ export function createChannelUi(channel: ChannelUi, mode: AdapterMode, lease: Ch
           const control = channel.subagentControl
           const projected = methods(control, { interrupt: 'mutate' } as Readonly<Record<keyof typeof control, HostEffectClass>>)
           const history = control.history
-          // The transcript read is an optional capability (Claude only): the
-          // method's absence is the signal the detail scene reads.
-          if (history === undefined) return projected
-          return Object.freeze({ ...projected, history: (id: string, window?: import('../../agent/capabilities.js').SubagentTranscriptWindow) => { check('read-only'); return history.call(control, id, window) } })
+          const message = control.message
+          // The transcript read and the send path are optional capabilities:
+          // each one's absence is the signal the views read (no transcript
+          // page / read-only, no composer), so a present one must be carried
+          // through — dropping `message` here left every real session's
+          // agent view read-only.
+          if (history === undefined && message === undefined) return projected
+          return Object.freeze({
+            ...projected,
+            ...(history === undefined ? {} : { history: (id: string, window?: import('../../agent/capabilities.js').SubagentTranscriptWindow) => { check('read-only'); return history.call(control, id, window) } }),
+            ...(message === undefined ? {} : {
+              message: Object.freeze({
+                via: message.via,
+                steer: message.steer,
+                ...methods(message, { listTargets: 'read-only', submit: 'mutate', messages: 'read-only' } as Readonly<Record<keyof typeof message, HostEffectClass>>),
+              }),
+            }),
+          })
         }
         if (key === 'jobControl') {
           const control = channel.jobControl as ChannelUi['jobControl'] | undefined
