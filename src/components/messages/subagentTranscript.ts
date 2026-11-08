@@ -340,6 +340,32 @@ export function mergeLiveWindow(leaves: readonly TranscriptLeaf[], subagent: Sub
   return rows
 }
 
+/**
+ * Overlay the live agent-message feed on loaded history leaves. The feed is
+ * folded into the leaves only when a page loads, so without this a message
+ * sent after the load stays invisible, and a placed one keeps its load-time
+ * state ('queued') after the child claims it, until the next reload. Placed
+ * rows take their newest view by messageId; a message the loaded span has
+ * not placed (newer than the load, and not before `messagesFrom`, which
+ * belongs to unloaded older pages) is appended at the tail.
+ */
+export function withLiveMessages(leaves: readonly TranscriptLeaf[], messages: readonly AgentMessageView[], messagesFrom: number): TranscriptLeaf[] {
+  if (messages.length === 0) return [...leaves]
+  const latest = new Map(messages.map(message => [message.messageId, message]))
+  const placed = new Set<string>()
+  const rows = leaves.map(leaf => {
+    if (leaf.kind !== 'agent-message') return leaf
+    placed.add(leaf.message.messageId)
+    const current = latest.get(leaf.message.messageId)
+    return current === undefined || current === leaf.message ? leaf : { ...leaf, message: current }
+  })
+  for (const message of messages) {
+    if (placed.has(message.messageId) || message.observedAt < messagesFrom) continue
+    rows.push({ kind: 'agent-message', key: `am-${message.messageId}`, message })
+  }
+  return rows
+}
+
 export type TranscriptLoader = (agentId: string, window?: SubagentTranscriptWindow) => Promise<SubagentTranscriptView | null>
 
 /**

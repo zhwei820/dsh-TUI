@@ -2142,6 +2142,7 @@ const dict = {
   'agent-message-compose-title': { zh: '发送给 {{name}}', en: 'Send to {{name}}' },
   'agent-message-submitted': { zh: '最近发送', en: 'submitted' },
   'agent-message-inbox-note': { zh: '已送进对方收件箱，不代表已读或已执行', en: 'in the inbox; not necessarily read or acted on' },
+  'agent-message-claimed-note': { zh: '子代理已取走并开始处理', en: 'the agent took it and is working on it' },
   'agent-message-unavailable': { zh: '当前无法发送', en: 'sending is unavailable right now' },
   'agent-message-target-ambiguous': { zh: '有同名代理，按 id {{id}} 区分', en: 'duplicate names; told apart by id {{id}}' },
   'agent-message-target-nameless': { zh: '此代理没有可用的名称，无法发送', en: 'this agent has no name to address; cannot send' },

@@ -327,6 +327,21 @@ function createSessionSubagentProjection(
     })
   }
 
+  /** A composer prompt the child CLAIMED into a turn. The continuation
+   *  manager stamps the browser prompt's durable source `{ kind: 'user',
+   *  rpcId: requestId }`, and the agent loop appends that `user/message` to
+   *  the child's log only when a turn takes it off the inbox (an admitted but
+   *  unclaimed message lives in `agent/inbox/spliced` alone). So the rpcId
+   *  matching our intent is the backend fact that advances 'queued' to
+   *  'delivered' — never inferred from timing. */
+  const noteChildClaimedPrompt = (childId: string, event: unknown): void => {
+    const source = (event as { readonly data?: { readonly source?: { readonly kind?: unknown; readonly rpcId?: unknown } } }).data?.source
+    if (source?.kind !== 'user' || typeof source.rpcId !== 'string') return
+    const sent = agentMessages.find(message => message.intentId === source.rpcId && message.to === childId)
+    if (sent === undefined) return
+    foldAgentMessage(agentMessages, { ...sent, state: 'delivered', text: '', observedAt: sent.observedAt })
+  }
+
   /** A child session's own descriptor can beat the host's spawn edge. With no
    *  row to attribute it to the label would be lost for good — an external
    *  child never gets a catalog to re-state it — so park it under the session
@@ -345,7 +360,10 @@ function createSessionSubagentProjection(
       rememberEarlyLabel(session, event)
       return false
     }
-    if (event.type === 'user/message') noteChildRelay(id, event)
+    if (event.type === 'user/message') {
+      noteChildRelay(id, event)
+      noteChildClaimedPrompt(id, event)
+    }
     store.onSessionEvent(id, event)
     if (event.type === 'assistant/chunk') {
       streamDirty = true

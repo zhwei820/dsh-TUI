@@ -8,6 +8,7 @@ import type { AgentComposeTarget, AgentMessageControl, AgentMessageView } from '
 import { subagentDetailMemory } from './subagentDetailMemory.js'
 import {
   mergeLiveWindow,
+  withLiveMessages,
   OUTPUT_WINDOW_CAP,
   TRANSCRIPT_OLDER_CHUNK,
   useSubagentTranscript,
@@ -671,7 +672,7 @@ export function SubagentDetailScene({
               {transcript.status === 'loading' && <Text dimColor>{`⏳ ${t('subagent-transcript-loading')}`}</Text>}
               {transcript.status === 'unavailable' && <Text color="error">{t('subagent-transcript-unavailable')}</Text>}
               {transcript.status === 'ready' && (() => {
-                const merged = mergeLiveWindow(transcript.leaves, subagent, true)
+                const merged = mergeLiveWindow(withLiveMessages(transcript.leaves, messages, transcript.messagesFrom), subagent, true)
                 const liveStart = merged.findIndex(row => row.kind === 'live')
                 // The delegating task is the first prompt of the WHOLE log; with
                 // older pages still unloaded the first visible one is a follow-up.

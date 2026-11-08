@@ -248,7 +248,10 @@ export function AgentMessageComposer({ target, control, messages, focused, onFoc
         <Box flexDirection="row" gap={1}>
           <Text dimColor>{`${t('agent-message-submitted')}: `}</Text>
           <Text color={agentMessageStateColor(latestIntentState)}>{agentMessageStateText(latestIntentState)}</Text>
-          <Text dimColor>{` · ${t('agent-message-inbox-note')}`}</Text>
+          {/* 'delivered' = the child's log shows a turn took it (DSH:
+              subagent-projection noteChildClaimedPrompt); before that the
+              receipt only proves the inbox. */}
+          <Text dimColor>{` · ${t(latestIntentState === 'delivered' ? 'agent-message-claimed-note' : 'agent-message-inbox-note')}`}</Text>
         </Box>
       )}
       <Text dimColor>
