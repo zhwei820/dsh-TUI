@@ -94,8 +94,8 @@ const SCENARIOS: Scenario[] = [
   {
     id: 'body-fold-hint',
     tool: { name: 'read', resultFull: 'l1\nl2\nl3\nl4\nl5' },
-    zh: ['… +2 行（ctrl+o 展开）'],
-    en: ['… +2 lines (ctrl+o to expand)'],
+    zh: ['… +2 行'],
+    en: ['… +2 lines'],
   },
   {
     id: 'terminal-title-fold-hint',
@@ -106,8 +106,8 @@ const SCENARIOS: Scenario[] = [
       resultFull: '',
     },
     opts: { foldTerminalCommand: true },
-    zh: ['Bash(cd /tmp)', '… +2 行（ctrl+o 展开）'],
-    en: ['Bash(cd /tmp)', '… +2 lines (ctrl+o to expand)'],
+    zh: ['Bash(cd /tmp)', '… +2 行'],
+    en: ['Bash(cd /tmp)', '… +2 lines'],
   },
   {
     id: 'exit-code-line',
@@ -205,10 +205,10 @@ async function runPass(lang: 'zh' | 'en') {
     marginTopOnTurn: false,
     verbose: false,
   }))
-  const splitExpected = lang === 'zh' ? '行（ctrl+o 展开）' : 'lines (ctrl+o to expand)'
+  const splitExpected = lang === 'zh' ? '行' : 'lines'
   check(`[${lang}] split-diff 隐藏行提示本地化`, await settled(() => screenOf(splitRig.term).includes(splitExpected)))
   // The other language's copy must never leak into this pass's screen.
-  const splitForbidden = lang === 'zh' ? 'lines (ctrl+o' : '行（ctrl+o'
+  const splitForbidden = lang === 'zh' ? ' lines' : ' 行'
   check(`[${lang}] split-diff 无对方语言残留`, !screenOf(splitRig.term).includes(splitForbidden))
 }
 

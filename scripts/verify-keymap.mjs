@@ -150,12 +150,13 @@ resetKeymapOverrides()
 // ---- hints follow remaps ----------------------------------------------------
 setLang('en')
 check('hint: default transcript key is ctrl+o', primaryComboString('transcript') === 'ctrl+o', primaryComboString('transcript'))
-check('hint: default fold marker names ctrl+o', foldLongLines('x'.repeat(1100)).text.includes('ctrl+o'))
+// Fold markers name the click only: no transcript key in the copy.
+check('hint: default fold marker names the click, not ctrl+o', foldLongLines('x'.repeat(1100)).text.includes('click to expand') && !foldLongLines('x'.repeat(1100)).text.includes('ctrl+o'))
 setKeymapOverrides({ transcript: 'alt+o, ctrl+o', history: 'alt+r' })
 check('hint: primary combo is the first remapped entry', primaryComboString('transcript') === 'alt+o', primaryComboString('transcript'))
 {
   const folded = foldLongLines('x'.repeat(1100)).text
-  check('hint: fold marker follows the transcript remap', folded.includes('alt+o to expand'), folded.slice(-60))
+  check('hint: fold marker carries no remapped key either', folded.includes('click to expand') && !folded.includes('alt+o'), folded.slice(-60))
 }
 {
   const helpTerm = new XTerm({ cols: 110, rows: 20, scrollback: 0, allowProposedApi: true })

@@ -4,7 +4,7 @@
  * 调用命令等）。
  *
  * 机制：`src/utils/fold-long-lines.ts` 按行裁剪超长单行（每行 1000 字符
- * 预算，行尾内联 `… 已折叠 N 字符（ctrl+o 展开）` 标记），在文本进入布局
+ * 预算，行尾内联 `… 已折叠 N 字符（点击展开）` 标记），在文本进入布局
  * 引擎之前完成——wrap 的成本只看字符数，一行 20 万字符会铺成上千视觉行，
  * 每帧都在重复付这笔钱。Ctrl+O（全局展开）恢复原文。
  *
@@ -58,7 +58,7 @@ const check = (name: string, ok: boolean, extra = ''): void => {
   if (!ok) failed++
 }
 
-const MARKER = 'chars folded (click or ctrl+o to expand)'
+const MARKER = 'chars folded (click to expand)'
 /** Head visible in every folded payload; the tail only survives unclipped. */
 const HEAD = 'FOLDHEAD'
 const TAIL = 'FOLDTAIL'

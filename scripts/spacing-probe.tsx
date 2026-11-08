@@ -224,7 +224,7 @@ check(
 check(
   'thinking duration on folded label',
   contentLines.some(l => l.includes('⚓ 思考') && l.includes('12s')),
-  '⚓ 思考 · 12s (ctrl+o expand)',
+  '⚓ 思考 · 12s',
 )
 
 // 7. Terminal tab title carries the ✦ prefix + DeepSeek whale (win32 path

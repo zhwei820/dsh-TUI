@@ -36,7 +36,7 @@ type Props = {
   isExpanded?: boolean
   /**
    * Mouse click (fullscreen): toggles the row's expansion — same action as
-   * clicking other transcript rows. Also makes the localized ctrl+o expand
+   * clicking other transcript rows. Also makes the localized fold
    * hint (lines-folded-expand) actionable with the mouse.
    */
   onClick?(event: ClickEvent): void

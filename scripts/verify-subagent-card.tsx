@@ -4,9 +4,9 @@
  *   M. 纯模型：token / 时长格式、可见工具调用与 `+N more`、状态行、行数预算、
  *      并行组判定（相邻 + 时间重叠才成组；先后委派不成组；无快照不成组）。
  *   S. 单卡：`● Agent(desc)` 头；运行中列最近 3 次工具调用 + `+N more tool uses
- *      (ctrl+o to expand)`；无工具时 `Initializing…`；完成后 `Done (N tool uses ·
+ *      `；无工具时 `Initializing…`；完成后 `Done (N tool uses ·
  *      … tokens · …)`；失败显示 `Error: …`；Ctrl+O 列出全部工具调用。
- *   G. 并行组：组头 `Running N agents… (ctrl+o to expand)`，成员 `├─`/`└─`
+ *   G. 并行组：组头 `Running N agents…`，成员 `├─`/`└─`
  *      分支、成员间无空行；全部结束后 `N agents finished`，失败数留在组头；
  *      Ctrl+O 展开后每个成员列出全部工具调用。
  *
@@ -200,7 +200,7 @@ console.log('--- S: single cards ---')
     const h = idx(l, 'Agent(task run)')
     check('S first body line hangs under ⎿', (l[h + 1] ?? '').includes('⎿') && (l[h + 1] ?? '').includes('Read(src/b.ts)'), l[h + 1])
     check('S recent three tools, oldest hidden', (l[h + 2] ?? '').includes('Bash(ls -la)') && (l[h + 3] ?? '').includes('Read(src/e.ts)') && !screen().includes('Read(src/a.ts)'))
-    check('S +N more tool uses (ctrl+o to expand)', (l[h + 4] ?? '').includes('+2 more tool uses (ctrl+o to expand)'), l[h + 4])
+    check('S +N more tool uses (no key hint)', (l[h + 4] ?? '').includes('+2 more tool uses') && !(l[h + 4] ?? '').includes('ctrl+o'), l[h + 4])
     const d = idx(l, 'Agent(task done)')
     check('S settled card folds to the Done line', (l[d + 1] ?? '').includes('⎿') && (l[d + 1] ?? '').includes('Done (4 tool uses · 41.2k tokens · 1m 12s)'), l[d + 1])
     const i = idx(l, 'Agent(task init)')
@@ -231,7 +231,7 @@ console.log('--- G: parallel group ---')
   ]
   const rows = [noteRow(1, 'note'), ...members]
   await withList(rows, async (screen, lines, rerender) => {
-    check('G head summary with expand hint', await settled(() => screen().includes('Running 3 agents… (ctrl+o to expand)')), lines().slice(0, 10).join('|'))
+    check('G head summary (no key hint)', await settled(() => screen().includes('Running 3 agents…')) && !screen().includes('ctrl+o'), lines().slice(0, 10).join('|'))
     const l = lines()
     const h = idx(l, 'Running 3 agents')
     check('G first member branches ├─ right under the head', (l[h + 1] ?? '').includes('├─ task p1 · 1 tool use · 12.1k tokens'), l[h + 1])

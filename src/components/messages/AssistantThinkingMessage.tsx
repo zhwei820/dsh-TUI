@@ -45,8 +45,8 @@ type Props = {
 
 /**
  * Thinking block in the compact visual language: settled rows fold to
- * `∴` + `thinking-settled` (with the recorded duration) + the ctrl+o expand
- * hint; streaming rows show one twinkling header line (`thinking-label`),
+ * `∴` + `thinking-settled` (with the recorded duration; a click expands
+ * it); streaming rows show one twinkling header line (`thinking-label`),
  * or the full reasoning text when expanded (click / Ctrl+O / thinkingFold
  * full).
  */

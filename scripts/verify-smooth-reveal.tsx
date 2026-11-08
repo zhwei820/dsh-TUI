@@ -353,8 +353,8 @@ console.log('--- C: component contracts ---')
     async (screen, rerender) => {
       const headShown = await settled(() => screen().includes('old line 0'))
       check(headShown, 'C2 running card: body head visible')
-      check(!screen().includes('lines (ctrl+o to expand)'), 'C2 running card: capped tail row hidden early in the reveal', screen())
-      check(await settled(() => screen().includes('lines (ctrl+o to expand)'), { timeoutMs: 6000 }), 'C2 running card: body complete after catch-up')
+      check(!/… \+\d+ lines/.test(screen()), 'C2 running card: capped tail row hidden early in the reveal', screen())
+      check(await settled(() => /… \+\d+ lines/.test(screen()), { timeoutMs: 6000 }), 'C2 running card: body complete after catch-up')
       // C3: result arriving mid/after reveal snaps complete.
       rerender(<AssistantToolUseMessage tool={doneTool} marginTopOnTurn={false} verbose={false} smoothReveal fresh />)
       // 固定窗:探针 结果视图不得走揭示动画：settled 等到揭完也判过，遮蔽 bug
@@ -415,7 +415,7 @@ console.log('--- D: long-session reveal subscriber fanout ---')
       await sleep(120) // 固定窗:墙钟 采样揭示动画早期（活动卡头部已出现）
       check(screen().includes('old line 0'), 'D1 active tool remains visible with many history cards')
       await sleep(2200) // 固定窗:墙钟 等揭示动画把活动卡追平
-      check(screen().includes('lines (ctrl+o to expand)'), 'D1 active tool reveal completes without nested store updates')
+      check(/… \+\d+ lines/.test(screen()), 'D1 active tool reveal completes without nested store updates')
     },
   )
 }

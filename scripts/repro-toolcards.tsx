@@ -197,14 +197,14 @@ show('cap', {
   resultView: { card: 'terminal', output: '1\n2\n3\n4\n5\n6', exitCode: 0 },
   resultFull: '1\n2\n3\n4\n5\n6',
 })
-check('文本正文折叠为 3 行 + 提示', await settled(() => screen().includes('… +3 lines (ctrl+o to expand)') && rowOf('4') === -1))
+check('文本正文折叠为 3 行 + 提示', await settled(() => screen().includes('… +3 lines') && rowOf('4') === -1))
 show('cap-open', {
   name: 'bash',
   callView: { card: 'terminal', title: 'seq 6' },
   resultView: { card: 'terminal', output: '1\n2\n3\n4\n5\n6', exitCode: 0 },
   resultFull: '1\n2\n3\n4\n5\n6',
 }, { verbose: true })
-check('verbose 不折叠', await settled(() => rowOf('6') >= 0 && !screen().includes('ctrl+o to expand')))
+check('verbose 不折叠', await settled(() => rowOf('6') >= 0 && !screen().includes('… +')))
 
 // 8. 错误卡：errorText 红色缩进。
 show('error', {
@@ -297,7 +297,7 @@ const pwshTool = {
 }
 await show('fold-on', pwshTool, { foldTerminalCommand: true })
 check('折叠时标题仅保留命令首行', await settled(() => screen().includes('PowerShell($items = Get-ChildItem -Recurse)')))
-check('折叠时显示 +N 行提示', await settled(() => screen().includes('… +3 lines') && screen().includes('ctrl+o')))
+check('折叠时显示 +N 行提示', await settled(() => screen().includes('… +3 lines') && !screen().includes('ctrl+o')))
 check('折叠时后续脚本行不出现', await settled(() => rowOf('Sort-Object') === -1 && rowOf('Select-Object') === -1))
 
 // 13b. 尾随换行是终止符不是行（sideLines 同规则）：'cd /tmp\nls\n' 计 +1 不 +2。

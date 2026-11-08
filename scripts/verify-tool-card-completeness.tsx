@@ -96,7 +96,7 @@ async function paint(tool: Record<string, unknown>, opts: { verbose?: boolean, s
     resultView: { card: 'terminal', output, exitCode: 1 },
     resultFull: output,
   })
-  check('1a. 长输出折叠提示仍在', screen.includes('… +3 行（ctrl+o 展开）'))
+  check('1a. 长输出折叠提示仍在', screen.includes('… +3 行'))
   check('1b. 非零退出码不被行预算折叠', screen.includes('退出码 1'))
   check('1c. 前三行输出可见', screen.includes('out-line-3'))
 }
@@ -108,7 +108,7 @@ async function paint(tool: Record<string, unknown>, opts: { verbose?: boolean, s
     resultFull: output,
   })
   check('2a. 信号行不被行预算折叠', screen.includes('被信号 SIGKILL 终止'))
-  check('2b. 折叠提示与信号行共存', screen.includes('… +2 行（ctrl+o 展开）'))
+  check('2b. 折叠提示与信号行共存', screen.includes('… +2 行'))
 }
 {
   const screen = await paint({
@@ -128,13 +128,13 @@ async function paint(tool: Record<string, unknown>, opts: { verbose?: boolean, s
     callView: { card: 'generic', title: 'Read /tmp/blob.txt' },
     resultFull: result,
   })
-  check('4a. 行+字符组合折叠提示', screen.includes('已折叠 2 行 · 400 字符（ctrl+o 展开）'))
-  check('4b. 纯行折叠的旧提示形态不被误用', !screen.includes('… +2 行（ctrl+o 展开）'))
+  check('4a. 行+字符组合折叠提示', screen.includes('已折叠 2 行 · 400 字符'))
+  check('4b. 纯行折叠的旧提示形态不被误用', !screen.includes('… +2 行'))
 }
 {
   // Lines-only fold keeps the historical hint byte-identical.
   const screen = await paint({ name: 'read', resultFull: 'l1\nl2\nl3\nl4\nl5' })
-  check('5. 纯行折叠保持既有提示', screen.includes('… +2 行（ctrl+o 展开）'))
+  check('5. 纯行折叠保持既有提示', screen.includes('… +2 行'))
 }
 
 // ── 6. Verbose window: bounded rows + honest marker ───────────────────────
@@ -180,7 +180,7 @@ async function paint(tool: Record<string, unknown>, opts: { verbose?: boolean, s
 {
   const errorText = Array.from({ length: 6 }, (_, i) => `err-line-${i + 1}`).join('\n')
   const collapsed = await paint({ status: 'error', errorText })
-  check('10a. 错误长文折叠提示', collapsed.includes('… +3 行（ctrl+o 展开）'))
+  check('10a. 错误长文折叠提示', collapsed.includes('… +3 行'))
   check('10b. 错误首行可见', collapsed.includes('err-line-1'))
   const expanded = await paint({ status: 'error', errorText }, { verbose: true })
   check('10c. 展开显示全部错误行', expanded.includes('err-line-6'))

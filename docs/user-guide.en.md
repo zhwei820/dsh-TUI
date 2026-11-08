@@ -571,7 +571,7 @@ An empty session shows the whale logo area at the top (scrolls away with the con
 **Long single-line fold** (default on)
 
 - Text with **a single line over 1000 chars** folds into
-  `… 已折叠 N 字符（点击或 ctrl+o 展开）` marker.
+  `… 已折叠 N 字符（点击展开）` marker.
 - Expand: **click the line** (tool card: click the card) to unfold, click again to fold; keyboard `Ctrl+O`.
 - Thinking lines don't fold.
 
@@ -644,7 +644,7 @@ Common items below, full list on the /settings screen. Most topics (**Appearance
 | whaleIdle | whale welcome idle animation (default on): fin/tail/blink, sleeps with Z after 10 s idle; click for a heart. Freezes after the first task |
 | splashFont | big-text face on the header splash: Daily rotation (default, changes with the local date) / bold / square / bevel / wide / dot matrix / stencil / thin (classic) / slab. Picking a face pins it; picking Daily rotation restores the rotation. Applies immediately |
 | whaleGirl | maid portrait (default off): under the DeepSeek brand, enable with `companion.skin=whale`; the `deepy` and `whaleGirl` skins override it. The Codex brand uses its own raster portrait or the maid character-art fallback and ignores these settings for splash artwork. Real raster (Kitty/Sixel), with character-art fallback. See the [precedence table](configuration.en.md) |
-| diffLayout | Edit/Write diff layout: auto (two columns ≥110 cols) / split / unified; in two columns (auto at ≥110 cols, or an explicit split) a collapsed card still keeps one line per change, clipping a too-wide line and ending with a `… folded N chars (ctrl+o to expand)` hint; once expanded (`Ctrl+O` or a click), a too-wide line wraps to its own column width and the two columns stay aligned row by row (the same change line starts at the same row on both sides) |
+| diffLayout | Edit/Write diff layout: auto (two columns ≥110 cols) / split / unified; in two columns (auto at ≥110 cols, or an explicit split) a collapsed card still keeps one line per change, clipping a too-wide line and ending with a `… folded N chars` hint; once expanded (`Ctrl+O` or a click), a too-wide line wraps to its own column width and the two columns stay aligned row by row (the same change line starts at the same row on both sides) |
 | thinkingFold | thinking block: preview (2-3 line preview + folded when settled) / full (expanded to end of turn) |
 | thinkingLanguage | thinking language: off (default, adds nothing) / zh / en. One DSH system-prompt section asks the model to think and reply in that language, keeping code, commands and error text as written; a soft constraint that long English context can still override. DSH backend only; applies from the next model step |
 | btw.contextBudget | Total character budget of recent Q/A pairs carried into a `/btw` follow-up (default 24000, range 1000-200000); oldest whole pairs are dropped first. Applies immediately |
