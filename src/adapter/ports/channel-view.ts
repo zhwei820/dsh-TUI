@@ -325,6 +325,14 @@ export interface SubagentState {
   outputEvents: SubagentOutputLine[]
   toolCalls: SubagentToolCall[]
   tokens?: SubagentTokenUsage
+  /** Cumulative durable usage of this child across all its runs, split by
+   *  billing period (the DeepSeek peak/idle tariff). Unlike `tokens` (the
+   *  latest step's report) it only grows. Absent = the backend keeps no
+   *  per-child ledger; the UI then shows `tokens` and no price. */
+  spend?: CostTokenBuckets
+  /** The child's current working directory: its session's starting cwd,
+   *  then its own directory changes. Absent = the backend did not say. */
+  cwd?: string
   /** The backend's own tool-count report (`usage.tool_uses`). Preferred
    *  over the locally kept records, which miss lane frames. */
   reportedToolUses?: number

@@ -15,7 +15,7 @@ import {
   type TranscriptLoader,
 } from './messages/subagentTranscript.js'
 import { t } from '../i18n.js'
-import { agentTitle } from './Chat/subagentCardModel.js'
+import { agentTitle, formatCny, formatSubagentSpend, formatTokenCount, subagentSpend, tildePath } from './Chat/subagentCardModel.js'
 import { Divider } from './design-system/Divider.js'
 import { ExitButton, isPanelPlainReturn, MainAgentButton } from './SubagentDashboard.js'
 import { isPlainReturnInput } from '../utils/modifiers.js'
@@ -72,6 +72,9 @@ function StatGrid({ subagent, totalTokens, elapsed, statusLabel, statusColor }: 
   statusLabel: string
   statusColor: keyof Theme | undefined
 }): React.ReactNode {
+  // Cumulative ledger (all runs) when the backend keeps one; else the
+  // latest step's report with its in/out split.
+  const spend = subagentSpend(subagent)
   return (
     <Box flexDirection="column">
       <StatRow label={t('subagent-status-label')}>
@@ -84,8 +87,15 @@ function StatGrid({ subagent, totalTokens, elapsed, statusLabel, statusColor }: 
         <Text>{elapsed !== undefined ? formatDuration(elapsed) : '—'}</Text>
       </StatRow>
       <StatRow label="tokens">
-        <Text>{totalTokens || '—'}{subagent.tokens?.input !== undefined ? ` (in ${subagent.tokens.input} · out ${subagent.tokens.output ?? 0})` : ''}</Text>
+        {spend !== undefined
+          ? <Text>{formatTokenCount(spend.tokens)}</Text>
+          : <Text>{totalTokens || '—'}{subagent.tokens?.input !== undefined ? ` (in ${subagent.tokens.input} · out ${subagent.tokens.output ?? 0})` : ''}</Text>}
       </StatRow>
+      {spend?.cny !== undefined && (
+        <StatRow label={t('agent-view-field-cost')}>
+          <Text>{formatCny(spend.cny)}</Text>
+        </StatRow>
+      )}
       <StatRow label={t('subagent-tools')}>
         <Text>{subagent.reportedToolUses ?? subagent.toolCalls.length}</Text>
       </StatRow>
@@ -272,6 +282,7 @@ export function SubagentDetailScene({
     : subagent.completedAt !== undefined ? subagent.completedAt - subagent.startedAt : undefined
   const info = statusGlyph(subagent.status)
   const totalTokens = subagent.tokens?.total ?? ((subagent.tokens?.input ?? 0) + (subagent.tokens?.output ?? 0) || 0)
+  const spend = subagentSpend(subagent)
   // The backend's own counts win over the locally kept records (a missed
   // lane frame must not undercount); no report → the local records.
   const toolsCount = subagent.reportedToolUses ?? subagent.toolCalls.length
@@ -533,13 +544,16 @@ export function SubagentDetailScene({
       </Box>
       <Text>
         <Text>{subagent.model ?? subagent.provider ?? 'default'}</Text>
-        <Text dimColor>{shownDuration !== undefined ? ` · ${formatDuration(shownDuration)} · ` : ' · '}{totalTokens || '—'} tok · {toolsCount} tools</Text>
+        <Text dimColor>{shownDuration !== undefined ? ` · ${formatDuration(shownDuration)} · ` : ' · '}{spend !== undefined ? formatSubagentSpend(spend) : `${totalTokens || '—'} tok`} · {toolsCount} tools</Text>
       </Text>
       <Text dimColor>
         {`${t('subagent-started')} ${formatTimestamp(subagent.startedAt)}`
         + (subagent.completedAt ? ` · ${t('subagent-completed')} ${formatTimestamp(subagent.completedAt)}` : '')}
         {` · id ${subagent.agentId.slice(0, 8)}`}
       </Text>
+      {subagent.cwd !== undefined && (
+        <Text dimColor wrap="truncate-start">{`${t('agent-view-field-cwd')} ${tildePath(subagent.cwd)}`}</Text>
+      )}
       {subagent.error && (
         <Box marginTop={0}>
           <Text color="error" wrap="wrap">{`${t('subagent-error-label')}: ${subagent.error}`}</Text>
@@ -567,7 +581,7 @@ export function SubagentDetailScene({
       {activePage === 'output' && loadTranscript === undefined && subagent.outputEvents.length >= OUTPUT_WINDOW_CAP && (
         <Text dimColor>{t('subagent-transcript-retained', { count: subagent.outputEvents.length })}</Text>
       )}
-      <Box flexDirection="column" paddingX={1} maxHeight={panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)}>
+      <Box flexDirection="column" paddingX={1} maxHeight={(panelMode ? Math.max(6, rows - 10) : Math.max(10, rows - 14)) - (subagent.cwd !== undefined ? 1 : 0)}>
         <ScrollBox ref={scrollRef} flexDirection="column" flexGrow={1}>
           {activePage === 'summary' && (
             <Box flexDirection="column">
