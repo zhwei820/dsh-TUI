@@ -18,7 +18,7 @@
 # dsh-TUI
 
 > An interactive terminal UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), the coding agent you drive from a terminal — built for people who want to stay in that terminal.
-> It adds a pixel-whale header, live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime, and supports DeepSeek models only. DSH is the built-in backend; installed plugin backends are experimental.
+> It adds a pixel-whale header, live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime, and targets DeepSeek models only. DSH is the built-in backend; installed plugin backends are experimental.
 > Zero core changes: it consumes only DSH's public exports, so installing enables it and uninstalling leaves no patches behind.
 > It is moving from a mounted plugin to an app with its own entry and composition root, with DSH loaded in process as the first-party backend.
 
@@ -30,21 +30,28 @@
 
 - **Pixel whale pet** — three startup intros, click to wake; freezes after the first task.
 - **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box (shown once on the first run). `/` and `@` completions are a borderless list, the footer is quiet (context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`), and todos read as a `⎿ ☐/☒` checklist.
-- **Quiet status lines** — while working, the line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it), an interruption reads `⎿ Interrupted · …`, and compaction reads `Compacting conversation…`. Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`. In narrow panes the compaction status stays on one line: phase and cancellation hints yield first, then the label shortens, and elapsed time only appears as a complete field.
+- **Quiet status lines** — while working, the line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it), an interruption reads `⎿ Interrupted · …`, and compaction reads `Compacting conversation…`.
+  - Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`.
+  - In narrow panes the compaction status stays on one line: phase and cancellation hints yield first, then the label shortens, and elapsed time only appears as a complete field.
 - **Diffs** — Edit/Write diffs are unified with tinted `+`/`-` rows under an `Updated with N additions and M removals` line; `/settings` `diffLayout` switches to side by side, or automatic by terminal width. One-sided additions and deletions get the full body width without an empty opposite pane; ordinary edits stay side by side, and mixed files choose their layout separately before folding or streaming reveal.
 - **Classic look** — the older presentation stays one switch away: `/settings` `launchpad` (landing page + whale header), `statusBar.*` (model, cwd and Git branch, cache, tokens, cost, segmented context bar and the other status-bar toggles), `diffLayout`, `promptSessionLabel` (session chip + ⌸ / ⛶), and cordis `activity: true` (live activity line).
 - **Launchpad** — with `/settings` `launchpad` on, an ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions; short or narrow terminals drop whole blocks, and whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title; off by default). Command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it.
 - **First-run guide** — the first run walks a four-step wizard (accounts & models / language + theme / model + workspace / shortcuts), re-runnable with `/setup`. It is not offered on launch once an account is configured (a `DEEPSEEK_API_KEY` or a signed-in account); its first step signs in to a DeepSeek account and catches the models it brings in (none → no question, one → that one, several → you choose); without any access it shows how to set `DEEPSEEK_API_KEY` by hand.
-- **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes. The `/model` picker shows the same cursor while moving between provider tabs, model rows and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row. The session manager also moves this cursor between the workspace rail, session rows and the search box; typing claims the search caret, and navigation returns it to the focused row. Configure animation and trail effects in your terminal.
+- **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes; configure animation and trail effects in your terminal.
+  - The `/model` picker shows the same cursor while moving between provider tabs, model rows and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row.
+  - The session manager also moves this cursor between the workspace rail, session rows and the search box; typing claims the search caret, and navigation returns it to the focused row.
 - **Terminal-native UI** — streaming Markdown, tool cards, `/` and `@` completion, `#L12-14` ranges, history search, zh/en UI.
 
 ### Rendering
 
-- **Images** — Kitty/Sixel thumbnails, centered preview with zoom and pan, paste-time fitting, and a text fallback. Kitty images scale to the reserved cells' physical pixels, including on HiDPI terminals. Images referenced with `@path` follow the same admission and resize/conversion policy as pasted images; notices report the stored dimensions and format, required animation conversion is refused rather than dropping frames, and mentioned and staged images share count and stored-byte limits in source order.
+- **Images** — Kitty/Sixel thumbnails, centered preview with zoom and pan, paste-time fitting, and a text fallback.
+  - Kitty images scale to the reserved cells' physical pixels, including on HiDPI terminals.
+  - Images referenced with `@path` follow the same admission and resize/conversion policy as pasted images; notices report the stored dimensions and format, required animation conversion is refused rather than dropping frames, and mentioned and staged images share count and stored-byte limits in source order.
 - **Mermaid diagrams** — `mermaid` fenced code blocks are drawn as Unicode diagrams.
 - **LaTeX math** — `$…$` and `$$…$$` formulas render as Unicode text, with fractions and limits stacked in display blocks; `mathRendering: image` typesets block and one-row inline formulas as terminal images on graphics terminals.
 - **Timeline rail** — every turn is clickable; timeline / scrollbar / hidden gutter.
-- **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize. All eight built-in panels and later-registered plugin panels start enabled (`sidePanel.panels: '*'`; untick a row in `/settings` for an explicit list), the header shows each inactive panel's symbol, and narrow terminals and inline mode keep full-screen panels. Panel identity and settings rules: [Configuration](docs/configuration.en.md#tui-configuration).
+- **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize. Panel identity and settings rules: [Configuration](docs/configuration.en.md#tui-configuration).
+  - All eight built-in panels and later-registered plugin panels start enabled (`sidePanel.panels: '*'`; untick a row in `/settings` for an explicit list), the header shows each inactive panel's symbol, and narrow terminals and inline mode keep full-screen panels.
   - **Workspace counts** — panel counts match the session manager: the current conversation counts; empty logs, subagents, fork ancestors and archived sessions do not. Registered workspaces with no visible conversations stay at zero; load and read errors are shown separately, and `r` refreshes.
 - **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata. Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused.
   - TPS includes hidden reasoning time and excludes tool execution time; decode spans of 500ms or less are excluded from TPS samples, while token and cost totals still include all reported usage.
@@ -52,13 +59,17 @@
 
 ### Sessions and workflow
 
-- **One session manager** — `/resume` `/home` `/agentview` `/bg` `⌸` open the same manager: workspace rail, live state, filter, ★ pins.
+- **One session manager** — `/resume`, `/home`, `/agentview`, `/bg` and `⌸` all open the same screen; see [Built-in Commands](#built-in-commands).
 - **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, fullscreen draft editor.
   - `/btw` uses an overlay when its sidebar cannot render; main-task questionnaires and the fullscreen draft editor take priority while preserving the side question and draft.
 - **Moving sessions** — when a DSH 0.2.1+ Agent moves its session to another directory (the `working_directory` tool or a Git worktree), the status line, Git branch, `@` completion, `!` commands, clicked paths, skill commands and loaded context follow it, including after `/resume`. The session stays registered under the project it started in. Relative paths in cards rendered before a move resolve against the session's current directory when clicked; absolute paths keep their target.
-- **Reasoning effort** — the default effort setting offers the current backend/model's declared tiers, including custom IDs. Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable. On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default; plugin backends keep their own backend preference at startup and on resume, and explicitly choosing Auto resets the model default. Explicit changes affect the next request, unsupported preferences fall back with a notice and are never forced onto a route, and resuming a DSH session preserves its recorded effort (or its live selection when reattaching); the saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
-- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos. The presets dsh-TUI registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
+- **Reasoning effort** — the default effort setting offers the current backend/model's declared tiers, including custom IDs.
+  - Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable.
+  - On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default; plugin backends keep their own backend preference at startup and on resume, and explicitly choosing Auto resets the model default.
+  - Explicit changes affect the next request, unsupported preferences fall back with a notice and are never forced onto a route, and resuming a DSH session preserves its recorded effort (or its live selection when reattaching); the saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
+- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos.
   - In the `todo` panel a long goal wraps to the panel width with its phase on a separate row; when the content exceeds the viewport, focus the panel and scroll with `↑`/`↓` or the wheel. The compact goal row above the input stays a single truncated line with a hover tooltip.
+  - The presets dsh-TUI registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
 - **Turn receipts and recaps** — a turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM` (`/settings` `turnUsageRow` swaps in the detailed token ledger), and one of a minute or more is followed by a one-line `※ recap: …` (the `recapOnOpen` switch covers both automatic recaps).
 - **Suggested next messages** — after each turn a suggested next message (when something is pending) appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it, `Enter` sends (cordis `promptSuggestions: false` turns it off). The model is also asked to state its rough plan and key decisions in its reply (cordis `decisionNotes: false` turns that off).
 - **IDE selection channel** — a VS Code selection lands in the prompt.
@@ -66,6 +77,12 @@
 ### DSH integration
 
 - **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires.
+<<<<<<< HEAD
+  - **Agent cards and the running list** — subagents render as `● Agent(description)` cards with their recent tool calls and, once settled, a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` expands a card's tool calls. While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool, elapsed time and tokens; click a row to open that agent.
+  - **Agent view** — opening a subagent (from that list, a transcript card, the agents dashboard or an agent detail) shows one transcript, the way the main agent's conversation reads: the delegating agent's task (complete, never truncated; pinned on top while older pages are still unloaded), every step — its reasoning folds to one `∴` line per block like the main agent's — and its final answer. Esc returns to where you came from.
+  - **Follow-ups** — the input at the bottom (the same shape as the main prompt) sends a follow-up prompt to a continuable agent; the prompt joins the transcript in order, and the composer reports the channel's delivery state.
+- **DeepSeek account sign-in** — dsh-TUI targets DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers Host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
+=======
 <<<<<<< HEAD
   - Subagents render as `● Agent(description)` cards with their recent tool calls and a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` lists every tool call. While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool and elapsed time; click a row to open that agent. Opening a subagent (from that list, its transcript card or the agents dashboard) shows its conversation the way the main agent's reads — one transcript, no tabs: the task the delegating agent gave it (complete, never truncated; pinned on top while older pages are still unloaded), every step, and its final answer — with an input at the bottom to send it follow-up prompts (DSH subagents are continuable). Esc returns to where you came from.
 =======
@@ -79,6 +96,7 @@
 >>>>>>> 444f507c69651549071bcba07ae6ca45651b580f
 >>>>>>> 0050a7375e2eeeb7fd1a821f992df0d06bab8416
 - **DeepSeek account sign-in** — dsh-TUI supports DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers Host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
+>>>>>>> e467b7b45fd87432c5955dd09d1884d5829e7125
   - A profile-only update from a global TUI patch that already mounts `dsh-tui-auth` can still start the official loopback callback listener on demand; fixed-port SSH forwarding still requires the global package to be aligned.
 - **Extensions** — browser interaction, computer use and more.
 
@@ -307,8 +325,8 @@ subagents, a read-only task board (status, owner, `blocked`, write-scope
 warnings) and a banner when the team record was rejected. A delegation
 provider whose settled runs fail at least twice and at least half the time
 gets one degraded-channel line above the list; the built-in `subagent` route,
-workflow members and per-type Claude children are excluded because there is
-no provider to switch to.
+workflow members and children a backend types by `subagent_type` are excluded
+because there is no provider to switch to.
 
 Limits: the switch covers the whole profile, not one session (a launch
 without the profile plugin service, or without hot reload, needs `dsh plugin`
@@ -336,7 +354,9 @@ the dashboard alone does not acknowledge every child. Task status stays failed.
 | `Ctrl+Shift+E` | Fullscreen draft editor |
 | `?` / `←` | Shortcuts / session manager (`←` backgrounds the current DSH session first) |
 
-`Ctrl+U` deletes from the caret to the current line start (preserving text to the right and whole image chips) in both the launchpad and chat, and `Alt/Option+←/→` / `Alt/Option+Backspace` move or delete by whitespace-delimited words; on macOS, configure your terminal to send Option as Meta. `Alt+Up` / `Alt+Down` also page through question text and approval previews without moving the choice focus, and are remappable in `/settings` → `Shortcuts`.
+`Ctrl+U` deletes from the caret to the current line start (preserving text to the right and whole image chips) in both the launchpad and chat, and `Alt/Option+←/→` / `Alt/Option+Backspace` move or delete by whitespace-delimited words; on macOS, configure your terminal to send Option as Meta.
+
+`Alt+Up` / `Alt+Down` also page through question text and approval previews without moving the choice focus, and are remappable in `/settings` → `Shortcuts`.
 
 Text, cursor position and staged image attachments on the launchpad or in chat while the backend starts are preserved when the session becomes ready; press `Enter` after it is ready to send, and an earlier `Enter` keeps the draft without queueing it. Opening a new session while startup is pending clears the previous draft and its images. In the launchpad input, `Shift+Enter` (or `Option+Enter`) opens chat and inserts a newline at the caret, keeping the draft and staged images unsent. Fixed-action permission questions offer only the caller's choices; ordinary questionnaires still accept free text. When DSH ends a turn because its session was disposed, the transcript shows “Session stopped”; user interruption keeps its existing prompt for what to do next. This describes the reported stop reason and does not recover a stuck session or its queued inputs.
 
@@ -344,13 +364,19 @@ The complete key table (editing, vim mode, image preview, questionnaires, transc
 
 ### Mouse and selection
 
-Fullscreen mouse selection stays in the pane where the gesture starts, including chat, sidebar and either diff column. Drag to select and copy, double/triple click to select a word or line, and click tool cards, timeline ticks, `[Image #N]` previews and file paths (which open a file-action menu; auto-detection does not extract a path from inside a slash-delimited token such as `working/idle/needs-input` or a date such as `2024/01/15`); diagonal, word and line selection copy that pane's text, soft wraps join independently, source newlines remain, and divider drags only resize.
+Fullscreen mouse selection stays in the pane where the gesture starts, including chat, sidebar and either diff column. Drag to select and copy, double/triple click to select a word or line, and diagonal, word and line selection copy that pane's text; soft wraps join independently, source newlines remain, and divider drags only resize.
 
-Automatic copies keep the text selected; press `Esc` to clear it or start a new selection to replace it. Selection highlighting skips trailing padding and blank rows while preserving spaces within text and code indentation, and a fullscreen selection started in a code block joins soft-wrapped rows without adding frame padding or newlines; hard line breaks and their inset remain part of screen copying. During a fullscreen drag the native cursor follows the selected text's edge and returns to the focused input's caret on release; fullscreen drag-copy uses the final highlight (if a live row changes mid-drag, move the selection back to stable text to re-baseline), a stationary selection whose copied text changes is refused, and automatic scroll or resize does not clear that protection. Inline mode uses the terminal's native selection.
+Click tool cards, timeline ticks, `[Image #N]` previews and file paths (which open a file-action menu; auto-detection does not extract a path from inside a slash-delimited token such as `working/idle/needs-input` or a date such as `2024/01/15`).
+
+Automatic copies keep the text selected; press `Esc` to clear it or start a new selection to replace it. Selection highlighting skips trailing padding and blank rows while preserving spaces within text and code indentation, and a fullscreen selection started in a code block joins soft-wrapped rows without adding frame padding or newlines; hard line breaks and their inset remain part of screen copying.
+
+During a fullscreen drag the native cursor follows the selected text's edge and returns to the focused input's caret on release; fullscreen drag-copy uses the final highlight (if a live row changes mid-drag, move the selection back to stable text to re-baseline), a stationary selection whose copied text changes is refused, and automatic scroll or resize does not clear that protection. Inline mode uses the terminal's native selection.
 
 ### Pasting and dropped files
 
-The launchpad accepts clipboard images and pasted image paths as `[Image #N]` attachments, sent with the first message; commands that do not accept images preserve the draft and attachments, and pasted text is folded to one line. Image chips behave like chat: arrows step across them, Backspace at the end or Delete at the start removes one whole, and Ctrl+W never splits a chip. In chat, native and bracketed paste keeps ordinary text and newlines and never submits itself, while pasted CRLF collapses to a single newline. On Windows terminals that deliver a paste as win32-input-mode key records, a leaked record stream is decoded back into the characters its `Uc` field encodes (newlines included), with only character-less records stripped.
+The launchpad accepts clipboard images and pasted image paths as `[Image #N]` attachments, sent with the first message; commands that do not accept images preserve the draft and attachments, and pasted text is folded to one line. Image chips behave like chat: arrows step across them, Backspace at the end or Delete at the start removes one whole, and Ctrl+W never splits a chip.
+
+In chat, native and bracketed paste keeps ordinary text and newlines and never submits itself, while pasted CRLF collapses to a single newline. On Windows terminals that deliver a paste as win32-input-mode key records, a leaked record stream is decoded back into the characters its `Uc` field encodes (newlines included), with only character-less records stripped.
 
 A native Windows desktop drop (Windows Terminal / OpenConsole) arrives as an OSC 8 hyperlink; the parser restores its `file://` URI to a decoded local path before paste hygiene runs, so the `]8;id=…;` parameter bytes never reach the draft. Image paths enter the existing image staging pipeline, other files are inserted as a referenceable path (quoted as a single `"…"` token when it contains whitespace), and only `file://` URIs are restored — a remote authority/UNC, several distinct URIs, or a URI with several tokens is refused and stays literal text.
 
@@ -360,17 +386,23 @@ Windows Neovim/Vim terminals identified by `NVIM` or `VIM_TERMINAL` retain VT in
 
 Extended key reporting (Kitty keyboard protocol and xterm `modifyOtherKeys`) is enabled for a fixed terminal list: iTerm2, kitty, WezTerm, Ghostty, rio, Orca, tmux, Warp and Windows Terminal. A terminal missing from that list can opt in with `DSH_TUI_FORCE_EXTENDED_KEYS=1`, and `DSH_TUI_DISABLE_EXTENDED_KEYS=1` opts an allowlisted terminal back out for SSH or nested xterm.js hosts (it wins when both are set). Outside native Windows, where win32-input-mode reports Enter's modifiers instead and is not touched by this switch, a terminal without extended keys cannot tell `Shift+Enter` from `Enter`, and `Ctrl+J` is the newline fallback.
 
-Fragmented input is reassembled instead of leaking into the prompt. On native Windows, Win32 input records split across short input delays are rejoined (a bare `ESC[` fragment is held only after one record has actually been decoded, while a fragment whose own shape is already record-specific holds on its own); terminals that never enter the mode keep the classic VT path, so a lone `Esc` keeps its response time. Split terminal replies (DA1 / DA2 / DSR / DECRPM / XTVERSION) are held only while a query of the matching response type is outstanding, and fragmented SGR mouse reports only while fullscreen mouse tracking is active. Every hold is bounded (about 1 second from first capture, never extended by later input; 64 bytes max), after which input is handled as before — SGR bytes replay as ordinary keys in arrival order. Inside a window, literal input starting with `[digit;…` can be held or joined to a preceding `Esc`, so wait for the window to close or avoid that shape right after `Esc`. Unknown complete CSI sequences are not inserted as text, and after a damaged CSI prefix a bare ASCII letter can be consumed as its terminator; the very first record can still leave residue if split before its record-specific shape forms.
+Fragmented input is reassembled instead of leaking into the prompt. On native Windows, Win32 input records split across short input delays are rejoined (a bare `ESC[` fragment is held only after one record has actually been decoded, while a fragment whose own shape is already record-specific holds on its own); terminals that never enter the mode keep the classic VT path, so a lone `Esc` keeps its response time. Split terminal replies (DA1 / DA2 / DSR / DECRPM / XTVERSION) are held only while a query of the matching response type is outstanding, and fragmented SGR mouse reports only while fullscreen mouse tracking is active. Every hold is bounded (about 1 second from first capture, never extended by later input; 64 bytes max), after which input is handled as before — SGR bytes replay as ordinary keys in arrival order.
+
+Inside a window, literal input starting with `[digit;…` can be held or joined to a preceding `Esc`, so wait for the window to close or avoid that shape right after `Esc`. Unknown complete CSI sequences are not inserted as text, and after a damaged CSI prefix a bare ASCII letter can be consumed as its terminator; the very first record can still leave residue if split before its record-specific shape forms.
 
 ### Display and session ownership
 
-The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy. If resume reports that another DSH process owns the writer, release the session in that process (for example, dsh web) and retry in the same TUI; the foreground session stays intact, and deleting session or lock files to bypass single-writer protection is not supported.
+The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy.
+
+If resume reports that another DSH process owns the writer, release the session in that process (for example, dsh web) and retry in the same TUI; the foreground session stays intact, and deleting session or lock files to bypass single-writer protection is not supported.
 
 Full reference: [Interaction and commands](docs/interaction.en.md).
 
 ## Built-in Commands
 
-`/resume` · `/home` · `/agentview` · `/bg` · `⌸` open the same session manager: workspace rail, live state, filter, ★ pins. Also `/model` `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/settings` `/setup` `/status` `/cost` `/jobs` `/skills` `/mcp` `/auth` `/login` `/update`.
+`/resume` · `/home` · `/agentview` · `/bg` · `⌸` open the same session manager: workspace rail, live state, filter, ★ pins.
+
+Session and model: `/new` `/compact` `/export` `/btw` `/tree` `/fork` `/rewind` `/model`. Settings, account and inspection: `/settings` `/setup` `/status` `/cost` `/skills` `/mcp` `/auth` `/login`. Jobs and updates: `/jobs` `/update`.
 
 Plugin slash-command results, including errors, remain as local transcript blocks for scrolling and copying during the current session, with indentation and line breaks preserved. Each report retains at most 200 lines, 65,536 UTF-16 code units and 4,000 terminal cells per line, plus a visible truncation marker; the rows are not sent as model input or replayed as history, and older blocks are evicted within the shared 600-row budget. Explicit report layouts such as `/goal` keep their existing formatting.
 
@@ -389,25 +421,30 @@ Shortcuts sit below the title and effort levels have their own section; the pick
 
 ### Session manager
 
-The session manager focuses the most recently used session in the current workspace; if there is no history, it focuses the new-session card. Moving between the workspace rail and session list preserves the selected session, including when the mouse enters the list. Switching to another workspace selects its latest session; switching back also starts from its latest session instead of restoring an earlier selection. Press `←` to move to the workspace rail. DST preloads the session list in the background after startup and updates the cache on success. The manager paints the last successful list immediately. Opening `/resume` while that read is pending shares the request and receives results that have already arrived. This first-paint snapshot survives restarts and is isolated by backend and storage directory. With or without a snapshot, the current workspace loads first before other workspaces are filled in. Fresh sessions and titles merge into the list immediately; cached rows from other workspaces remain until the full read finishes. Background updates preserve a session the user has selected manually. The browser groups sessions by their own cwd. DSH resolves the current workspace's metadata first and publishes it before reading other workspaces' logs, even when it has fewer than 32 sessions. Titles that require a deeper DSH log scan appear first with a fallback name and update in place when recovery finishes.
+The session manager focuses the most recently used session in the current workspace; if there is no history, it focuses the new-session card. Moving between the workspace rail and session list preserves the selected session, including when the mouse enters the list. Switching to another workspace selects its latest session; switching back also starts from its latest session instead of restoring an earlier selection. Press `←` to move to the workspace rail.
+
+DST preloads the session list in the background after startup and updates the cache on success. The manager paints the last successful list immediately. Opening `/resume` while that read is pending shares the request and receives results that have already arrived. This first-paint snapshot survives restarts and is isolated by backend and storage directory. With or without a snapshot, the current workspace loads first before other workspaces are filled in. Fresh sessions and titles merge into the list immediately; cached rows from other workspaces remain until the full read finishes. Background updates preserve a session the user has selected manually.
+
+The browser groups sessions by their own cwd. DSH resolves the current workspace's metadata first and publishes it before reading other workspaces' logs, even when it has fewer than 32 sessions. Titles that require a deeper DSH log scan appear first with a fallback name and update in place when recovery finishes.
+
 The session manager shows the selected workspace's absolute path once, beneath the source tabs (wrapping when needed; hover reveals exceptionally long paths). Session rows show their title and essential status/time instead of repeating the directory; DSH size and model remain in the title tooltip.
+
 With DSH's current JSONL backend, startup and `/new` keep initial permission events in memory until further session activity saves the complete log. Flushing a session that holds only initialization leaves it unstored. Restarting an unstored empty session starts fresh.
-The project rail uses one line per directory on every backend and source tab; the selected project’s path appears once above the panes.
+
+The project rail uses one line per directory on every backend and source tab.
 
 Removing a workspace registration keeps its sessions accessible under a "History only" directory in the rail.
 History-only directories offer edit and new-session actions; rename and remove are available for registered workspaces.
 
 If a `/resume` attempt fails or is cancelled before switching, it releases any session occupancy acquired by that attempt so the session can be retried.
 
-On Linux, stale TUI occupancy and mount locks can be reclaimed when the old PID
-has been reused by a non-leader thread. This requires readable `/proc` identity
-data in the same PID namespace; uncertain identities remain occupied. Reuse by
-another process can still retain a stale claim, so this is not a general fix for
-PID reuse across platforms.
+On Linux, stale TUI occupancy and mount locks can be reclaimed when the old PID has been reused by a non-leader thread. This requires readable `/proc` identity data in the same PID namespace; uncertain identities remain occupied. Reuse by another process can still retain a stale claim, so this is not a general fix for PID reuse across platforms.
 
 ### Background work
 
-**Background jobs**: card headers open the focused task panel. Click the card body or use `Ctrl+O` to toggle the command between its first statement and full script. Commands and output use separate colored edges with `❯` (`>` on Windows) and `≡` on their first rows; output always stays at the latest two visible rows. `/jobs` and the side panel keep the full output scrollable, while `e` toggles the focused command. Consecutive blank script lines collapse to one.
+**Background jobs**: card headers open the focused task panel. Click the card body or use `Ctrl+O` to toggle the command between its first statement and full script.
+
+Commands and output use separate colored edges with `❯` (`>` on Windows) and `≡` on their first rows; output always stays at the latest two visible rows. `/jobs` and the side panel keep the full output scrollable, while `e` toggles the focused command. Consecutive blank script lines collapse to one.
 
 **Background sessions**: On the DSH backend, `/bg` or `←` on an empty prompt backgrounds the current session and opens the session manager; `Esc` returns to it. Background sessions run in this process and stop when the TUI exits. Logs survive. On plugin backends, those entries open the session manager without backgrounding the session.
 
@@ -485,12 +522,16 @@ Plugin development: [admission & development guide](tui-profile/docs/plugin-admi
 
 Exported plugin subcomponents are admitted using the nearest package manifest of their ESM entry, including import-only and conditional exports; they do not inherit an outer package's identity.
 
-A backend plugin (the `tui.dsh/v1alpha1` `Backend` contribution family) is in the kernel picker after a restart: the boot scans the bundles the profile declares, admits and registers each package-root `dsh-plugin.json` declaration, and reads the implementation from the package's `backend` export — importing that module only when the backend is actually selected.
+A backend plugin (the experimental `tui.dsh/v1alpha1` `Backend` contribution family) is in the kernel picker after a restart: the boot scans the bundles the profile declares, admits and registers each package-root `dsh-plugin.json` declaration, and reads the implementation from the package's `backend` export — importing that module only when the backend is actually selected.
 Each bundle may declare one backend, and its handler id must match the declaration. Entries awaiting authorization are neither probed nor loaded, including when explicitly requested at startup.
 
 Seam grading and API notes: [Plugin development](docs/plugins.en.md). The organization maintains the listing only; it does not endorse community plugins.
 
-Installing a plugin from inside the TUI: `/plugin install <package | path | git url>`. It goes through the host's profile plugin manager — a pre-install notice, a trust confirmation, cancellable progress, build-script approval and exact-version exemptions. Packages on the first-party feed this package ships (`tui-profile/feed/first-party.json`, pinned per release and decided offline) skip the trust confirmation, and only a spec that names that exact version qualifies: a bare name, a tag or a range is resolved again at install time, so it is confirmed with the person instead. What was confirmed is what gets installed — the run pins the exact `name@version` the inspection read — and a turn that is still running refuses the install (finish it, or `/new`, first). The same actions remain available from the CLI (`dsh plugin --profile dsh-tui …`). The confirmation lists the permissions the package declares; `Enter` installs **and grants** — the grant is written to `~/.dsh-tui/extension-grants.json` before the install starts, and a failed install rolls that write back. A registry package's declaration cannot be read before it lands, so a `grant` step follows a successful install: `Enter` grants, `Esc` skips (the install stays). Declared permissions this host does not know are skipped and named. On a terminal too short for a permission row, the list folds to a count or the key hint carries the count; the package identity, the notice and the keys stay visible.
+Installing a plugin from inside the TUI: `/plugin install <package | path | git url>`. It goes through the host's profile plugin manager — a pre-install notice, a trust confirmation, cancellable progress, build-script approval and exact-version exemptions. Packages on the first-party feed this package ships (`tui-profile/feed/first-party.json`, pinned per release and decided offline) skip the trust confirmation, and only a spec that names that exact version qualifies: a bare name, a tag or a range is resolved again at install time, so it is confirmed with the person instead.
+
+What was confirmed is what gets installed — the run pins the exact `name@version` the inspection read — and a turn that is still running refuses the install (finish it, or `/new`, first). The same actions remain available from the CLI (`dsh plugin --profile dsh-tui …`).
+
+The confirmation lists the permissions the package declares; `Enter` installs **and grants** — the grant is written to `~/.dsh-tui/extension-grants.json` before the install starts, and a failed install rolls that write back. A registry package's declaration cannot be read before it lands, so a `grant` step follows a successful install: `Enter` grants, `Esc` skips (the install stays). Declared permissions this host does not know are skipped and named. On a terminal too short for a permission row, the list folds to a count or the key hint carries the count; the package identity, the notice and the keys stay visible.
 
 A spec names one of three things:
 
@@ -506,9 +547,15 @@ During installation, `esc` attempts cancellation and keeps the pane open until t
 
 Failed installs show up to six redacted log lines; lines larger than 16 KiB are omitted with a notice.
 
-Managing what is installed: `/plugin remove <bundle>`, `/plugin enable <name | row id>` and `/plugin disable <name | row id>`. A bundle is a composition layer and a row is one patch entry, so the two are separate actions, and a bundle name is matched before any row identity. A module name shared by multiple rows requires a specific row ID. **Gate 2 refuses the three ways this app could switch itself off** — removing or disabling the bundle that provides it, the host layer `dsh-base`, or one of its own rows — and says which rule it broke, without calling the service at all; that holds whether or not hot reload is live, which is the path the host's own guard misses. `enable` is never refused by gate 2 (it is the repair action). Every enable and removal asks first; `disable` asks only about a host-layer row. The host does not attest installed package sources, so even an exact feed match requires confirmation before enabling.
+Managing what is installed: `/plugin remove <bundle>`, `/plugin enable <name | row id>` and `/plugin disable <name | row id>`. A bundle is a composition layer and a row is one patch entry, so the two are separate actions, and a bundle name is matched before any row identity. A module name shared by multiple rows requires a specific row ID.
 
-These three actions have no cancellation — the service offers none — so `esc` only closes the pane while the write finishes and reports itself into the transcript. Enable and disable have no CLI verb either (the service writes them into the profile's own files). **Grants follow the lifecycle**: `enable` enables and grants the declared permissions, `disable` disables and revokes the permissions that component declared, and `remove` **deletes the component's `grants`/`denies` entries** after the removal — grants are keyed by component id, so leaving them behind lets any later package reusing that id inherit them silently; a reinstall asks again. Backend data directories, storage namespaces and the effect ledger stay, and the residue report names each source by its path. A failed grant write never blocks an install or enable — it is reported instead. Grants are behavioural constraints, not a security boundary.
+**Gate 2 refuses the three ways this app could switch itself off** — removing or disabling the bundle that provides it, the host layer `dsh-base`, or one of its own rows — and says which rule it broke, without calling the service at all; that holds whether or not hot reload is live, which is the path the host's own guard misses. `enable` is never refused by gate 2 (it is the repair action). Every enable and removal asks first; `disable` asks only about a host-layer row. The host does not attest installed package sources, so even an exact feed match requires confirmation before enabling.
+
+These three actions have no cancellation — the service offers none — so `esc` only closes the pane while the write finishes and reports itself into the transcript. Enable and disable have no CLI verb either (the service writes them into the profile's own files).
+
+**Grants follow the lifecycle**: `enable` enables and grants the declared permissions, `disable` disables and revokes the permissions that component declared, and `remove` **deletes the component's `grants`/`denies` entries** after the removal — grants are keyed by component id, so leaving them behind lets any later package reusing that id inherit them silently; a reinstall asks again.
+
+Backend data directories, storage namespaces and the effect ledger stay, and the residue report names each source by its path. A failed grant write never blocks an install or enable — it is reported instead. Grants are behavioural constraints, not a security boundary.
 
 `/plugin list` also advertises the experimental features DSH ships, leaves off by default, and this app knows how to drive (currently Agent Teams, Auto review, Session search and Git worktrees), each with its switch and usage line. A DSH installation that does not ship one shows no such section.
 
