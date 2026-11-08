@@ -28,15 +28,28 @@
 
 ### Terminal experience
 
-- **Pixel whale pet** — three startup intros, click to wake; freezes after the first task.
-- **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box (shown once on the first run). `/` and `@` completions are a borderless list, the footer is quiet (context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`), and todos read as a `⎿ ☐/☒` checklist.
-- **Quiet status lines** — while working, the line is `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`; finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it), an interruption reads `⎿ Interrupted · …`, and compaction reads `Compacting conversation…`.
+- **Pixel whale pet** — three startup intros and click-to-wake; freezes after the first task.
+- **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box, shown once on the first run.
+  - `/` and `@` completions are a borderless list.
+  - The footer shows the context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`.
+  - Todos read as a `⎿ ☐/☒` checklist.
+- **Quiet status lines** — the line reports progress without taking over the screen.
+  - While thinking: `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`.
+  - Finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it); an interruption reads `⎿ Interrupted · …`; compaction reads `Compacting conversation…`.
   - Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`.
   - In narrow panes the compaction status stays on one line: phase and cancellation hints yield first, then the label shortens, and elapsed time only appears as a complete field.
-- **Diffs** — Edit/Write diffs are unified with tinted `+`/`-` rows under an `Updated with N additions and M removals` line; `/settings` `diffLayout` switches to side by side, or automatic by terminal width. One-sided additions and deletions get the full body width without an empty opposite pane; ordinary edits stay side by side, and mixed files choose their layout separately before folding or streaming reveal.
-- **Classic look** — the older presentation stays one switch away: `/settings` `launchpad` (landing page + whale header), `statusBar.*` (model, cwd and Git branch, cache, tokens, cost, segmented context bar and the other status-bar toggles), `diffLayout`, `promptSessionLabel` (session chip + ⌸ / ⛶), and cordis `activity: true` (live activity line).
-- **Launchpad** — with `/settings` `launchpad` on, an ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions; short or narrow terminals drop whole blocks, and whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title; off by default). Command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it.
-- **First-run guide** — the first run walks a four-step wizard (accounts & models / language + theme / model + workspace / shortcuts), re-runnable with `/setup`. It is not offered on launch once an account is configured (a `DEEPSEEK_API_KEY` or a signed-in account); its first step signs in to a DeepSeek account and catches the models it brings in (none → no question, one → that one, several → you choose); without any access it shows how to set `DEEPSEEK_API_KEY` by hand.
+- **Diffs** — Edit/Write diffs are unified by default, with tinted `+`/`-` rows under an `Updated with N additions and M removals` line.
+  - `/settings` `diffLayout` switches to side by side, or automatic by terminal width.
+  - One-sided additions and deletions get the full body width without an empty opposite pane; ordinary edits stay side by side, and mixed files choose their layout separately before folding or streaming reveal.
+- **Classic look** — the older presentation stays one switch away.
+  - `/settings` `launchpad` restores the landing page and whale header; `statusBar.*` covers model, cwd and Git branch, cache, tokens, cost, the segmented context bar and the other status-bar toggles.
+  - `diffLayout` and `promptSessionLabel` (session chip + ⌸ / ⛶) are in the same settings; cordis `activity: true` turns on the live activity line.
+- **Launchpad** — with `/settings` `launchpad` on, an ordinary launch lands on a landing page with a **real input box** (big text + whale + quick actions).
+  - Short or narrow terminals drop whole blocks; whale-girl images use a compact native-canvas footprint instead of leaving a large gap before the title. Off by default.
+  - Command completion matches chat: `Tab` fills the input, `Enter` runs the command and clears it.
+- **First-run guide** — the first run walks a four-step wizard (accounts & models / language + theme / model + workspace / shortcuts), re-runnable with `/setup`.
+  - It is not offered on launch once an account is configured (a `DEEPSEEK_API_KEY` or a signed-in account).
+  - Its first step signs in to a DeepSeek account and catches the models it brings in (none → no question, one → that one, several → you choose); without any access it shows how to set `DEEPSEEK_API_KEY` by hand.
 - **Native cursor** — focused text inputs inherit your terminal's cursor shape, color, blinking, and enabled animation or trail effects in both inline and fullscreen modes; configure animation and trail effects in your terminal.
   - The `/model` picker shows the same cursor while moving between provider tabs, model rows and effort levels, then hides it after **0.5 seconds at rest**; clipped regions fall back to the model row.
   - The session manager also moves this cursor between the workspace rail, session rows and the search box; typing claims the search caret, and navigation returns it to the focused row.
@@ -49,47 +62,58 @@
   - Images referenced with `@path` follow the same admission and resize/conversion policy as pasted images; notices report the stored dimensions and format, required animation conversion is refused rather than dropping frames, and mentioned and staged images share count and stored-byte limits in source order.
 - **Mermaid diagrams** — `mermaid` fenced code blocks are drawn as Unicode diagrams.
 - **LaTeX math** — `$…$` and `$$…$$` formulas render as Unicode text, with fractions and limits stacked in display blocks; `mathRendering: image` typesets block and one-row inline formulas as terminal images on graphics terminals.
-- **Timeline rail** — every turn is clickable; timeline / scrollbar / hidden gutter.
+- **Timeline rail** — every turn is clickable; the right gutter shows the turn timeline, a scrollbar or nothing.
 - **Side panel** — `Ctrl+B` splits the chat with a panel column once the terminal is wide enough; drag the divider to resize. Panel identity and settings rules: [Configuration](docs/configuration.en.md#tui-configuration).
-  - All eight built-in panels and later-registered plugin panels start enabled (`sidePanel.panels: '*'`; untick a row in `/settings` for an explicit list), the header shows each inactive panel's symbol, and narrow terminals and inline mode keep full-screen panels.
+  - All eight built-in panels and later-registered plugin panels start enabled (`sidePanel.panels: '*'`; untick a row in `/settings` for an explicit list); the header shows each inactive panel's symbol, and narrow terminals and inline mode keep full-screen panels.
   - **Workspace counts** — panel counts match the session manager: the current conversation counts; empty logs, subagents, fork ancestors and archived sessions do not. Registered workspaces with no visible conversations stay at zero; load and read errors are shown separately, and `r` refreshes.
-- **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata. Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused.
+- **Live state** — activity animation, context bar, TPS, cache hit rate, effort, tokens, session cost estimate (main + subagents), Git and session metadata.
+  - Title, trajectory-strip and session-state animations update independently of the transcript and pause when idle or unfocused.
   - TPS includes hidden reasoning time and excludes tool execution time; decode spans of 500ms or less are excluded from TPS samples, while token and cost totals still include all reported usage.
   - Context-bar fill follows backend occupancy, and colors estimate content composition; compaction clears obsolete estimates, and missing composition shows a single used block with a measured used count in both hover details.
 
 ### Sessions and workflow
 
 - **One session manager** — `/resume`, `/home`, `/agentview`, `/bg` and `⌸` all open the same screen; see [Built-in Commands](#built-in-commands).
-- **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, fullscreen draft editor.
+- **Session workflow** — `/new` `/compact` `/export` `/btw`, model hot-switch, fork, rewind, vim, and the fullscreen draft editor.
   - `/btw` uses an overlay when its sidebar cannot render; main-task questionnaires and the fullscreen draft editor take priority while preserving the side question and draft.
-- **Moving sessions** — when a DSH 0.2.1+ Agent moves its session to another directory (the `working_directory` tool or a Git worktree), the status line, Git branch, `@` completion, `!` commands, clicked paths, skill commands and loaded context follow it, including after `/resume`. The session stays registered under the project it started in. Relative paths in cards rendered before a move resolve against the session's current directory when clicked; absolute paths keep their target.
+- **Moving sessions** — when a DSH 0.2.1+ Agent moves its session to another directory (the `working_directory` tool or a Git worktree), the status line, Git branch, `@` completion, `!` commands, clicked paths, skill commands and loaded context follow it, including after `/resume`.
+  - The session stays registered under the project it started in. Relative paths in cards rendered before a move resolve against the session's current directory when clicked; absolute paths keep their target.
 - **Reasoning effort** — the default effort setting offers the current backend/model's declared tiers, including custom IDs.
   - Saved values absent from that catalog stay visible and stored; while loading or unavailable, only Auto is selectable.
   - On DSH, Auto follows the saved `/effort` choice, then the configured effort, then the model default; plugin backends keep their own backend preference at startup and on resume, and explicitly choosing Auto resets the model default.
-  - Explicit changes affect the next request, unsupported preferences fall back with a notice and are never forced onto a route, and resuming a DSH session preserves its recorded effort (or its live selection when reattaching); the saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
-- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history. `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos.
+  - Explicit changes affect the next request, unsupported preferences fall back with a notice and are never forced onto a route, and resuming a DSH session preserves its recorded effort (or its live selection when reattaching). The saved default seeds new sessions, and explicit `/effort` or effort-default changes still apply to the current session's next request.
+- **Goals and todos** — the prompt footer hides completed goals once the turn is idle; the Todo side panel retains their history.
+  - `Ctrl+Q` folds todos while working and hides/restores the idle goal/todo footer; clicking the todo header also hides it while idle. Hiding changes only this display — a new goal/todo snapshot or session reveals it again, and `/goal clear` does not clear todos.
   - In the `todo` panel a long goal wraps to the panel width with its phase on a separate row; when the content exceeds the viewport, focus the panel and scroll with `↑`/`↓` or the wheel. The compact goal row above the input stays a single truncated line with a hover tooltip.
   - The presets dsh-TUI registers disable the model's `todo_write` tool, so the agent states its rough steps in prose instead of a todo list.
-- **Turn receipts and recaps** — a turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM` (`/settings` `turnUsageRow` swaps in the detailed token ledger), and one of a minute or more is followed by a one-line `※ recap: …` (the `recapOnOpen` switch covers both automatic recaps).
-- **Suggested next messages** — after each turn a suggested next message (when something is pending) appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it, `Enter` sends (cordis `promptSuggestions: false` turns it off). The model is also asked to state its rough plan and key decisions in its reply (cordis `decisionNotes: false` turns that off).
+- **Turn receipts and recaps** — a turn of 10s or more closes with `✻ Worked for 1m 14s · done 7:46 AM`, and `/settings` `turnUsageRow` swaps in the detailed token ledger instead.
+  - A turn of a minute or more is followed by a one-line `※ recap: …`; the `recapOnOpen` switch covers both automatic recaps.
+- **Suggested next messages** — after each turn, when something is pending, a suggested next message appears under the input as `↹ Tab: …`; `Tab` on an empty input takes it and `Enter` sends.
+  - The model is also asked to state its rough plan and key decisions in its reply; cordis `promptSuggestions: false` and `decisionNotes: false` turn these off respectively.
 - **IDE selection channel** — a VS Code selection lands in the prompt.
 
 ### DSH integration
 
-- **DSH integrations** — presets, skills, MCP, goals, todos, subagents, questionnaires.
-  - **Agent cards and the running list** — subagents render as `● Agent(description)` cards with their recent tool calls and, once settled, a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` expands a card's tool calls. While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool, elapsed time and tokens; click a row to open that agent.
-  - **Agent view** — opening a subagent (from that list, a transcript card, the agents dashboard or the agents side panel) shows one transcript, the way the main agent's conversation reads: the delegating agent's task (complete, never truncated; pinned on top while older pages are still unloaded), every step — its reasoning folds to one `∴` line per block like the main agent's — and its final answer. Esc returns to where you came from.
-  - **Follow-ups** — the input at the bottom (the same shape as the main prompt) sends a follow-up prompt to a continuable agent; the prompt joins the transcript in order, and the composer reports the channel's delivery state.
+DSH supplies presets, skills, MCP, goals, todos, subagents and questionnaires; dsh-TUI renders them natively.
+
+- **Agent cards and the running list** — subagents render as `● Agent(description)` cards with their recent tool calls and, once settled, a `Done (N tool uses · tokens · time)` line; parallel runs read as one `Running N agents…` tree, and `Ctrl+O` expands a card's tool calls.
+  - While any subagent runs, an `N agents running` list stays pinned above the input — one row per agent with its latest tool, elapsed time and tokens; click a row to open that agent.
+- **Agent view** — opening a subagent (from that list, a transcript card, the agents dashboard or the agents side panel) shows one transcript, the way the main agent's conversation reads.
+  - The delegating agent's task is complete and never truncated, pinned on top while older pages are still unloaded; every step appears, with its reasoning folded to one `∴` line per block like the main agent's, plus the final answer. `Esc` returns to where you came from.
+- **Follow-ups** — the input at the bottom (the same shape as the main prompt) sends a follow-up prompt to a continuable agent; the prompt joins the transcript in order, and the composer reports the channel's delivery state.
 - **DeepSeek account sign-in** — dsh-TUI targets DeepSeek models only. On DSH 0.2.0-rc.1+ the standard profile offers host-owned DeepSeek browser sign-in as `deepseek-account`; use `/auth` or the first-run guide without another plugin.
   - A profile-only update from a global TUI patch that already mounts `dsh-tui-auth` can still start the official loopback callback listener on demand; fixed-port SSH forwarding still requires the global package to be aligned.
 - **Extensions** — browser interaction, computer use and more.
 
 ### Platform and performance
 
-- **Task completion notifications** — sessions notify after successful live work settles, with no queued follow-up or active goal. The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters). OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings. Replay, cancellation and failures do not notify; works in inline and fullscreen modes.
+- **Task completion notifications** — sessions notify after successful live work settles, with no queued follow-up or active goal.
+  - The title is “dsh-TUI · Task complete”; the body shows the latest settled reply as a single-line plain-text preview (Markdown formatting removed, up to 200 characters).
+  - OSC 777/9 apply an additional 2048-byte sequence budget, including title and protocol bytes, preserving whole graphemes. No reply shows only the title; BEL only rings.
+  - Replay, cancellation and failures do not notify; works in inline and fullscreen modes.
   - **Settings** — `/settings` → Conversation: `taskNotifications` = `unfocused` (default), `always`, or `off`; `notificationMethod` = `auto` (default), `osc9`, `bel`, or `windows`.
   - **Delivery** — `auto` uses separate title/body fields on Ghostty/WezTerm (OSC 777) and Kitty (OSC 99); iTerm2/Warp and explicit `osc9` use a title prefix; other terminals ring the bell, and delivery follows your terminal's notification/bell settings. Terminals without focus reporting need `always`; tmux needs `set -g allow-passthrough on` for OSC notifications and `set -g focus-events on` for focus reporting.
-  - **Windows** — on local Windows, `auto` resolves to `windows`, the system's native notifications. The first toast registers that user's AppUserModelID under HKCU; it appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route). For DSH sessions, an enabled, active external DSH notification plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications. If the AppUserModelID cannot be written, the notification falls back to the bell instead of going silent.
+  - **Windows** — on local Windows, `auto` resolves to `windows`, the system's native notifications. The first toast registers that user's AppUserModelID under HKCU; it appears about 3 seconds after the task ends (the PowerShell cold start that buys the no-extra-install route). For DSH sessions, an enabled, active `cc-dsh-notifier` plugin in the running profile makes dsh-TUI yield to it (no toast, no bell); an installed but disabled plugin does not suppress notifications. If the AppUserModelID cannot be written, the notification falls back to the bell instead of going silent.
   - **SSH** — SSH sessions keep the attached terminal's notification protocol in `auto` mode; explicit `windows` still selects the host's native transport.
 - **Built for long sessions** — event-driven projection, virtualization, bounded caches.
 
@@ -145,26 +169,6 @@ The `deepseek-official` API-key route needs `DEEPSEEK_API_KEY`. On DSH
 0.2.0-rc.1+, the standard profile can instead use `/auth login deepseek-account`
 and select the separate account route through `/model`.
 
-The primary compatibility target is DSH `0.2.2-rc.1`. This adapter supports its
-Shell API, V4 session messages, declarative presets, and profile-backed settings;
-older supported hosts retain their compatibility paths. See [configuration](docs/configuration.en.md).
-
-On DSH 0.2.1-rc.5 and later, `/settings` also selects DeepSeek Search / Fetch APIs and edits their
-endpoint and result limits, supporting custom Loader entry IDs and a masked API
-key input saved through DSH's credential store.
-
-`/settings` groups its sections into pages: the TUI's own settings sit under
-**General**, and plugins that declare a page get their own tab (`Tab` / `Shift+Tab`, or a click on the strip in fullscreen, switches pages; the strip is hidden when only one page exists).
-
-On DSH 0.1.7, `/settings` uses the TUI's actual Loader entry ID, including custom
-IDs. It requires matching profile dependencies with `@deepseek-ai/schemastery`
-3.18.3 or newer; an incompatible schema stops TUI startup with repair guidance
-instead of showing an uneditable settings page. Older hosts keep their legacy settings scope.
-
-The `dsh-tui` section of `/settings` is saved in `~/.dsh-tui/settings.json`, shared by
-every kernel; the first launch imports it once from the profile's `cordis.patch.yml` (and an older host's `~/.dsh/settings.yaml`).
-See [configuration](docs/configuration.en.md#tui-configuration).
-
 ```sh
 # Install the CLI and this plugin globally (ships the dsh-tui command)
 npm install -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui
@@ -186,20 +190,48 @@ Afterwards `dsh-tui` and `dsh --profile dsh-tui` are equivalent.
 > No manual step needed. Details:
 > [Getting started](docs/getting-started.en.md#pnpm-install-script-blocks-and-foreign-platform-natives).
 
+### Updates
+
 After startup the TUI checks for newer versions in the background. It never
 blocks the first frame. Type `/update` for a one-shot upgrade of the whole set
-— TUI, dsh engine and global launcher. It restarts automatically and resumes
-the current session, and refuses instead of leaving an incompatible or
-unbootable TUI/engine combination. Launcher alignment is normally best effort,
-but a failure after the engine advances blocks the restart and prints a repair
-command. If the registry has a newer dsh release outside the TUI's
-validated line, it says so and waits for a TUI update rather than installing an
-unvalidated engine. Launcher alignment only touches proven global installs;
-local npm/npx packages, ambiguous aliases and multi-member pnpm groups stay
-unchanged. See
-[Getting started](docs/getting-started.en.md) for the profile lifecycle,
+— TUI, dsh engine and global launcher.
+
+- **Restart** — it restarts automatically and resumes the current session, and
+  refuses instead of leaving an incompatible or unbootable TUI/engine
+  combination.
+- **Launcher alignment** — normally best effort, but a failure after the engine
+  advances blocks the restart and prints a repair command.
+- **Version line** — if the registry has a newer dsh release outside the TUI's
+  validated line, it says so and waits for a TUI update rather than installing
+  an unvalidated engine.
+- **Scope** — alignment only touches proven global installs; local npm/npx
+  packages, ambiguous aliases and multi-member pnpm groups stay unchanged.
+
+See [Getting started](docs/getting-started.en.md) for the profile lifecycle,
 source builds, and troubleshooting, including migration from the former
 `dsh-cc-tui` package.
+
+### Profile and settings compatibility
+
+The primary compatibility target is DSH `0.2.2-rc.1`. This adapter supports its
+Shell API, V4 session messages, declarative presets, and profile-backed settings;
+older supported hosts retain their compatibility paths. See [configuration](docs/configuration.en.md).
+
+On DSH 0.2.1-rc.5 and later, `/settings` also selects DeepSeek Search / Fetch APIs and edits their
+endpoint and result limits, supporting custom Loader entry IDs and a masked API
+key input saved through DSH's credential store.
+
+`/settings` groups its sections into pages: the TUI's own settings sit under
+**General**, and plugins that declare a page get their own tab (`Tab` / `Shift+Tab`, or a click on the strip in fullscreen, switches pages; the strip is hidden when only one page exists).
+
+On DSH 0.1.7, `/settings` uses the TUI's actual Loader entry ID, including custom
+IDs. It requires matching profile dependencies with `@deepseek-ai/schemastery`
+3.18.3 or newer; an incompatible schema stops TUI startup with repair guidance
+instead of showing an uneditable settings page. Older hosts keep their legacy settings scope.
+
+The `dsh-tui` section of `/settings` is saved in `~/.dsh-tui/settings.json`, shared by
+every kernel; the first launch imports it once from the profile's `cordis.patch.yml` (and an older host's `~/.dsh/settings.yaml`).
+See [configuration](docs/configuration.en.md#tui-configuration).
 
 ### CLI
 
@@ -263,64 +295,23 @@ start — that retry is the last way back.
 
 ### Experimental: DSH Agent Teams
 
-DSH's experimental Agent Teams lets the session's agent (the Lead) create
-named teammates that share the working directory, message each other and
-coordinate on a shared task board. It ships with dsh, is off by default, and
-`/plugin list` advertises it. Switch it on:
+DSH's experimental Agent Teams lets the session's agent (the Lead) create named teammates that share the working directory, message each other and coordinate on a shared task board. It ships with dsh, is off by default, and `/plugin list` advertises it.
 
 ```sh
 /plugin enable @deepseek-ai/dsh-experimental-agent-team-profile
 ```
 
-The switch enables or disables the bundle in the profile, so it persists
-across restarts, and on a `dsh --profile` launch it applies at once — running
-sessions included: the model is told which tools came and went. `/team` appears
-in Help and `/` completion only once the team service is mounted, and only
-reports: `/team` (or `/team status`) shows the bundle, the service and this
-session's teammates. `/team on|off` was removed; typing it points at
-`/plugin enable|disable`. Turning the bundle off while teammates run asks
-first, and switching off stops them: the team service releases the teammates
-still running as it unloads. Inside a teammate session the other teammates'
-runs are not visible, so the question counts them as possibly running. The
-team record stays in the session and comes back when the bundle is enabled
-again.
-
-If the running DSH does not ship the bundle (`/plugin list` stays silent),
-switch DSH to one of the supported lines first (`0.2.2-rc.1`, `0.2.1-rc.5`, `0.2.1-rc.4`, `0.2.1-rc.3`,
-`0.2.1-rc.2`, `0.2.1-alpha.5`, `0.2.0-rc.1` or `0.2.0-rc.2`). To install it into the profile explicitly,
-run `dsh plugin --profile dsh-tui add @deepseek-ai/dsh-experimental-agent-team-profile@<your-dsh-version>`:
-the team packages ship in lockstep with DSH and pin their DSH peers exactly,
-so the version must match.
-
-While a request carries `spawn_teammate`, dsh-TUI drops `subagent` /
-`subagent_fork` from it, and the team's `send_message` / `list_agents` /
-`interrupt_agent` / `wait_agent` take the place of the legacy controls of the
-same names, so `spawn_teammate` is the delegation tool; with the team off
-the legacy tools are back. Subagents that are not team members (workflow,
-ralph) keep `subagent`. A teammate shows up as a subagent row, a message between
-members as a `✉ <sender>` bubble in the receiving session (a teammate's
-received messages show on its subagent detail as agent messages), and the
-other team tools as one-line cards (`send_message` with its target and
-`sent`). The agents dashboard (Ctrl+A) and the agents side
-panel switch to a team view: each teammate under its member name with
-`running` / `idle` / `provisioning` / `failed` (a teammate whose turn ended
-is idle — a message wakes it — not done), the Lead line, the remaining
-subagents, a read-only task board (status, owner, `blocked`, write-scope
-warnings) and a banner when the team record was rejected. A delegation
-provider whose settled runs fail at least twice and at least half the time
-gets one degraded-channel line above the list; the built-in `subagent` route,
-workflow members and children a backend types by `subagent_type` are excluded
-because there is no provider to switch to.
-
-Limits: the switch covers the whole profile, not one session (a launch
-without the profile plugin service, or without hot reload, needs `dsh plugin`
-and a restart); there is no "enter teammate session" yet, and `/export` leaves team messages out. Upstream limits apply: teammates share one working directory, a
-team lives in one process, and a task owner is never released automatically.
-Subagent failure badges and the Companion error state share session-scoped unread
-status. Opening that child’s detail or main view acknowledges only that failure;
-a new run or failure alerts again. Acknowledgements survive panel remounts and
-session switches during this process, but a cold restart starts unread. Opening
-the dashboard alone does not acknowledge every child. Task status stays failed.
+- **Persistence** — the switch enables or disables the bundle in the profile, so it persists across restarts, and on a `dsh --profile` launch it applies at once — running sessions included: the model is told which tools came and went.
+- **`/team`** — appears in Help and `/` completion only once the team service is mounted, and only reports: `/team` (or `/team status`) shows the bundle, the service and this session's teammates. `/team on|off` was removed; typing it points at `/plugin enable|disable`.
+- **Switching off** — asks first while teammates run, and switching off stops them: the team service releases the teammates still running as it unloads. Inside a teammate session the other teammates' runs are not visible, so the question counts them as possibly running. The team record stays in the session and comes back when the bundle is enabled again.
+- **Host support** — if the running DSH does not ship the bundle (`/plugin list` stays silent), switch DSH to one of the supported lines first (`0.2.2-rc.1`, `0.2.1-rc.5`, `0.2.1-rc.4`, `0.2.1-rc.3`, `0.2.1-rc.2`, `0.2.1-alpha.5`, `0.2.0-rc.1` or `0.2.0-rc.2`).
+  - To install it into the profile explicitly, run `dsh plugin --profile dsh-tui add @deepseek-ai/dsh-experimental-agent-team-profile@<your-dsh-version>`: the team packages ship in lockstep with DSH and pin their DSH peers exactly, so the version must match.
+- **Tools** — while a request carries `spawn_teammate`, dsh-TUI drops `subagent` / `subagent_fork` from it, and the team's `send_message` / `list_agents` / `interrupt_agent` / `wait_agent` take the place of the legacy controls of the same names, so `spawn_teammate` is the delegation tool; with the team off the legacy tools are back.
+  - Subagents that are not team members (workflow, ralph) keep `subagent`. A teammate shows up as a subagent row, a message between members as a `✉ <sender>` bubble in the receiving session (a teammate's received messages show on its subagent detail as agent messages), and the other team tools as one-line cards (`send_message` with its target and `sent`).
+  - The agents dashboard (Ctrl+A) and the agents side panel switch to a team view: each teammate under its member name with `running` / `idle` / `provisioning` / `failed` (a teammate whose turn ended is idle — a message wakes it — not done), the Lead line, the remaining subagents, a read-only task board (status, owner, `blocked`, write-scope warnings) and a banner when the team record was rejected.
+  - A delegation provider whose settled runs fail at least twice and at least half the time gets one degraded-channel line above the list; the built-in `subagent` route, workflow members and children a backend types by `subagent_type` are excluded because there is no provider to switch to.
+- **Limits** — the switch covers the whole profile, not one session (a launch without the profile plugin service, or without hot reload, needs `dsh plugin` and a restart); there is no "enter teammate session" yet, and `/export` leaves team messages out. Upstream limits apply: teammates share one working directory, a team lives in one process, and a task owner is never released automatically.
+- **Unread failures** — subagent failure badges and the Companion error state share session-scoped unread status. Opening that child’s detail or main view acknowledges only that failure; a new run or failure alerts again. Acknowledgements survive panel remounts and session switches during this process, but a cold restart starts unread. Opening the dashboard alone does not acknowledge every child. Task status stays failed.
 
 ## Keybindings & Mouse
 
@@ -502,22 +493,15 @@ pnpm smoke
 
 ## Plugin Ecosystem
 
-Plugin development: [admission & development guide](tui-profile/docs/plugin-admission-and-development.md) · [plugin-template](https://github.com/dsh-tui-ecosystem/plugin-template) · [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem). Reference implementation: `dsh-working-activity`.
+Plugin development: [admission & development guide](tui-profile/docs/plugin-admission-and-development.md) · [plugin-template](https://github.com/dsh-tui-ecosystem/plugin-template) · [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem). Reference implementation: `dsh-working-activity`. Seam grading and API notes: [Plugin development](docs/plugins.en.md). The organization maintains the listing only; it does not endorse community plugins.
 
-Exported plugin subcomponents are admitted using the nearest package manifest of their ESM entry, including import-only and conditional exports; they do not inherit an outer package's identity.
+### Installing plugins
 
-A backend plugin (the experimental `tui.dsh/v1alpha1` `Backend` contribution family) is in the kernel picker after a restart: the boot scans the bundles the profile declares, admits and registers each package-root `dsh-plugin.json` declaration, and reads the implementation from the package's `backend` export — importing that module only when the backend is actually selected.
-Each bundle may declare one backend, and its handler id must match the declaration. Entries awaiting authorization are neither probed nor loaded, including when explicitly requested at startup.
+`/plugin install <package | path | git url>` runs inside the TUI and goes through the host's profile plugin manager — a pre-install notice, a trust confirmation, cancellable progress, build-script approval and exact-version exemptions.
 
-Seam grading and API notes: [Plugin development](docs/plugins.en.md). The organization maintains the listing only; it does not endorse community plugins.
-
-Installing a plugin from inside the TUI: `/plugin install <package | path | git url>`. It goes through the host's profile plugin manager — a pre-install notice, a trust confirmation, cancellable progress, build-script approval and exact-version exemptions. Packages on the first-party feed this package ships (`tui-profile/feed/first-party.json`, pinned per release and decided offline) skip the trust confirmation, and only a spec that names that exact version qualifies: a bare name, a tag or a range is resolved again at install time, so it is confirmed with the person instead.
-
-What was confirmed is what gets installed — the run pins the exact `name@version` the inspection read — and a turn that is still running refuses the install (finish it, or `/new`, first). The same actions remain available from the CLI (`dsh plugin --profile dsh-tui …`).
-
-The confirmation lists the permissions the package declares; `Enter` installs **and grants** — the grant is written to `~/.dsh-tui/extension-grants.json` before the install starts, and a failed install rolls that write back. A registry package's declaration cannot be read before it lands, so a `grant` step follows a successful install: `Enter` grants, `Esc` skips (the install stays). Declared permissions this host does not know are skipped and named. On a terminal too short for a permission row, the list folds to a count or the key hint carries the count; the package identity, the notice and the keys stay visible.
-
-A spec names one of three things:
+- **First-party feed** — packages on the first-party feed this package ships (`tui-profile/feed/first-party.json`, pinned per release and decided offline) skip the trust confirmation, and only a spec that names that exact version qualifies: a bare name, a tag or a range is resolved again at install time, so it is confirmed with the person instead.
+- **Pinned artifact** — what was confirmed is what gets installed: the run pins the exact `name@version` the inspection read. A turn that is still running refuses the install (finish it, or `/new`, first).
+- **Spec shapes** — a spec names one of three things:
 
 ```sh
 /plugin install /path/to/repo
@@ -525,21 +509,49 @@ A spec names one of three things:
 /plugin install @scope/package@1.2.3
 ```
 
-Typing `/plugin install ` lists these three shapes in the completion popup, and the same shapes follow the installed names on `/plugin info `. They are examples, never candidates: `Tab` leaves the draft exactly as it is, and `Enter` runs the line you typed — the subcommand's usage line while the spec is still empty, your own spec once it is not. No example can therefore be inserted or installed by accident, and a real path that merely starts like one is never swallowed.
+- **Completion** — typing `/plugin install ` lists these three shapes in the completion popup, and the same shapes follow the installed names on `/plugin info `. They are examples, never candidates: `Tab` leaves the draft exactly as it is, and `Enter` runs the line you typed — the subcommand's usage line while the spec is still empty, your own spec once it is not. No example can therefore be inserted or installed by accident, and a real path that merely starts like one is never swallowed.
+- **Cancellation** — during installation, `esc` attempts cancellation and keeps the pane open until the write settles; if cancellation is too late, it waits for the installation to finish. During exemption registration, it waits for the current write and stops subsequent grants and the retry. Exemptions already written remain.
+- **Failures** — failed installs show up to six redacted log lines; lines larger than 16 KiB are omitted with a notice.
+- **CLI** — the same actions remain available from the command line (`dsh plugin --profile dsh-tui …`).
 
-During installation, `esc` attempts cancellation and keeps the pane open until the write settles; if cancellation is too late, it waits for the installation to finish. During exemption registration, it waits for the current write and stops subsequent grants and the retry. Exemptions already written remain.
+### Trust and permissions
 
-Failed installs show up to six redacted log lines; lines larger than 16 KiB are omitted with a notice.
+- **What is listed** — the confirmation lists the permissions the package declares.
+- **Install and grant** — `Enter` installs **and grants**; the grant is written to `~/.dsh-tui/extension-grants.json` before the install starts, and a failed install rolls that write back.
+- **Registry packages** — a registry package's declaration cannot be read before it lands, so a `grant` step follows a successful install: `Enter` grants, `Esc` skips (the install stays).
+- **Unknown permissions** — declared permissions this host does not know are skipped and named.
+- **Short terminals** — on a terminal too short for a permission row, the list folds to a count or the key hint carries the count; the package identity, the notice and the keys stay visible.
+- **Lifecycle** — `enable` enables and grants the declared permissions, `disable` disables and revokes the permissions that component declared, and `remove` **deletes the component's `grants`/`denies` entries** after the removal — grants are keyed by component id, so leaving them behind lets any later package reusing that id inherit them silently; a reinstall asks again.
+- **Failure handling** — a failed grant write never blocks an install or enable — it is reported instead. Grants are behavioural constraints, not a security boundary.
+- **Residue** — backend data directories, storage namespaces and the effect ledger stay, and the residue report names each source by its path.
 
-Managing what is installed: `/plugin remove <bundle>`, `/plugin enable <name | row id>` and `/plugin disable <name | row id>`. A bundle is a composition layer and a row is one patch entry, so the two are separate actions, and a bundle name is matched before any row identity. A module name shared by multiple rows requires a specific row ID.
+### Managing plugins
 
-**Gate 2 refuses the three ways this app could switch itself off** — removing or disabling the bundle that provides it, the host layer `dsh-base`, or one of its own rows — and says which rule it broke, without calling the service at all; that holds whether or not hot reload is live, which is the path the host's own guard misses. `enable` is never refused by gate 2 (it is the repair action). Every enable and removal asks first; `disable` asks only about a host-layer row. The host does not attest installed package sources, so even an exact feed match requires confirmation before enabling.
+Managing what is installed: `/plugin remove <bundle>`, `/plugin enable <name | row id>` and `/plugin disable <name | row id>`.
 
-These three actions have no cancellation — the service offers none — so `esc` only closes the pane while the write finishes and reports itself into the transcript. Enable and disable have no CLI verb either (the service writes them into the profile's own files).
+- A bundle is a composition layer and a row is one patch entry, so the two are separate actions, and a bundle name is matched before any row identity.
+- A module name shared by multiple rows requires a specific row ID.
+- Every enable and removal asks first; `disable` asks only about a host-layer row.
+- The host does not attest installed package sources, so even an exact feed match requires confirmation before enabling.
+- These three actions have no cancellation — the service offers none — so `esc` only closes the pane while the write finishes and reports itself into the transcript.
+- Enable and disable have no CLI verb either (the service writes them into the profile's own files).
 
-**Grants follow the lifecycle**: `enable` enables and grants the declared permissions, `disable` disables and revokes the permissions that component declared, and `remove` **deletes the component's `grants`/`denies` entries** after the removal — grants are keyed by component id, so leaving them behind lets any later package reusing that id inherit them silently; a reinstall asks again.
+### Gate 2 rules
 
-Backend data directories, storage namespaces and the effect ledger stay, and the residue report names each source by its path. A failed grant write never blocks an install or enable — it is reported instead. Grants are behavioural constraints, not a security boundary.
+**Gate 2 refuses the three ways this app could switch itself off** — removing or disabling the bundle that provides it, the host layer `dsh-base`, or one of its own rows — and says which rule it broke, without calling the service at all.
+
+- It holds whether or not hot reload is live, which is the path the host's own guard misses.
+- `enable` is never refused by gate 2 (it is the repair action).
+
+### Backend plugins
+
+A backend plugin (the experimental `tui.dsh/v1alpha1` `Backend` contribution family) is in the kernel picker after a restart: the boot scans the bundles the profile declares, admits and registers each package-root `dsh-plugin.json` declaration, and reads the implementation from the package's `backend` export — importing that module only when the backend is actually selected.
+
+- **One per bundle** — each bundle may declare one backend, and its handler id must match the declaration.
+- **Authorization** — entries awaiting authorization are neither probed nor loaded, including when explicitly requested at startup.
+- **Admission identity** — exported plugin subcomponents are admitted using the nearest package manifest of their ESM entry, including import-only and conditional exports; they do not inherit an outer package's identity.
+
+### Experimental features
 
 `/plugin list` also advertises the experimental features DSH ships, leaves off by default, and this app knows how to drive (currently Agent Teams, Auto review, Session search and Git worktrees), each with its switch and usage line. A DSH installation that does not ship one shows no such section.
 
@@ -574,19 +586,51 @@ Everything, bilingual: [docs/README.md](docs/README.md).
 
 ## Permissions and Security Boundary
 
+### Defaults
+
 > **Windows security warning:** the Windows profile defaults to `danger-full-access` with approval set to `never`, so tools have unrestricted access. Inspect and tighten the profile before starting next to sensitive credentials or in an untrusted repository.
 
 No sandbox of its own: dsh-TUI uses the active DSH profile's filesystem, shell, sandbox and approval policies. Permission presets come from the DSH `permissionPresets` registry.
 
-**Permission persistence**: the DSH `/permission` pick is kept at `~/.dsh-tui/permission.json`. Every durable preset switch teaches it (picker, typed `/permission`, Shift+Tab static modes, or a switch the official command performed on its own), and a session that never customized its permission planes starts on the remembered preset — applied through the same official switch path. "Never customized" is about the user: the composition writes its own default preset into every fresh session at creation, and those events do not count. Plan-mode transients and the experimental Auto review preset (see below) are excluded, a `DSH_PERMISSION_MODE` launch pin (this run's initial permission plane) outranks the file, and an identity the mounted roster no longer offers is skipped.
+### Permission persistence
 
-**Auto review** (DSH, experimental): `/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-auto-review`, the `auto` preset (shown as "Auto review", tagged `EXP`) appears in `/permission` and its completions live, and disappears when the plugin is removed. It is session-only: the model reviews every tool call before it runs, there is no file sandbox, and each call costs one extra model request; its approval prompts show the localized reason, and a subagent denial reads "Auto review denied; not executed". Picking it in the picker first shows a risk confirmation (`Enter` enables, `Esc` goes back; in fullscreen its Enable / Go back rows are clickable); a typed `/permission auto` switches directly. Once the current session has selected it, the picker skips the confirmation and Shift+Tab stops skipping it.
+- **Stored** — the DSH `/permission` pick is kept at `~/.dsh-tui/permission.json`.
+- **Written** — every durable preset switch teaches it (picker, typed `/permission`, Shift+Tab static modes, or a switch the official command performed on its own).
+- **Restored** — a session that never customized its permission planes starts on the remembered preset, applied through the same official switch path.
+- **"Never customized"** — this is about the user: the composition writes its own default preset into every fresh session at creation, and those events do not count.
+- **Exclusions** — plan-mode transients and the experimental Auto review preset (see below) are excluded. A `DSH_PERMISSION_MODE` launch pin (this run's initial permission plane) outranks the file, and an identity the mounted roster no longer offers is skipped.
 
-**Session search** (DSH, experimental): `/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-session-search`, an agent gains five read-only tools (`session_search`, `session_event_search`, `session_trace`, `session_event_trace`, `session_event_read`) over earlier sessions in the same workspace — cross-session access requires an identical `cwd`. The index is in memory and is built on the first search; nothing is written to disk. This app keeps the kernel Minimal preset at its single persistent-shell tool, so Minimal never shows these five tools or their usage guidance.
+### Auto review (experimental)
 
-**Git worktrees** (DSH, experimental): `/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-tool-worktree`, an agent gains `create_worktree`, which creates a new Git branch and a checkout under `.agents/worktrees/<name>` of the current repository (from `HEAD` or a local revision; uncommitted files stay in the source checkout) and moves the session into it — the status line, Git branch and `@` completion follow, while the session stays registered under its project. Its card reads `Worktree("<branch>")` with the checkout path and base revision. Nothing is cleaned up: remove the checkout with `git worktree remove <path>` and the branch separately with `git branch -D <branch>` (the agent leaves with `working_directory`; once the checkout is gone, the next request returns the session to the project). A leftover branch makes a later `create_worktree` with the same name fail. Calling it from inside a worktree nests the new checkout under that worktree. Moving does not change file permissions or already-open terminals. This app hides `create_worktree` from the kernel Minimal preset and the bundled liangshen preset: their persistent shell (liangshen's on macOS and Linux) keeps the directory it started in, so after a move it would still edit the source checkout.
+`/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-auto-review`, the `auto` preset (shown as "Auto review", tagged `EXP`) appears in `/permission` and its completions live, and disappears when the plugin is removed.
 
-**Upstream auto-retry** (DSH): whenever a session binds (boot, `/model` switch, resume), the TUI seeds a retry policy — 5 attempts, transport-drop-aware failure codes including `STREAM_CLOSED` (a dropped upstream stream) — on **the provider route that session actually uses**, through the official `llm-pi-ai` settings section (the policy the kernel's `llm-retry` plugin executes). Only routes without an explicit `retryPolicy` are seeded — dormant channels are never written — and `upstreamRetry: false` in cordis.yml opts out.
+- **Session-only** — the model reviews every tool call before it runs, there is no file sandbox, and each call costs one extra model request.
+- **Messages** — its approval prompts show the localized reason, and a subagent denial reads "Auto review denied; not executed".
+- **Confirmation** — picking it in the picker first shows a risk confirmation (`Enter` enables, `Esc` goes back; in fullscreen its Enable / Go back rows are clickable); a typed `/permission auto` switches directly. Once the current session has selected it, the picker skips the confirmation and Shift+Tab stops skipping it.
+
+### Session search (experimental)
+
+`/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-session-search`, an agent gains five read-only tools (`session_search`, `session_event_search`, `session_trace`, `session_event_trace`, `session_event_read`) over earlier sessions in the same workspace — cross-session access requires an identical `cwd`.
+
+The index is in memory and is built on the first search; nothing is written to disk. This app keeps the kernel Minimal preset at its single persistent-shell tool, so Minimal never shows these five tools or their usage guidance.
+
+### Git worktrees (experimental)
+
+`/plugin list` advertises it; after `/plugin enable @deepseek-ai/dsh-experimental-tool-worktree`, an agent gains `create_worktree`.
+
+- **Creates and moves** — it creates a new Git branch and a checkout under `.agents/worktrees/<name>` of the current repository (from `HEAD` or a local revision; uncommitted files stay in the source checkout) and moves the session into it — the status line, Git branch and `@` completion follow, while the session stays registered under its project.
+- **Card** — reads `Worktree("<branch>")` with the checkout path and base revision.
+- **Cleanup** — nothing is cleaned up: remove the checkout with `git worktree remove <path>` and the branch separately with `git branch -D <branch>` (the agent leaves with `working_directory`; once the checkout is gone, the next request returns the session to the project). A leftover branch makes a later `create_worktree` with the same name fail.
+- **Nesting and effects** — calling it from inside a worktree nests the new checkout under that worktree. Moving does not change file permissions or already-open terminals.
+- **Preset exclusions** — this app hides `create_worktree` from the kernel Minimal preset and the bundled liangshen preset: their persistent shell (liangshen's on macOS and Linux) keeps the directory it started in, so after a move it would still edit the source checkout.
+
+### Upstream auto-retry
+
+Whenever a session binds (boot, `/model` switch, resume), the TUI seeds a retry policy on **the provider route that session actually uses**, through the official `llm-pi-ai` settings section (the policy the kernel's `llm-retry` plugin executes).
+
+- **Policy** — 5 attempts, with transport-drop-aware failure codes including `STREAM_CLOSED` (a dropped upstream stream).
+- **Guards** — only routes without an explicit `retryPolicy` are seeded; dormant channels are never written.
+- **Opt-out** — `upstreamRetry: false` in cordis.yml turns it off.
 
 Details: [Permissions and security boundary](docs/architecture.en.md#permissions-and-security-boundary).
 
