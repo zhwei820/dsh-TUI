@@ -19,6 +19,9 @@ process.env.DSH_TUI_LANG = 'zh'
 process.env.WT_SESSION = 'headless-windows-terminal-probe'
 delete process.env.TERM_PROGRAM
 delete process.env.TMUX
+// zellij / JetBrains 会按设计关掉 DECSTBM（isDecstbmSafe），在这类终端里跑脚本时清掉，保持模拟的是 Windows Terminal
+delete process.env.ZELLIJ
+delete process.env.TERMINAL_EMULATOR
 
 const [
   { PassThrough, Writable },
