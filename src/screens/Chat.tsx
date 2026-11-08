@@ -89,6 +89,7 @@ import { resolveBindingGeneration, type PromptDraftCache } from '../components/p
 import type { InjectController } from '../dsh-adapter/inject-channel.js'
 import { PromptEditorLayer, usePromptEditorOpen } from '../components/PromptEditor.js'
 import { GoalTodoPanel } from '../components/GoalTodoPanel.js'
+import { RunningAgentsPanel } from '../components/RunningAgentsPanel.js'
 import { useSidePanel } from '../components/sidePanel/useSidePanel.js'
 import { jobsFocusStore } from '../components/sidePanel/jobsFocusStore.js'
 import { SidePanelLayout } from '../components/sidePanel/SidePanelLayout.js'
@@ -7342,6 +7343,9 @@ export function Chat({
             activityPreset={activitySlot ? channel.activityFrames : undefined}
           />
         )}
+        {/* Running subagents: a clickable roster under the main agent while
+            any of them runs (click → that agent's detail scene). */}
+        <RunningAgentsPanel subagents={channel.subagents ?? []} onOpen={setSubagentDetailId} />
         {/* 分栏且 todo Panel 已启用时，Goal/Todo 由右栏 Panel 承载，
             底部 chrome 不再挂载（窄屏 / inline / 未启用时保留现状）。 */}
         {!(sidePanel.split && sidePanel.enabledPanelIds.includes('todo'))

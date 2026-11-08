@@ -252,6 +252,8 @@ const GROUPS = {
 // 回合收尾行：长回合 ✻ Worked for … · done …（短/中断回合不显示、turnUsageRow 换回详细用量）；
 // ≥60s 的回合结束后自动 ※ recap。
     ["verify-turn-worked", ['node', '--import', 'tsx/esm', 'scripts/verify-turn-worked.tsx']],
+// 主代理下方的运行中子代理列表：只列运行中、显示最近工具与用时、点击进入详情、全部结束即消失。
+    ["verify-running-agents", ['node', '--import', 'tsx/esm', 'scripts/verify-running-agents.tsx']],
 // 子代理流投影批处理：chunk 风暴的 snapshot+行投影必须按 16ms 帧
 // 对齐合并（token 率 100-300/s 下的全量深拷贝热路径），且生命周期
 // 事件（tool/call、subagent/end）保持同步立即可见。
