@@ -406,8 +406,10 @@ function fakeRegistry(): ProjectionRegistryLike & {
   store.attachRegistry(registry)
   store.seed(session)
   const elapsed = (value: ActivityView | undefined): number => {
-    const match = /总(\d+)s/u.exec(value?.line ?? '')
-    assert.ok(match !== undefined, `the line carries elapsed time (got: ${value?.line ?? 'none'})`)
+    // The line is rendered in the reader's UI language (dsh-working-activity
+    // 0.5: `总2s` / `total 2s`); what is pinned here is the elapsed number.
+    const match = /(?:总|total )(\d+)s/u.exec(value?.line ?? '')
+    assert.ok(match !== null, `the line carries elapsed time (got: ${value?.line ?? 'none'})`)
     assert.equal(value?.live, true, 'a running turn counts time')
     return Number(match[1])
   }
