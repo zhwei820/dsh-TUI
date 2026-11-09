@@ -19,6 +19,16 @@ import { pluginReport } from '../plugins-info.js'
 import type { ChannelOwner } from './owner.js'
 import { toolResultText } from './transcript.js'
 
+/** The key belongs to the DEEPSEEK_BASE_URL endpoint, so its balance lives at that origin's `/user/balance`. */
+function balanceOptions(baseUrl: string | undefined): { baseUrl?: string } {
+  if (!baseUrl) return {}
+  try {
+    return { baseUrl: new URL(baseUrl).origin }
+  } catch {
+    return {}
+  }
+}
+
 /** Local reports and filesystem actions, fenced to the originating binding. */
 export function createReportActions(ctx: Context, deps: {
   owner: Pick<ChannelOwner, 'current'>
@@ -42,7 +52,7 @@ export function createReportActions(ctx: Context, deps: {
       try { apiKey = (await credentials.resolve('DEEPSEEK_API_KEY'))?.value ?? '' } catch { /* env fallback */ }
     }
     if (!current(capture)) return { ok: false as const, reason: 'network' as const }
-    return fetchBalance(apiKey || process.env.DEEPSEEK_API_KEY || '')
+    return fetchBalance(apiKey || process.env.DEEPSEEK_API_KEY || '', balanceOptions(process.env.DEEPSEEK_BASE_URL))
   }
 
   const mcpStatus = (): string[] => {
