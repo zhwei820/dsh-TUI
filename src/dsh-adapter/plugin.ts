@@ -1536,8 +1536,8 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
         // decisive; set overrides it from the next boot on.
         fullscreen: Schema.boolean(),
         // Same no-default rule as fullscreen: the launchpad boot gate reads
-        // `value.launchpad ?? config.launchpad ?? true`, so cordis.yml stays
-        // decisive while the user layer is unset.
+        // `value.launchpad ?? config.launchpad ?? false`, so cordis.yml stays
+        // decisive while the user layer is unset (off unless explicitly on).
         launchpad: Schema.boolean(),
         // Unset inherits cordis.yml; a saved choice takes effect after restart.
         terminalImages: Schema.boolean(),
@@ -1805,7 +1805,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
       return () => { active = false; stop() }
     })
     let lastTerminalImages = bootSettings.terminalImages ?? config.terminalImages ?? true
-    let lastLaunchpad = bootSettings.launchpad ?? config.launchpad ?? true
+    let lastLaunchpad = bootSettings.launchpad ?? config.launchpad ?? false
     settingsCtx.effect(() => scope.watch(next => {
       apply(next)
       if (typeof next.fullscreen === 'boolean' && next.fullscreen !== bootedFullscreen) {
@@ -1816,7 +1816,7 @@ export async function apply(ctx: Context, runtimeConfig: RuntimeConfig<Config>, 
         channel.notify(t('settings-terminal-images-restart'), { color: 'warning' })
       }
       lastTerminalImages = terminalImages
-      const launchpad = next.launchpad ?? config.launchpad ?? true
+      const launchpad = next.launchpad ?? config.launchpad ?? false
       if (launchpad !== lastLaunchpad && launchpad !== bootedLaunchpad) {
         notifyChannel(t('settings-launchpad-restart'), { color: 'warning' })
       }
@@ -3173,9 +3173,11 @@ function unsupportedWorkspaceTarget(target: string): string {
  * Attach to an existing agent, resume a persisted session (`dsh-tui --resume`
  * feeds the id through `config.sessionId`), or create a fresh one. Resume
  * goes through the DSH persistence seam (`ctx.agents.resume` reads the
- * session log written by dsh-session-persistence-jsonl); a missing artifact
- * or unmounted backend falls back to a fresh session, as does a plain boot
- * without a session id.
+ * session log written by dsh-session-persistence-jsonl). An explicit resume
+ * that cannot be honored (session held elsewhere, unreadable or missing log,
+ * unmounted backend) throws instead of substituting a fresh session; falling
+ * back is the caller's decision. Only a plain boot without a session id
+ * creates a fresh one.
  *
  * Preset composition (issue #8): a create resolves the requested preset
  * (`DSH_TUI_PRESET` over the persisted `/preset` choice over the cordis.yml
