@@ -51,10 +51,23 @@ prefix_writable() {
 install_with() {
   case "$1" in
     # --legacy-peer-deps：npm 12 解析全局 peer 会崩（启动器是瘦壳，跳过安全；见 bin/dsh-tui.js 同款提示）。
-    npm) "$NPM" install -g --legacy-peer-deps "$2" ;;
+    npm) "$NPM" install -g --legacy-peer-deps "$2"; strip_deps "$("$NPM" root -g)" ;;
     pnpm) "$PNPM" add -g "$2" ;;
-    npm-prefix:*) "$NPM" install -g --prefix "${1#npm-prefix:}" --legacy-peer-deps "$2" ;;
+    npm-prefix:*)
+      "$NPM" install -g --prefix "${1#npm-prefix:}" --legacy-peer-deps "$2"
+      strip_deps "${1#npm-prefix:}/lib/node_modules"
+      ;;
   esac
+}
+
+# npm 全局副本不留运行时依赖：启动器只用 node 内置模块；而与 dsh 同前缀时，宿主沿自身上级目录
+# 解析 $PKG 会命中这份副本，profile 里的 react-reconciler 随之拿到它的 react —— 两份 React，
+# 首个 hook 即抛错，整屏空白。pnpm 全局目录不在宿主的上级路径上，不处理。
+strip_deps() {
+  dir="$1/$PKG/node_modules"
+  [ -d "$dir" ] || return 0
+  echo "Removing the launcher's runtime dependencies: $dir"
+  rm -rf "$dir"
 }
 
 install() {
