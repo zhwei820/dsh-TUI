@@ -1,24 +1,11 @@
 <p align="center">
-  <img src="docs/assets/readme/logo-en.svg" alt="dsh-TUI animated whale logo" width="560">
-</p>
-
-<p align="center">
   <strong>English</strong> | <a href="README_ZH.md">简体中文</a>
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/@deepseek-harness-tui/dsh-tui"><img alt="npm" src="https://img.shields.io/npm/v/@deepseek-harness-tui/dsh-tui?style=flat-square&color=4b6fff"></a>
-  <a href="https://github.com/ccch1mneyyy/dsh-TUI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ccch1mneyyy/dsh-TUI/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-263146?style=flat-square"></a>
-  <img alt="Public beta" src="https://img.shields.io/badge/status-public%20beta-7da1de?style=flat-square">
-  <a href="https://github.com/ccch1mneyyy/dsh-TUI/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ccch1mneyyy/dsh-TUI?style=flat-square&color=4b6fff"></a>
-  <a href="https://www.npmjs.com/package/@deepseek-harness-tui/dsh-tui"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@deepseek-harness-tui/dsh-tui?style=flat-square&color=4b6fff"></a>
 </p>
 
 # dsh-TUI
 
 > An interactive terminal UI for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), the coding agent you drive from a terminal — built for people who want to stay in that terminal.
-> It adds a pixel-whale header, live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime, and targets DeepSeek models only. DSH is the built-in backend; installed plugin backends are experimental.
+> It adds live work status, streaming reasoning, double-`Esc` time rewind, a context progress bar and a TPS gauge on top of the official runtime, and targets DeepSeek models only. DSH is the built-in backend; installed plugin backends are experimental.
 > Zero core changes: it consumes only DSH's public exports, so installing enables it and uninstalling leaves no patches behind.
 > It is moving from a mounted plugin to an app with its own entry and composition root, with DSH loaded in process as the first-party backend.
 
@@ -28,14 +15,13 @@
 
 ### Terminal experience
 
-- **Pixel whale pet** — three startup intros and click-to-wake; freezes after the first task.
 - **Quiet defaults** — an ordinary launch goes straight into chat under a compact welcome box, shown once on the first run.
   - `/` and `@` completions are a borderless list.
   - The footer shows the context readout, `? for shortcuts`, or `⏸ plan mode on (shift+tab to cycle)`.
   - Todos read as a `⎿ ☐/☒` checklist.
 - **Quiet status lines** — the line reports progress without taking over the screen.
   - While thinking: `✻ Thinking… (12s · ↑ … tokens · esc to interrupt)`.
-  - Finished thinking folds to `∴ Thought for 12s` (click or `Ctrl+O` to read it); an interruption reads `⎿ Interrupted · …`; compaction reads `Compacting conversation…`.
+  - Finished thinking folds to `∴ Thought for 12s` (click to read it); an interruption reads `⎿ Interrupted · …`; compaction reads `Compacting conversation…`.
   - Approvals ask `Do you want to proceed?` with `Yes` / `Yes, and don't ask again` / `No, and tell the model what to do differently (esc)`.
   - In narrow panes the compaction status stays on one line: phase and cancellation hints yield first, then the label shortens, and elapsed time only appears as a complete field.
 - **Diffs** — Edit/Write diffs are unified by default, with tinted `+`/`-` rows under an `Updated with N additions and M removals` line.
@@ -119,15 +105,6 @@ DSH supplies presets, skills, MCP, goals, todos, subagents and questionnaires; d
 
 Keys and commands: [Interaction and commands](docs/interaction.en.md). Everything else: [documentation index](docs/README.md).
 
-## Preview
-
-<div align="center">
-  <picture>
-    <source media="(max-width: 640px)" srcset="docs/assets/readme/preview-en-mobile.svg">
-    <img src="docs/assets/readme/preview-en.svg" alt="Recorded dsh-TUI session: welcome, completion, help and typing, with animated pixel whale." width="78%">
-  </picture>
-</div>
-
 ## Featured & Listed
 
 Among the community plugins recommended by the **official lead of DeepSeek
@@ -137,27 +114,6 @@ Featured by the **DeepSeek Harness official WeChat account**, listed in the
 [dshfind](https://dshfind.com/en/plugins/ccch1mneyyy/dsh-TUI) plugin
 directory, and ranked **#7 on [GitHub Trending](https://trendshift.io/repositories/146168)
 daily** (TypeScript).
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center" valign="middle" width="50%">
-        <img src="screenshots/wechat-official.png" alt="dsh-TUI featured by the DeepSeek Harness official WeChat account" width="480">
-        <br>
-        <strong>Featured by the official WeChat account</strong>
-      </td>
-      <td align="center" valign="middle" width="50%">
-        <a href="https://dshfind.com/en/plugins/ccch1mneyyy/dsh-TUI"><img src="https://dshfind.com/api/card/ccch1mneyyy/dsh-TUI?lang=en" alt="dsh-TUI on dshfind" width="420"></a>
-        <br>
-        <strong>Listed in the dshfind directory</strong>
-        <br><br>
-        <a href="https://trendshift.io/repositories/146168" title="GitHub Trending Daily #7 · TypeScript"><img alt="Trendshift" src="https://trendshift.io/api/badge/trendshift/repositories/146168/daily?language=TypeScript"></a>
-        <br>
-        <strong>GitHub Trending Daily #7</strong>
-      </td>
-    </tr>
-  </table>
-</div>
 
 ## Quick Start
 
@@ -367,7 +323,7 @@ Inside a window, literal input starting with `[digit;…` can be held or joined 
 
 ### Display and session ownership
 
-The pixel whale, large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy.
+The large title and context/TPS colors follow the same terminal color depth as other text: monochrome, 16-color, 256-color or truecolor. Apple Terminal and tmux use the shared fallback; `NO_COLOR` and `FORCE_COLOR` retain the existing shared color policy.
 
 If resume reports that another DSH process owns the writer, release the session in that process (for example, dsh web) and retry in the same TUI; the foreground session stays intact, and deleting session or lock files to bypass single-writer protection is not supported.
 
@@ -571,18 +527,11 @@ Everything, bilingual: [docs/README.md](docs/README.md).
 - **Ecosystem organization**: [dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem)
   hosts community plugins, templates, and the curated list. Come ship a
   plugin, pitch an idea, or just hang out 🐋
-- **Chat groups** (Chinese-language): usage questions, plugin ideas, and
-  feature wishes are all welcome.
+- **Chat groups** (Chinese-language, QQ group 572549239): usage questions,
+  plugin ideas, and feature wishes are all welcome.
 - **Code of conduct**: please read the
   [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.en.md) before taking
   part.
-
-| WeChat group (dsh-TUI community 4) | QQ group (ID 572549239) |
-| :---: | :---: |
-| <img src="screenshots/wechat-group.jpg" alt="dsh-TUI community WeChat group 4 QR code" width="200"> | <img src="screenshots/qq-group.png" alt="dsh-TUI community QQ group QR code" width="200"> |
-
-> The WeChat QR code expires roughly every 7 days; if it stops working, use
-> the QQ group (572549239) or open an issue to nudge us for a refresh.
 
 ## Permissions and Security Boundary
 
@@ -648,22 +597,16 @@ Details: [Permissions and security boundary](docs/architecture.en.md#permissions
 Community, related projects, and companion tools built by friends:
 [see the links page](docs/links.md)
 
-## Stars
-
-[![Star History](https://raw.githubusercontent.com/ccch1mneyyy/dsh-TUI/bot-star-history/assets/star-history/star-history.png)](https://star-history.com/#ccch1mneyyy/dsh-TUI&Date)
-
----
-
 ## Maintainers
 
 <table>
   <tbody>
     <tr>
-      <td align="center" width="150"><a href="https://github.com/ccch1mneyyy"><img src="https://github.com/ccch1mneyyy.png?size=160" width="96" height="96" alt="ccch1mneyyy"></a><br><a href="https://github.com/ccch1mneyyy"><b>ccch1mneyyy</b></a><br><sub>Core development &amp; maintenance</sub></td>
-      <td align="center" width="150"><a href="https://github.com/CikeSeven"><img src="https://github.com/CikeSeven.png?size=160" width="96" height="96" alt="CikeSeven"></a><br><a href="https://github.com/CikeSeven"><b>CikeSeven</b></a><br><sub>Performance &amp; stability</sub></td>
-      <td align="center" width="150"><a href="https://github.com/T-Auto"><img src="https://github.com/T-Auto.png?size=160" width="96" height="96" alt="T-Auto"></a><br><a href="https://github.com/T-Auto"><b>T-Auto</b></a><br><sub>Architecture &amp; ecosystem adaptation</sub></td>
-      <td align="center" width="150"><a href="https://github.com/AdamPlatin123"><img src="https://github.com/AdamPlatin123.png?size=160" width="96" height="96" alt="AdamPlatin123"></a><br><a href="https://github.com/AdamPlatin123"><b>AdamPlatin123</b></a><br><sub>Security &amp; interaction</sub></td>
-      <td align="center" width="150"><a href="https://github.com/Nagi-ovo"><img src="https://github.com/Nagi-ovo.png?size=160" width="96" height="96" alt="Nagi-ovo"></a><br><a href="https://github.com/Nagi-ovo"><b>Nagi-ovo</b></a><br><sub>Test infrastructure &amp; terminal rendering</sub></td>
+      <td align="center" width="150"><a href="https://github.com/ccch1mneyyy"><b>ccch1mneyyy</b></a><br><sub>Core development &amp; maintenance</sub></td>
+      <td align="center" width="150"><a href="https://github.com/CikeSeven"><b>CikeSeven</b></a><br><sub>Performance &amp; stability</sub></td>
+      <td align="center" width="150"><a href="https://github.com/T-Auto"><b>T-Auto</b></a><br><sub>Architecture &amp; ecosystem adaptation</sub></td>
+      <td align="center" width="150"><a href="https://github.com/AdamPlatin123"><b>AdamPlatin123</b></a><br><sub>Security &amp; interaction</sub></td>
+      <td align="center" width="150"><a href="https://github.com/Nagi-ovo"><b>Nagi-ovo</b></a><br><sub>Test infrastructure &amp; terminal rendering</sub></td>
     </tr>
   </tbody>
 </table>
@@ -674,7 +617,7 @@ Community, related projects, and companion tools built by friends:
 
 ## Contributors
 
-[![Contributors](https://contrib.rocks/image?repo=ccch1mneyyy/dsh-TUI)](https://github.com/ccch1mneyyy/dsh-TUI)
+[Contributors](https://github.com/ccch1mneyyy/dsh-TUI/graphs/contributors)
 
 ## License
 

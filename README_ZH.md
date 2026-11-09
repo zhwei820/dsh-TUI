@@ -1,25 +1,11 @@
 <p align="center">
-  <img src="docs/assets/readme/logo.svg" alt="dsh-TUI 像素鲸鱼标题动画" width="560">
-</p>
-
-<p align="center">
   <a href="README.md">English</a> | <strong>简体中文</strong>
-</p>
-
-<p align="center">
-  <a href="https://www.npmjs.com/package/@deepseek-harness-tui/dsh-tui"><img alt="npm" src="https://img.shields.io/npm/v/@deepseek-harness-tui/dsh-tui?style=flat-square&color=4b6fff"></a>
-  <a href="https://github.com/ccch1mneyyy/dsh-TUI/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ccch1mneyyy/dsh-TUI/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-263146?style=flat-square"></a>
-  <img alt="Public beta" src="https://img.shields.io/badge/status-public%20beta-7da1de?style=flat-square">
-  <a href="https://github.com/ccch1mneyyy/dsh-TUI/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ccch1mneyyy/dsh-TUI?style=flat-square&color=4b6fff"></a>
-  <a href="https://www.npmjs.com/package/@deepseek-harness-tui/dsh-tui"><img alt="npm downloads" src="https://img.shields.io/npm/dm/@deepseek-harness-tui/dsh-tui?style=flat-square&color=4b6fff"></a>
-  <img alt="官方收录" src="https://img.shields.io/badge/DeepSeek%20Harness%20官方公众号-收录-brightgreen">
 </p>
 
 # dsh-TUI
 
 > 面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的交互式终端界面——给习惯在终端里驱动这个编程 Agent 的人用。
-> 它在官方运行时之上加了像素鲸鱼顶栏、实时工作状态、流式思考、双击 `Esc` 时间回溯、上下文进度条与 TPS 仪表，并且只面向 DeepSeek 模型。DSH 是内置后端，已安装的插件后端仍属实验性。
+> 它在官方运行时之上加了实时工作状态、流式思考、双击 `Esc` 时间回溯、上下文进度条与 TPS 仪表，并且只面向 DeepSeek 模型。DSH 是内置后端，已安装的插件后端仍属实验性。
 > 零核心改动：只消费 DSH 的公开导出，装上即启用，卸载不留补丁。
 > 它正从「挂载型插件」演进为拥有自身入口与组装根的终端应用，DSH 作为首方后端在进程内加载。
 
@@ -29,9 +15,8 @@
 
 ### 终端体验
 
-- **像素鲸鱼娘** — 开屏三选一动画，点击唤醒；开始第一个任务后定格。
 - **简洁默认外观** — 普通启动直接进入聊天页，只有第一次启动会显示一次紧凑欢迎框。`/` 与 `@` 补全是无边框列表，底栏保持安静（上下文读数、`? 查看快捷键`，或 `⏸ 计划模式已开启（shift+tab 切换）`），待办显示为 `⎿ ☐/☒` 勾选列表。
-- **安静的状态行** — 工作时行内显示 `✻ Thinking… (12s · ↑ … tokens · esc 中断)`；思考结束折叠为 `∴ 已思考 12s`（点击或 `Ctrl+O` 展开），打断显示 `⎿ 已打断 · …`，压缩显示 `正在压缩对话…`。
+- **安静的状态行** — 工作时行内显示 `✻ Thinking… (12s · ↑ … tokens · esc 中断)`；思考结束折叠为 `∴ 已思考 12s`（点击展开），打断显示 `⎿ 已打断 · …`，压缩显示 `正在压缩对话…`。
   - 审批问「是否继续？」，选项为「是 / 是，且不再询问 / 否，并告诉模型该怎么做（esc）」。
   - 窄面板里压缩状态保持单行：先让出阶段与取消提示，再缩短标签，计时只会完整显示。
 - **差异视图** — Edit/Write 差异默认统一式，增删行带底色，首行是「已更新：新增 N 行，删除 M 行」；`/settings` 的 `diffLayout` 可切到并排，或按终端宽度自动选择。纯新增、纯删除文件使用完整正文宽度，不保留空的另一栏；普通修改仍双栏显示，多文件分别决定布局，判断先于折叠与流式展开。
@@ -96,41 +81,11 @@ DSH 提供 presets、技能、MCP、目标、待办、子代理与问卷，dsh-T
 
 键位与命令：[交互与命令](docs/interaction.md)。其余见[文档索引](docs/README.md)。
 
-## 界面预览
-
-<div align="center">
-  <picture>
-    <source media="(max-width: 640px)" srcset="docs/assets/readme/preview-zh-mobile.svg">
-    <img src="docs/assets/readme/preview-zh.svg" alt="dsh-TUI 会话录制：欢迎界面、补全、帮助与输入，以及像素鲸鱼动画。" width="78%">
-  </picture>
-</div>
-
 ## 官方收录
 
 **DeepSeek Harness 官方负责人**推荐的社区插件中，dsh-TUI 是首个被推荐的插件。
 
 本插件被 **DeepSeek Harness 官方公众号**推文收录，也被 [dshfind](https://dshfind.com/ccch1mneyyy/dsh-TUI) 插件目录收录，并登上 [GitHub Trending](https://trendshift.io/repositories/146168) 日榜第七（TypeScript 口径）。
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center" valign="middle" width="50%">
-        <img src="screenshots/wechat-official.png" alt="DeepSeek Harness 官方公众号推文收录 dsh-TUI" width="480">
-        <br>
-        <strong>DeepSeek Harness 官方公众号推文收录</strong>
-      </td>
-      <td align="center" valign="middle" width="50%">
-        <a href="https://dshfind.com/ccch1mneyyy/dsh-TUI"><img src="https://dshfind.com/api/card/ccch1mneyyy/dsh-TUI?lang=zh" alt="dsh-TUI on dshfind" width="420"></a>
-        <br>
-        <strong>dshfind 插件目录收录</strong>
-        <br><br>
-        <a href="https://trendshift.io/repositories/146168" title="GitHub Trending 日榜 #7 · TypeScript 口径"><img alt="Trendshift" src="https://trendshift.io/api/badge/trendshift/repositories/146168/daily?language=TypeScript"></a>
-        <br>
-        <strong>GitHub Trending 日榜第七</strong>
-      </td>
-    </tr>
-  </table>
-</div>
 
 ## 快速开始
 
@@ -328,7 +283,7 @@ Windows 下由 `NVIM` 或 `VIM_TERMINAL` 标识的 Neovim/Vim 终端保留 VT �
 
 ### 显示与会话归属
 
-像素鲸鱼、大字标题和 context/TPS 指标遵守统一终端色深：无色、16 色、256 色或真彩。Apple Terminal 与 tmux 使用共享降级策略，`NO_COLOR` 和 `FORCE_COLOR` 沿用现有统一颜色规则。
+大字标题和 context/TPS 指标遵守统一终端色深：无色、16 色、256 色或真彩。Apple Terminal 与 tmux 使用共享降级策略，`NO_COLOR` 和 `FORCE_COLOR` 沿用现有统一颜色规则。
 
 恢复时若提示另一 DSH 进程占用写入，请先在该进程（如 dsh web）释放会话，再在当前 TUI 重试；前台会话保持不变，不支持通过删除会话或锁文件绕过单写者保护。
 
@@ -532,14 +487,8 @@ pnpm smoke
 ## 社区
 
 - **生态组织**：[dsh-tui-ecosystem](https://github.com/dsh-tui-ecosystem) 是社区插件、模板与收录列表的家。欢迎来发插件、提创意、互相取暖 🐋
-- **社区交流群**：使用问题、插件创意、功能许愿，都欢迎进来聊。
+- **社区交流群**（QQ 群 572549239）：使用问题、插件创意、功能许愿，都欢迎进来聊。
 - **行为准则**：参与前请读一遍[贡献者行为准则](CODE_OF_CONDUCT.md)。
-
-| 微信群（dsh-TUI 社区交流 4 群） | QQ 群（群号 572549239） |
-| :---: | :---: |
-| <img src="screenshots/wechat-group.jpg" alt="dsh-TUI 社区交流 4 群微信群二维码" width="200"> | <img src="screenshots/qq-group.png" alt="dsh-TUI 社区交流群 QQ 群二维码" width="200"> |
-
-> 微信群二维码约 7 天过期一次，如遇失效请走 QQ 群（572549239），或开个 issue 提醒我们更新。
 
 ## 权限与安全边界
 
@@ -599,24 +548,16 @@ DSH 的 `/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-exper
 
 朋友们开发的[社区、相关项目与周边工具](docs/links.md)
 
-## Stars
-
-<!-- star-history:start -->
-[![Star History](https://raw.githubusercontent.com/ccch1mneyyy/dsh-TUI/bot-star-history/assets/star-history/star-history.png)](https://star-history.com/#ccch1mneyyy/dsh-TUI&Date)
-<!-- star-history:end -->
-
----
-
 ## 维护团队
 
 <table>
   <tbody>
     <tr>
-      <td align="center" width="150"><a href="https://github.com/ccch1mneyyy"><img src="https://github.com/ccch1mneyyy.png?size=160" width="96" height="96" alt="ccch1mneyyy"></a><br><a href="https://github.com/ccch1mneyyy"><b>ccch1mneyyy</b></a><br><sub>核心开发与维护</sub></td>
-      <td align="center" width="150"><a href="https://github.com/CikeSeven"><img src="https://github.com/CikeSeven.png?size=160" width="96" height="96" alt="CikeSeven"></a><br><a href="https://github.com/CikeSeven"><b>CikeSeven / 柒月</b></a><br><sub>性能与稳定性</sub></td>
-      <td align="center" width="150"><a href="https://github.com/T-Auto"><img src="https://github.com/T-Auto.png?size=160" width="96" height="96" alt="T-Auto"></a><br><a href="https://github.com/T-Auto"><b>T-Auto / 风雪</b></a><br><sub>架构与生态适配</sub></td>
-      <td align="center" width="150"><a href="https://github.com/AdamPlatin123"><img src="https://github.com/AdamPlatin123.png?size=160" width="96" height="96" alt="AdamPlatin123"></a><br><a href="https://github.com/AdamPlatin123"><b>AdamPlatin123</b></a><br><sub>安全与交互体验</sub></td>
-      <td align="center" width="150"><a href="https://github.com/Nagi-ovo"><img src="https://github.com/Nagi-ovo.png?size=160" width="96" height="96" alt="Nagi-ovo"></a><br><a href="https://github.com/Nagi-ovo"><b>Nagi-ovo</b></a><br><sub>测试基建与终端渲染</sub></td>
+      <td align="center" width="150"><a href="https://github.com/ccch1mneyyy"><b>ccch1mneyyy</b></a><br><sub>核心开发与维护</sub></td>
+      <td align="center" width="150"><a href="https://github.com/CikeSeven"><b>CikeSeven / 柒月</b></a><br><sub>性能与稳定性</sub></td>
+      <td align="center" width="150"><a href="https://github.com/T-Auto"><b>T-Auto / 风雪</b></a><br><sub>架构与生态适配</sub></td>
+      <td align="center" width="150"><a href="https://github.com/AdamPlatin123"><b>AdamPlatin123</b></a><br><sub>安全与交互体验</sub></td>
+      <td align="center" width="150"><a href="https://github.com/Nagi-ovo"><b>Nagi-ovo</b></a><br><sub>测试基建与终端渲染</sub></td>
     </tr>
   </tbody>
 </table>
@@ -627,7 +568,7 @@ DSH 的 `/plugin list` 会列出它；用 `/plugin enable @deepseek-ai/dsh-exper
 
 ## 贡献者
 
-[![Contributors](https://contrib.rocks/image?repo=ccch1mneyyy/dsh-TUI)](https://github.com/ccch1mneyyy/dsh-TUI)
+[贡献者列表](https://github.com/ccch1mneyyy/dsh-TUI/graphs/contributors)
 
 ## License
 
