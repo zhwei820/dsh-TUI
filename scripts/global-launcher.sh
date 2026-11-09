@@ -20,14 +20,32 @@ launcher_path() { command -v dsh-tui 2>/dev/null || true; }
 # 启动器的 `--version` 在角色分支之前应答，不委托、不自举；第一行是 "<pkg> <version> (launcher)"。
 launcher_version() { "$1" --version 2>/dev/null | awk 'NR == 1 { print $2 }'; }
 
-# npm | pnpm | unknown：启动器所在目录属于哪个包管理器的全局 bin。
+# npm | pnpm | npm-prefix:<prefix> | unknown：启动器所在目录属于哪个包管理器的全局 bin。
+# npm-prefix：另一个 node 的 npm 全局前缀（如换过 node 后 /usr/local 里的旧副本）——
+# <prefix>/bin/dsh-tui 指向 <prefix>/lib/node_modules/$PKG/bin/dsh-tui.js 就是 npm 布局，用 --prefix 定位它。
 launcher_owner() {
   dir=$(cd "$(dirname "$1")" && pwd -P)
   npm_bin=$("$NPM" prefix -g 2>/dev/null || true)
   if [ -n "$npm_bin" ] && [ -d "$npm_bin/bin" ] && [ "$dir" = "$(cd "$npm_bin/bin" && pwd -P)" ]; then echo npm; return; fi
   pnpm_bin=$("$PNPM" bin -g 2>/dev/null || true)
   if [ -n "$pnpm_bin" ] && [ -d "$pnpm_bin" ] && [ "$dir" = "$(cd "$pnpm_bin" && pwd -P)" ]; then echo pnpm; return; fi
+  prefix=$(dirname "$dir")
+  target=$(readlink -f "$1" 2>/dev/null || true)
+  if [ -n "$target" ] && [ "$target" = "$(cd "$prefix" && pwd -P)/lib/node_modules/$PKG/bin/dsh-tui.js" ]; then echo "npm-prefix:$prefix"; return; fi
   echo unknown
+}
+
+# 另一个前缀不可写（多半要 sudo）时不替用户提权，只给出命令。
+prefix_writable() {
+  case "$1" in
+    npm-prefix:*)
+      p=${1#npm-prefix:}
+      [ -w "$p/lib/node_modules" ] && [ -w "$p/bin" ] && return 0
+      echo "global-launcher: $p is not writable; run it yourself:" >&2
+      echo "  sudo $NPM $2 -g --prefix $p $3" >&2
+      return 1
+      ;;
+  esac
 }
 
 install_with() {
@@ -35,6 +53,7 @@ install_with() {
     # --legacy-peer-deps：npm 12 解析全局 peer 会崩（启动器是瘦壳，跳过安全；见 bin/dsh-tui.js 同款提示）。
     npm) "$NPM" install -g --legacy-peer-deps "$2" ;;
     pnpm) "$PNPM" add -g "$2" ;;
+    npm-prefix:*) "$NPM" install -g --prefix "${1#npm-prefix:}" --legacy-peer-deps "$2" ;;
   esac
 }
 
@@ -54,6 +73,7 @@ install() {
     echo "  It may install its own version into the profile. Remove it, then run: make install" >&2
     return
   fi
+  prefix_writable "$owner" install "--legacy-peer-deps $tarball" || return 0
   echo "Reinstalling the global dsh-tui launcher at $bin (v${before:-?}, $owner)"
   install_with "$owner" "$tarball"
   after=$(launcher_version "$(launcher_path)")
@@ -69,6 +89,11 @@ remove() {
     case "$owner" in
       npm) echo "Removing the global dsh-tui launcher at $bin (npm)"; "$NPM" uninstall -g "$PKG" ;;
       pnpm) echo "Removing the global dsh-tui launcher at $bin (pnpm)"; "$PNPM" remove -g "$PKG" ;;
+      npm-prefix:*)
+        prefix_writable "$owner" uninstall "$PKG" || return 0
+        echo "Removing the global dsh-tui launcher at $bin (npm, prefix ${owner#npm-prefix:})"
+        "$NPM" uninstall -g --prefix "${owner#npm-prefix:}" "$PKG"
+        ;;
       *)
         echo "global-launcher: $bin (v$(launcher_version "$bin")) is not an npm/pnpm global install; remove it by hand." >&2
         return
